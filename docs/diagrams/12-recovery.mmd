@@ -1,0 +1,20 @@
+flowchart TD
+  N0["Connection lost or app restarted"]
+  N0 --> N1
+  N1{"Saved transaction hash exists?"}
+  B1["No broadcast evidence: reconcile wallet first"]
+  N1 -->|No| B1
+  N1 -->|Yes| N2
+  N2["Read receipt from configured chain"]
+  N2 --> N3
+  N3{"Receipt available?"}
+  B3["Keep pending; bounded polling / explorer"]
+  N3 -->|No| B3
+  N3 -->|Yes| N4
+  N4{"Receipt successful?"}
+  B4["Show reverted; allow deliberate retry"]
+  N4 -->|No| B4
+  N4 -->|Yes| N5
+  N5["Report same hash to API; upsert receipt / events"]
+  N5 --> N6
+  N6["Scanner restores missed logs; refresh membership"]

@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1195" viewBox="0 0 1280 1195" role="img">
+<title>Mock yield allocation</title>
+<desc>Funded test-token yield; no guaranteed APY</desc>
+<rect width="1280" height="1195" fill="#f8fafc"/>
+<text x="45" y="57" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="700" text-anchor="start" fill="#0f172a">Mock yield allocation</text>
+<text x="45" y="91" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="400" text-anchor="start" fill="#475569">Funded test-token yield; no guaranteed APY</text>
+<rect x="70" y="145" width="710" height="96" rx="16" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+<text x="425.0" y="200.5" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="400" text-anchor="middle" fill="#0f172a">Testnet script funds adapter yield per subscription</text>
+<polyline points="425.0,241 425.0,282" fill="none" stroke="#64748b" stroke-width="3" stroke-linejoin="round"/>
+<polygon points="425.0,282 420.0,272 430.0,272" fill="#64748b"/>
+<rect x="70" y="290" width="710" height="96" rx="16" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+<text x="425.0" y="345.5" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="400" text-anchor="middle" fill="#0f172a">UI labels estimated yield as MOCK</text>
+<polyline points="425.0,386 425.0,427" fill="none" stroke="#64748b" stroke-width="3" stroke-linejoin="round"/>
+<polygon points="425.0,427 420.0,417 430.0,417" fill="#64748b"/>
+<rect x="70" y="435" width="710" height="96" rx="16" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+<text x="425.0" y="490.5" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="400" text-anchor="middle" fill="#0f172a">Release or refund triggers settlement</text>
+<polyline points="425.0,531 425.0,572" fill="none" stroke="#64748b" stroke-width="3" stroke-linejoin="round"/>
+<polygon points="425.0,572 420.0,562 430.0,562" fill="#64748b"/>
+<polygon points="425.0,580 780,628.0 425.0,676 70,628.0" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+<text x="425.0" y="621.0" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="400" text-anchor="middle" fill="#0f172a">Adapter can redeem principal and realized</text>
+<text x="425.0" y="650.0" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="400" text-anchor="middle" fill="#0f172a">yield?</text>
+<polyline points="425.0,676 425.0,717" fill="none" stroke="#64748b" stroke-width="3" stroke-linejoin="round"/>
+<polygon points="425.0,717 420.0,707 430.0,707" fill="#64748b"/>
+<text x="455.0" y="699" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="400" text-anchor="middle" fill="#475569">Yes</text>
+<rect x="910" y="580" width="300" height="96" rx="16" fill="#fff1f2" stroke="#e11d48" stroke-width="2"/>
+<text x="1060.0" y="621.0" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="400" text-anchor="middle" fill="#0f172a">Revert atomically; do not</text>
+<text x="1060.0" y="646.0" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="400" text-anchor="middle" fill="#0f172a">borrow other users&#x27; funds</text>
+<polyline points="780,628.0 902,628.0" fill="none" stroke="#e11d48" stroke-width="3" stroke-linejoin="round"/>
+<polygon points="902,628.0 892,623.0 892,633.0" fill="#e11d48"/>
+<text x="845.0" y="619.0" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="400" text-anchor="middle" fill="#be123c">No</text>
+<rect x="70" y="725" width="710" height="96" rx="16" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+<text x="425.0" y="766.0" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="400" text-anchor="middle" fill="#0f172a">Principal goes to merchant (release) or subscriber</text>
+<text x="425.0" y="795.0" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="400" text-anchor="middle" fill="#0f172a">(refund)</text>
+<polyline points="425.0,821 425.0,862" fill="none" stroke="#64748b" stroke-width="3" stroke-linejoin="round"/>
+<polygon points="425.0,862 420.0,852 430.0,852" fill="#64748b"/>
+<rect x="70" y="870" width="710" height="96" rx="16" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+<text x="425.0" y="925.5" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="400" text-anchor="middle" fill="#0f172a">Yield: merchant 70%; subscriber 20%; treasury remainder</text>
+<polyline points="425.0,966 425.0,1007" fill="none" stroke="#64748b" stroke-width="3" stroke-linejoin="round"/>
+<polygon points="425.0,1007 420.0,997 430.0,997" fill="#64748b"/>
+<rect x="70" y="1015" width="710" height="96" rx="16" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+<text x="425.0" y="1070.5" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="400" text-anchor="middle" fill="#0f172a">Record confirmed event and refresh summaries</text>
+<text x="45" y="1172" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#64748b">PrePaidGuard | Design draft | Read policy B1-B6 in project.md</text>
+</svg>

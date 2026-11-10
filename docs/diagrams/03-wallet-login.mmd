@@ -1,0 +1,16 @@
+flowchart TD
+  N0["Connect EOA wallet on supported chain"]
+  N0 --> N1
+  N1["POST /auth/challenge"]
+  N1 --> N2
+  N2["Wallet signs the SIWE message"]
+  N2 --> N3
+  N3["POST /auth/verify"]
+  N3 --> N4
+  N4{"Signature and challenge valid?"}
+  B4["Reject; request a new challenge"]
+  N4 -->|No| B4
+  N4 -->|Yes| N5
+  N5["Consume nonce; issue session token"]
+  N5 --> N6
+  N6["Store token securely; GET /me"]

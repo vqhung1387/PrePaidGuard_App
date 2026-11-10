@@ -1,0 +1,14 @@
+flowchart TD
+  N0["Check config, test tokens and gas"]
+  N0 --> N1
+  N1["Merchant publishes a short-duration demo plan"]
+  N1 --> N2
+  N2["Subscriber approves and subscribes"]
+  N2 --> N3
+  N3["Check in one eligible period"]
+  N3 --> N4
+  N4["Open explorer; scan old QR to show rejection"]
+  N4 --> N5
+  N5["Refund a second eligible subscription"]
+  N5 --> N6
+  N6["Show terminal state and explain MOCK yield"]

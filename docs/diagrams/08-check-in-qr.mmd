@@ -1,0 +1,16 @@
+flowchart TD
+  N0["Open ACTIVE subscription"]
+  N0 --> N1
+  N1["GET live /eligibility"]
+  N1 --> N2
+  N2{"Check-in allowed?"}
+  B2["Show too-early / refund-window reason"]
+  N2 -->|No| B2
+  N2 -->|Yes| N3
+  N3["Build message: ID, merchant, period, nonce, deadline"]
+  N3 --> N4
+  N4["Wallet signs EIP-712 for configured chain / Vault"]
+  N4 --> N5
+  N5["Display QR and 15-minute countdown"]
+  N5 --> N6
+  N6["Merchant scans; wait for confirmed release"]

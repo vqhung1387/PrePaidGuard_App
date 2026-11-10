@@ -1,0 +1,20 @@
+flowchart TD
+  N0["User requests a transaction"]
+  N0 --> N1
+  N1["Wallet asks for signature"]
+  N1 --> N2
+  N2{"User approves?"}
+  B2["Rejected: return to idle"]
+  N2 -->|No| B2
+  N2 -->|Yes| N3
+  N3["Broadcast and save transaction hash"]
+  N3 --> N4
+  N4{"Receipt available?"}
+  B4["Pending: keep hash and poll"]
+  N4 -->|No| B4
+  N4 -->|Yes| N5
+  N5{"Receipt succeeded?"}
+  B5["Reverted: no financial event"]
+  N5 -->|No| B5
+  N5 -->|Yes| N6
+  N6["Confirmed: refresh chain state"]

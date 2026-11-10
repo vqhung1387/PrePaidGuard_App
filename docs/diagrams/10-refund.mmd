@@ -1,0 +1,22 @@
+flowchart TD
+  N0["Subscriber opens membership"]
+  N0 --> N1
+  N1["GET live /eligibility"]
+  N1 --> N2
+  N2{"ACTIVE and refund time reached?"}
+  B2["Explain why refund is unavailable"]
+  N2 -->|No| B2
+  N2 -->|Yes| N3
+  N3["Review remaining principal and refund terms"]
+  N3 --> N4
+  N4["Subscriber wallet calls refund"]
+  N4 --> N5
+  N5["Vault validates owner / time and withdraws"]
+  N5 --> N6
+  N6{"Withdrawal succeeds?"}
+  B6["Revert atomically; keep balance"]
+  N6 -->|No| B6
+  N6 -->|Yes| N7
+  N7["Pay principal and yield; mark REFUNDED"]
+  N7 --> N8
+  N8["Confirm receipt; disable old QR"]

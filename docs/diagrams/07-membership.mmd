@@ -1,0 +1,14 @@
+flowchart TD
+  N0["GET /me/subscriptions"]
+  N0 --> N1
+  N1["Select membership; GET /subscriptions/{id}"]
+  N1 --> N2
+  N2["Display principal, periods and sync block"]
+  N2 --> N3
+  N3["GET subscription events / explorer"]
+  N3 --> N4
+  N4{"Subscription is ACTIVE?"}
+  B4["Terminal: show read-only history"]
+  N4 -->|No| B4
+  N4 -->|Yes| N5
+  N5["Refresh eligibility before check-in / refund"]

@@ -1,0 +1,22 @@
+flowchart TD
+  N0["Scan plan QR and GET /plans/{id}"]
+  N0 --> N1
+  N1["Review terms; connect subscriber wallet"]
+  N1 --> N2
+  N2{"Balance and gas sufficient?"}
+  B2["Obtain test tokens / gas"]
+  N2 -->|No| B2
+  N2 -->|Yes| N3
+  N3["Check allowance; approve if needed"]
+  N3 --> N4
+  N4["Wait for approval receipt"]
+  N4 --> N5
+  N5["Wallet calls subscribe(planId)"]
+  N5 --> N6
+  N6["Track transaction and verify Subscribed"]
+  N6 --> N7
+  N7{"Confirmed?"}
+  B7["Pending / reverted: do not show success"]
+  N7 -->|No| B7
+  N7 -->|Yes| N8
+  N8["Open ACTIVE membership card"]

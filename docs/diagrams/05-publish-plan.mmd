@@ -1,0 +1,16 @@
+flowchart TD
+  N0["Enter and review immutable plan terms"]
+  N0 --> N1
+  N1["POST /plan-drafts; get client_reference"]
+  N1 --> N2
+  N2["Merchant wallet sends createPlan"]
+  N2 --> N3
+  N3["Save hash; POST /transactions"]
+  N3 --> N4
+  N4{"Valid PlanCreated receipt?"}
+  B4["Keep draft; reconcile pending or mismatch"]
+  N4 -->|No| B4
+  N4 -->|Yes| N5
+  N5["Backend links plan ID and publishes draft"]
+  N5 --> N6
+  N6["Display registration QR"]

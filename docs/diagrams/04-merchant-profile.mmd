@@ -1,0 +1,14 @@
+flowchart TD
+  N0["Sign in with merchant wallet"]
+  N0 --> N1
+  N1["Enter business profile"]
+  N1 --> N2
+  N2["POST /merchants"]
+  N2 --> N3
+  N3{"Profile belongs to current wallet?"}
+  B3["Reject unauthorized changes"]
+  N3 -->|No| B3
+  N3 -->|Yes| N4
+  N4["Save merchant profile"]
+  N4 --> N5
+  N5["Open dashboard; PATCH profile if needed"]

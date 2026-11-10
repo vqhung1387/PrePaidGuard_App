@@ -1,0 +1,16 @@
+flowchart TD
+  N0["Start Flutter and load local deployment"]
+  N0 --> N1
+  N1["GET /config"]
+  N1 --> N2
+  N2{"Chain, Vault and ABI match?"}
+  B2["Block actions; fix configuration"]
+  N2 -->|No| B2
+  N2 -->|Yes| N3
+  N3["Restore token and GET /me"]
+  N3 --> N4
+  N4{"Session valid?"}
+  B4["Connect wallet and sign in"]
+  N4 -->|No| B4
+  N4 -->|Yes| N5
+  N5["Open subscriber / merchant home"]

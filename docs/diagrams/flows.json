@@ -1,0 +1,558 @@
+[
+  {
+    "file": "01-transaction-state",
+    "title": "Transaction states",
+    "subtitle": "Only a verified receipt confirms a payment",
+    "nodes": [
+      {
+        "text": "User requests a transaction",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Wallet asks for signature",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "User approves?",
+        "branch": "Rejected: return to idle",
+        "label": "Yes"
+      },
+      {
+        "text": "Broadcast and save transaction hash",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Receipt available?",
+        "branch": "Pending: keep hash and poll",
+        "label": "Yes"
+      },
+      {
+        "text": "Receipt succeeded?",
+        "branch": "Reverted: no financial event",
+        "label": "Yes"
+      },
+      {
+        "text": "Confirmed: refresh chain state",
+        "branch": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "file": "02-app-start",
+    "title": "App startup",
+    "subtitle": "Check configuration before enabling transactions",
+    "nodes": [
+      {
+        "text": "Start Flutter and load local deployment",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "GET /config",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Chain, Vault and ABI match?",
+        "branch": "Block actions; fix configuration",
+        "label": "Yes"
+      },
+      {
+        "text": "Restore token and GET /me",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Session valid?",
+        "branch": "Connect wallet and sign in",
+        "label": "Yes"
+      },
+      {
+        "text": "Open subscriber / merchant home",
+        "branch": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "file": "03-wallet-login",
+    "title": "Wallet login",
+    "subtitle": "Signing in does not transfer tokens",
+    "nodes": [
+      {
+        "text": "Connect EOA wallet on supported chain",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "POST /auth/challenge",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Wallet signs the SIWE message",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "POST /auth/verify",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Signature and challenge valid?",
+        "branch": "Reject; request a new challenge",
+        "label": "Yes"
+      },
+      {
+        "text": "Consume nonce; issue session token",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Store token securely; GET /me",
+        "branch": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "file": "04-merchant-profile",
+    "title": "Merchant onboarding",
+    "subtitle": "Ownership comes from the authenticated wallet",
+    "nodes": [
+      {
+        "text": "Sign in with merchant wallet",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Enter business profile",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "POST /merchants",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Profile belongs to current wallet?",
+        "branch": "Reject unauthorized changes",
+        "label": "Yes"
+      },
+      {
+        "text": "Save merchant profile",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Open dashboard; PATCH profile if needed",
+        "branch": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "file": "05-publish-plan",
+    "title": "Create and publish a plan",
+    "subtitle": "Database draft becomes published after event verification",
+    "nodes": [
+      {
+        "text": "Enter and review immutable plan terms",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "POST /plan-drafts; get client_reference",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Merchant wallet sends createPlan",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Save hash; POST /transactions",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Valid PlanCreated receipt?",
+        "branch": "Keep draft; reconcile pending or mismatch",
+        "label": "Yes"
+      },
+      {
+        "text": "Backend links plan ID and publishes draft",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Display registration QR",
+        "branch": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "file": "06-subscribe",
+    "title": "Subscribe and fund escrow",
+    "subtitle": "Approve and subscribe are separate transactions",
+    "nodes": [
+      {
+        "text": "Scan plan QR and GET /plans/{id}",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Review terms; connect subscriber wallet",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Balance and gas sufficient?",
+        "branch": "Obtain test tokens / gas",
+        "label": "Yes"
+      },
+      {
+        "text": "Check allowance; approve if needed",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Wait for approval receipt",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Wallet calls subscribe(planId)",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Track transaction and verify Subscribed",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Confirmed?",
+        "branch": "Pending / reverted: do not show success",
+        "label": "Yes"
+      },
+      {
+        "text": "Open ACTIVE membership card",
+        "branch": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "file": "07-membership",
+    "title": "Membership and history",
+    "subtitle": "Financial values come from the blockchain",
+    "nodes": [
+      {
+        "text": "GET /me/subscriptions",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Select membership; GET /subscriptions/{id}",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Display principal, periods and sync block",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "GET subscription events / explorer",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Subscription is ACTIVE?",
+        "branch": "Terminal: show read-only history",
+        "label": "Yes"
+      },
+      {
+        "text": "Refresh eligibility before check-in / refund",
+        "branch": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "file": "08-check-in-qr",
+    "title": "Generate a check-in QR",
+    "subtitle": "One signed message authorizes one eligible period",
+    "nodes": [
+      {
+        "text": "Open ACTIVE subscription",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "GET live /eligibility",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Check-in allowed?",
+        "branch": "Show too-early / refund-window reason",
+        "label": "Yes"
+      },
+      {
+        "text": "Build message: ID, merchant, period, nonce, deadline",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Wallet signs EIP-712 for configured chain / Vault",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Display QR and 15-minute countdown",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Merchant scans; wait for confirmed release",
+        "branch": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "file": "09-merchant-scan",
+    "title": "Scan and release payment",
+    "subtitle": "Merchant pays gas; Vault verifies the signed authorization",
+    "nodes": [
+      {
+        "text": "Merchant scans check-in QR",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Validate format, network and merchant",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Refresh eligibility and preview payment",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Merchant signs checkInWithSignature",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Vault validates signer, nonce, period and time",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Validation and adapter withdrawal succeed?",
+        "branch": "Revert atomically; no state or payout change",
+        "label": "Yes"
+      },
+      {
+        "text": "Update principal, period and nonce; pay recipients",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Confirm receipt; sync both devices",
+        "branch": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "file": "10-refund",
+    "title": "Refund unused principal",
+    "subtitle": "Proposed time-based cancellation policy; team approval required",
+    "nodes": [
+      {
+        "text": "Subscriber opens membership",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "GET live /eligibility",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "ACTIVE and refund time reached?",
+        "branch": "Explain why refund is unavailable",
+        "label": "Yes"
+      },
+      {
+        "text": "Review remaining principal and refund terms",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Subscriber wallet calls refund",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Vault validates owner / time and withdraws",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Withdrawal succeeds?",
+        "branch": "Revert atomically; keep balance",
+        "label": "Yes"
+      },
+      {
+        "text": "Pay principal and yield; mark REFUNDED",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Confirm receipt; disable old QR",
+        "branch": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "file": "11-mock-yield",
+    "title": "Mock yield allocation",
+    "subtitle": "Funded test-token yield; no guaranteed APY",
+    "nodes": [
+      {
+        "text": "Testnet script funds adapter yield per subscription",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "UI labels estimated yield as MOCK",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Release or refund triggers settlement",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Adapter can redeem principal and realized yield?",
+        "branch": "Revert atomically; do not borrow other users' funds",
+        "label": "Yes"
+      },
+      {
+        "text": "Principal goes to merchant (release) or subscriber (refund)",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Yield: merchant 70%; subscriber 20%; treasury remainder",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Record confirmed event and refresh summaries",
+        "branch": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "file": "12-recovery",
+    "title": "Network and transaction recovery",
+    "subtitle": "Never treat an unknown result as a failed payment",
+    "nodes": [
+      {
+        "text": "Connection lost or app restarted",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Saved transaction hash exists?",
+        "branch": "No broadcast evidence: reconcile wallet first",
+        "label": "Yes"
+      },
+      {
+        "text": "Read receipt from configured chain",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Receipt available?",
+        "branch": "Keep pending; bounded polling / explorer",
+        "label": "Yes"
+      },
+      {
+        "text": "Receipt successful?",
+        "branch": "Show reverted; allow deliberate retry",
+        "label": "Yes"
+      },
+      {
+        "text": "Report same hash to API; upsert receipt / events",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Scanner restores missed logs; refresh membership",
+        "branch": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "file": "13-demo",
+    "title": "End-to-end demo",
+    "subtitle": "Two wallets, two devices and test tokens on Fuji",
+    "nodes": [
+      {
+        "text": "Check config, test tokens and gas",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Merchant publishes a short-duration demo plan",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Subscriber approves and subscribes",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Check in one eligible period",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Open explorer; scan old QR to show rejection",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Refund a second eligible subscription",
+        "branch": null,
+        "label": null
+      },
+      {
+        "text": "Show terminal state and explain MOCK yield",
+        "branch": null,
+        "label": null
+      }
+    ]
+  }
+]

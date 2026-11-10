@@ -1,0 +1,18 @@
+flowchart TD
+  N0["Merchant scans check-in QR"]
+  N0 --> N1
+  N1["Validate format, network and merchant"]
+  N1 --> N2
+  N2["Refresh eligibility and preview payment"]
+  N2 --> N3
+  N3["Merchant signs checkInWithSignature"]
+  N3 --> N4
+  N4["Vault validates signer, nonce, period and time"]
+  N4 --> N5
+  N5{"Validation and adapter withdrawal succeed?"}
+  B5["Revert atomically; no state or payout change"]
+  N5 -->|No| B5
+  N5 -->|Yes| N6
+  N6["Update principal, period and nonce; pay recipients"]
+  N6 --> N7
+  N7["Confirm receipt; sync both devices"]
