@@ -20,6 +20,16 @@ uv run --locked uvicorn app.main:app --reload
 
 `GET /health` kiểm tra API. `GET /ready` kiểm tra migration, chain, Vault, token và decimals. OpenAPI ở `/docs` và `/openapi.json`. Kết nối database có thể dùng URL `postgresql+psycopg://` hoặc `postgresql://`. Đặt `AUTH_DOMAIN` đúng authority của `AUTH_URI` (gồm port nếu có). Nếu dùng proxy, cấu hình Uvicorn chỉ tin IP proxy thực tế để rate limit theo IP hoạt động đúng.
 
+Khi nối Flutter Web chạy bằng `flutter run -d chrome --web-port 8080`, đặt các biến backend theo origin của trang Flutter:
+
+```dotenv
+CORS_ORIGINS=["http://localhost:8080"]
+AUTH_DOMAIN=localhost:8080
+AUTH_URI=http://localhost:8080
+```
+
+Frontend gọi API ở `http://localhost:8000`. Khi deploy hai dịch vụ riêng, đặt `CORS_ORIGINS` và domain SIWE theo URL HTTPS của Flutter, rồi trỏ client tới URL HTTPS của API. Origin là scheme, hostname và port, không kèm dấu `/` cuối. Trình duyệt có thể đọc các header `X-Request-ID`, `Retry-After` và `WWW-Authenticate`.
+
 ## Nối với Vault
 
 Đặt `ABI_FILE` và `DEPLOYMENT_FILE` trỏ tới file do contract team xuất trong `shared/`. Đường dẫn tương đối tính từ `backend/`. `CHAIN_ID` phải khớp manifest, mặc định Fuji 43113. Có thể đặt `RPC_URL` riêng cho server. API `/config` chỉ trả URL công khai đã cấu hình trong manifest. Khi chưa có ABI/manifest, health và OpenAPI vẫn hoạt động, endpoint cần Vault trả `503 CONFIG_MISMATCH`.

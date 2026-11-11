@@ -73,7 +73,7 @@ def create_app(settings: Settings | None = None, vault: Vault | None = None) -> 
             allow_origins=settings.cors_origins,
             allow_methods=["GET", "POST", "PATCH"],
             allow_headers=["Authorization", "Content-Type"],
-            expose_headers=["X-Request-ID", "Retry-After"],
+            expose_headers=["X-Request-ID", "Retry-After", "WWW-Authenticate"],
         )
     app.include_router(system.router)
     for router in (auth.router, metadata.router, reads.router, transactions.router):

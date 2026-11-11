@@ -16,9 +16,9 @@
 
 ## D06, B10, I01, I04 và I06 — Môi trường và điều kiện nghiệm thu
 
-- Nền tảng demo theo thiết kế hiện tại là Android sau D04. Host đề xuất là Render HTTPS + PostgreSQL cho demo, có Blueprint và hướng dẫn trong backend README. Nhóm cần workspace được cấp quyền repo và người quản lý biến môi trường.
+- Commit frontend `e1909ff` có demo Flutter Web với dữ liệu theo phiên. Khi nối API, bắt đầu bằng `GET /health` và `GET /api/v1/config`, rồi thêm luồng ký ví SIWE. Cấu hình origin Web và domain ký được ghi trong backend README. Nền tảng nghiệm thu vẫn cần nhóm chốt sau D04. Host đề xuất là Render HTTPS + PostgreSQL, có Blueprint và cần workspace được cấp quyền repo.
 - Làm và push trên nhánh `backend`. A review API/DTO, C review ABI/đối chiếu receipt. Chạy CI trên PR backend → main và ghép sau review. ABI và manifest phải là bản xuất từ C.
-- B10 cần URL HTTPS đã deploy, `/ready` trả 200 và Android gọi được URL đó. I01 cần hai ví/thiết bị trên Fuji, có tx hash publish, subscribe, release và refund của gói đủ hạn. Kiểm tra thêm việc sync lịch sử khi client chưa báo hash.
+- B10 cần URL HTTPS đã deploy, `/ready` trả 200 và client trên thiết bị demo gọi được URL đó. I01 cần hai ví/thiết bị trên Fuji, có tx hash publish, subscribe, release và refund của gói đủ hạn. Kiểm tra thêm việc sync lịch sử khi client chưa báo hash.
 - I04 cần link repo/slide/video, cấu hình demo công khai, ABI và địa chỉ thật, cùng explorer evidence. I06 cần kiểm lại trên thiết bị và dashboard, xem link với tư cách người chấm rồi xác nhận đã submit. Trạng thái hiện tại của các bước này phụ thuộc bản Flutter, Vault Fuji, quyền host và bộ bài nộp của nhóm.
 
 ### Kiểm thử I01 local

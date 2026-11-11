@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import BaseModel, Field, SecretStr, model_validator
+from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.schemas.types import Address, ChainId
@@ -89,6 +89,25 @@ class Settings(BaseSettings):
     sync_batch_size: int = Field(default=90, ge=1, le=2000)
     sync_overlap: int = Field(default=8, ge=0, le=100)
     sync_interval_seconds: int = Field(default=0, ge=0)
+
+    @field_validator("cors_origins")
+    @classmethod
+    def validate_cors_origins(cls, origins: list[str]) -> list[str]:
+        for origin in origins:
+            url = urlsplit(origin)
+            if (
+                url.scheme not in {"http", "https"}
+                or not url.hostname
+                or url.username is not None
+                or not origin.isascii()
+                or any(char.isspace() or ord(char) < 32 for char in origin)
+                or origin != f"{url.scheme}://{url.netloc}"
+                or url.port == 0
+            ):
+                raise ValueError(
+                    "CORS_ORIGINS must contain exact HTTP(S) origins without paths"
+                )
+        return origins
 
     @model_validator(mode="after")
     def validate_auth(self):
