@@ -84,7 +84,9 @@ def list_plans(
     limit: Limit = 20,
     cursor: Cursor = None,
 ):
-    block = vault.checked_head()
+    block = vault.confirmed_block()
+    if block is None:
+        return {"items": [], "next_cursor": None}
     query = select(EventRecord).filter_by(**vault.scope, event_name="PLAN_CREATED")
     if merchant_address:
         query = query.where(EventRecord.merchant_address == merchant_address)
@@ -106,7 +108,9 @@ def list_plans(
 
 @router.get("/plans/{plan_id}", response_model=PlanResponse)
 def get_plan(plan_id: UintString, db: Db, vault: Chain):
-    block = vault.checked_head()
+    block = vault.confirmed_block()
+    if block is None:
+        raise not_found()
     result = plan_response(db, vault, vault.plan(int(plan_id), block), block)
     vault.require_canonical(block)
     return result
@@ -249,8 +253,10 @@ def get_subscription(
     settings: Config,
 ):
     sub_id = int(subscription_id)
-    head = vault.checked_head()
-    sub, plan = participant(vault, sub_id, principal.user.wallet_address, head)
+    block = vault.confirmed_block()
+    if block is None:
+        raise not_found()
+    sub, plan = participant(vault, sub_id, principal.user.wallet_address, block)
     snapshot = db.scalar(
         select(SubscriptionSnapshot).filter_by(**vault.scope, subscription_id=sub_id)
     )
@@ -261,7 +267,7 @@ def get_subscription(
     ):
         lock(db, vault.lock_key)
         scan_head = vault.checked_head()
-        target = min(head.number, scan_head.number - vault.deployment.confirmations + 1)
+        target = min(block.number, vault.confirmed_height(scan_head))
         sync_through(db, vault, settings, scan_head, target, max_batches=2)
         db.commit()
         snapshot = db.scalar(
@@ -282,8 +288,8 @@ def get_subscription(
         raise config_error()
     estimate = None
     if vault.deployment.yield_mode == "MOCK":
-        estimate = vault.estimate(sub_id, head) if status == "ACTIVE" else 0
-    vault.require_canonical(head)
+        estimate = vault.estimate(sub_id, block) if status == "ACTIVE" else 0
+    vault.require_canonical(block)
     return SubscriptionResponse(
         **vault.scope,
         subscription_id=sub_id,
@@ -306,7 +312,7 @@ def get_subscription(
         yield_summary=yield_summary(
             vault, snapshot if sub["nonce"] else None, estimate
         ),
-        sync=live_info(head),
+        sync=live_info(block),
     )
 
 

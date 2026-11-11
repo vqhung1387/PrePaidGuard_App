@@ -100,7 +100,7 @@ Trong lúc ký publish, mobile khóa chỉnh sửa draft. Backend đối chiếu
 Không có API đặt state=PUBLISHED. Mobile gọi createPlan qua ví merchant, rồi POST /transactions với action=CREATE_PLAN và plan_draft_id.
 Backend chỉ publish draft khi receipt/event từ đúng Vault, đúng merchant, đúng client_reference và toàn bộ điều khoản khớp draft.
 Nếu giao dịch đã xác nhận nhưng app chưa gửi hash, log scanner khôi phục linkage qua merchant + client_reference.
-Published plan GET trả metadata cùng financial terms đọc on-chain; không dùng database draft ghi đè terms.
+Published plan GET trả metadata cùng financial terms đọc từ block đã đủ xác nhận. Terms lấy từ chain.
 
 ### Lists
 /plan-drafts chỉ owner; /plans chỉ published, cursor theo projection block/ID hoặc metadata stable key.
@@ -112,7 +112,7 @@ Không có DELETE plan hoặc sửa terms on-chain trong MVP.
 /me/subscriptions và /merchant/subscriptions dùng danh sách đã index, có thể chậm sau block mới.
 Sau transaction CONFIRMED, backend cập nhật projection ngay; scanner phục hồi các tx chưa được client báo.
 
-/subscriptions/{id} trả nguồn và block sync. Trước ký check-in/refund, eligibility phải đọc live; RPC lỗi trả 503, không giả can_refund=true từ cache.
+/subscriptions/{id} trả trạng thái từ block đã đủ xác nhận theo deployment, cùng nguồn và block sync. Trước ký check-in/refund, eligibility đọc block mới nhất; RPC lỗi trả 503, không giả can_refund=true từ cache.
 Status filter chỉ ACTIVE|COMPLETED|REFUNDED.
 Không cho client truyền subscriber_address để đọc danh sách của ví khác.
 Merchant filter plan_id chỉ chấp nhận plan thuộc merchant đó.

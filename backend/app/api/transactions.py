@@ -126,7 +126,7 @@ def _track(
     lookup=None,
 ):
     head = vault.checked_head()
-    confirmed = head.number - vault.deployment.confirmations + 1
+    confirmed = vault.confirmed_height(head)
     if record.status != "SUBMITTED":
         if (
             record.block_number <= confirmed

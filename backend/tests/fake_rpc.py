@@ -127,6 +127,7 @@ class FakeRpc:
         self.receipts = {}
         self.plans = {}
         self.subs = {}
+        self.subs_by_block = {}
         self.estimated = 17
 
     def block_hash(self, n):
@@ -172,7 +173,12 @@ class FakeRpc:
                     )
                 else:
                     spec, rows = (
-                        (PLAN, self.plans) if name == "getPlan" else (SUB, self.subs)
+                        (PLAN, self.plans)
+                        if name == "getPlan"
+                        else (
+                            SUB,
+                            self.subs_by_block.get(int(params[1], 16), self.subs),
+                        )
                     )
                     values = rows.get(next(iter(args.values())))
                     if values is None:

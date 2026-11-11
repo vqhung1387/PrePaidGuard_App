@@ -310,6 +310,16 @@ class Vault:
         except (Web3Exception, RequestException, OSError, ValueError):
             raise rpc_error() from None
 
+    def confirmed_height(self, head: Block) -> int:
+        return head.number - self.deployment.confirmations + 1
+
+    def confirmed_block(self) -> Block | None:
+        head = self.checked_head()
+        height = self.confirmed_height(head)
+        if height < self.deployment.deployment_block:
+            return None
+        return head if height == head.number else self.block(height)
+
     def check_contract(self, block: Block) -> None:
         try:
             token_address = Web3.to_checksum_address(self.deployment.token.address)

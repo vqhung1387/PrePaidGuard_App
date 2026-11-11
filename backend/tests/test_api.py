@@ -405,6 +405,15 @@ def test_chain_receipts_sync_and_live_boundaries(harness):
         "nonce": 1,
         "nextReleaseAt": BASE_TIME + 130,
     }
+    rpc.head = 104
+    rpc.subs_by_block[103] = {5: sub}
+    pending = client.get(f"{API}/subscriptions/5", headers=sh)
+    assert pending.status_code == 200, pending.json()
+    assert pending.json()["remaining_principal"] == "100000000"
+    assert pending.json()["sync"]["block_number"] == "103"
+    latest = client.get(url, headers=mh).json()
+    assert (latest["nonce"], latest["sync"]["block_number"]) == ("1", "104")
+
     rpc.head = 105
     # No POST for the release. Scanning with an overlapping range restores history.
     with Session(app.state.engine) as db, db.begin():
@@ -425,7 +434,7 @@ def test_chain_receipts_sync_and_live_boundaries(harness):
         "paid_subscriber": "2",
         "paid_platform": "1",
     }
-    rpc.head = 107
+    rpc.head = 106
     refund = rpc.add_tx(
         7,
         106,
@@ -435,7 +444,17 @@ def test_chain_receipts_sync_and_live_boundaries(harness):
         event_name="Refunded",
         event_args={**payout, "nonceAfter": 2},
     )
+    rpc.subs_by_block[105] = {5: rpc.subs[5]}
     rpc.subs[5] = {**rpc.subs[5], "remainingPrincipal": 0, "status": 2, "nonce": 2}
+    assert (
+        submit(sh, refund, "REFUND", subscription_id="5").json()["status"]
+        == "SUBMITTED"
+    )
+    prior = client.get(f"{API}/subscriptions/5", headers=sh).json()
+    assert (prior["status"], prior["remaining_principal"]) == ("ACTIVE", "50000000")
+    assert client.get(url, headers=sh).json()["reasons"] == ["TERMINAL_STATE"]
+
+    rpc.head = 107
     assert (
         submit(sh, refund, "REFUND", subscription_id="5").json()["status"]
         == "CONFIRMED"

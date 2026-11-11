@@ -340,7 +340,7 @@ def run_scan(
         with Session(engine) as db, db.begin():
             lock(db, vault.lock_key)
             head = vault.checked_head()
-            confirmed = head.number - vault.deployment.confirmations + 1
+            confirmed = vault.confirmed_height(head)
             if target is None:
                 vault.check_contract(head)
                 target = confirmed
