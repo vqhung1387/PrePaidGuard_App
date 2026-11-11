@@ -40,7 +40,7 @@ def draft_terms(draft: PlanDraft) -> tuple:
     )
 
 
-def _publish(db: Session, vault: Vault, entry: Log) -> None:
+def reconcile_plan_draft(db: Session, vault: Vault, entry: Log) -> None:
     args = entry.args
     draft = db.scalar(
         select(PlanDraft)
@@ -105,7 +105,7 @@ def _record_events(db: Session, vault: Vault, logs: Iterable[Log]) -> set[int]:
             ):
                 raise config_error()
             merchant = args["merchant"].lower()
-            _publish(db, vault, entry)
+            reconcile_plan_draft(db, vault, entry)
         else:
             merchant = _plan_event(db, vault, plan_id).merchant_address
             if entry.name == "SUBSCRIBED":

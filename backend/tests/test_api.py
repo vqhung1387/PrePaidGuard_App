@@ -210,6 +210,99 @@ def test_metadata_ownership_and_exact_amounts(harness):
     )
 
 
+def test_retry_publication_after_correcting_draft_terms(harness):
+    client, app, vault, rpc = harness
+    merchant = Account.create()
+    headers = login(client, merchant)
+    assert (
+        client.post(
+            API + "/merchants", headers=headers, json={"business_name": "Gym"}
+        ).status_code
+        == 201
+    )
+    pending = draft(client, headers).json()
+    path = f"{API}/plan-drafts/{pending['id']}"
+    reference = bytes.fromhex(pending["client_reference"][2:])
+
+    def create_plan(number, block):
+        return rpc.add_tx(
+            number,
+            block,
+            merchant.address,
+            "createPlan",
+            [reference, TOKEN, 50_000_000, 2, 10, 20],
+            event_name="PlanCreated",
+            event_args={
+                "planId": number,
+                "merchant": merchant.address,
+                "clientReference": reference,
+                "token": TOKEN,
+                "pricePerPeriod": 50_000_000,
+                "totalPeriods": 2,
+                "periodDuration": 10,
+                "gracePeriod": 20,
+            },
+        )
+
+    def submit(hash_, draft_id=pending["id"], auth=headers):
+        return client.post(
+            API + "/transactions",
+            headers=auth,
+            json={"tx_hash": hash_, "action": "CREATE_PLAN", "plan_draft_id": draft_id},
+        )
+
+    def set_price(price):
+        response = client.patch(path, headers=headers, json={"price_per_period": price})
+        assert response.status_code == 200, response.json()
+
+    tx = create_plan(1, 100)
+    set_price("60000000")
+    rpc.head = 120
+    assert run_scan(app.state.engine, vault, app.state.settings, max_batches=3) == (
+        119,
+        True,
+    )
+    with Session(app.state.engine) as db:
+        indexed_id = db.scalars(select(EventRecord.id)).one()
+
+    assert_error(submit(tx), 409, "TX_MISMATCH")
+    unchanged = client.get(path, headers=headers).json()
+    assert unchanged["state"] == "DRAFT"
+    assert unchanged["onchain_plan_id"] is None
+    assert unchanged["price_per_period"] == "60000000"
+
+    set_price("50000000")
+    stranger = login(client, Account.create())
+    assert_error(submit(tx, auth=stranger), 404, "NOT_FOUND")
+    another_draft = draft(client, headers).json()
+    assert_error(submit(tx, another_draft["id"]), 409, "TX_MISMATCH")
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        retries = list(executor.map(submit, [tx, tx]))
+    for response in retries:
+        assert response.status_code == 202, response.json()
+        assert response.json()["status"] == "CONFIRMED"
+        assert response.json()["event_ids"] == [str(indexed_id)]
+    assert retries[0].json() == retries[1].json()
+    with Session(app.state.engine) as db:
+        assert db.scalars(select(EventRecord.id)).one() == indexed_id
+        assert db.scalars(select(TransactionRecord.tx_hash)).one() == tx
+
+    published = client.get(path, headers=headers).json()
+    assert published["state"] == "PUBLISHED"
+    assert published["onchain_plan_id"] == "1"
+    assert published["publication_tx_hash"] == tx
+
+    other_tx = create_plan(2, 120)
+    rpc.head = 121
+    assert run_scan(app.state.engine, vault, app.state.settings, max_batches=1) == (
+        120,
+        True,
+    )
+    assert_error(submit(other_tx), 409, "TX_MISMATCH")
+    assert client.get(path, headers=headers).json() == published
+
+
 def test_chain_receipts_sync_and_live_boundaries(harness):
     client, app, vault, rpc = harness
     merchant, subscriber, stranger = (

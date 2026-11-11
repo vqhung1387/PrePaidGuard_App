@@ -12,7 +12,12 @@ from app.core.errors import ApiError, not_found, rpc_error
 from app.models.entities import EventRecord, TransactionRecord, User
 from app.schemas.api import TransactionResponse, TransactionSubmit
 from app.schemas.types import Hash32, utcnow
-from app.services.sync import draft_terms, plan_terms, sync_through
+from app.services.sync import (
+    draft_terms,
+    plan_terms,
+    reconcile_plan_draft,
+    sync_through,
+)
 
 router = APIRouter(tags=["transaction tracking"])
 
@@ -197,6 +202,8 @@ def _track(
         )
         if indexed is None or indexed.payload != entry.payload:
             raise rpc_error()
+        if draft and draft.state == "DRAFT":
+            reconcile_plan_draft(db, vault, entry)
         if draft and (
             draft.onchain_plan_id != indexed.plan_id
             or draft.publication_tx_hash != record.tx_hash
