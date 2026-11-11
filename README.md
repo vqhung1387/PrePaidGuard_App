@@ -21,7 +21,7 @@ MVP UniHack cho quản lý ký quỹ dịch vụ trả trước trên Avalanche.
 
 ## Trạng thái
 
-Đã tạo khung thư mục và tài liệu hướng dẫn. Chưa khởi tạo Flutter SDK project, FastAPI app, Hardhat project hoặc cài dependencies. Các file .gitkeep giữ thư mục trống trong Git; có thể xóa khi thư mục có mã nguồn.
+Backend đã có FastAPI, migration PostgreSQL và bộ kiểm thử. Xem [hướng dẫn backend](backend/README.md) và [handoff tích hợp](docs/backend-handoff.md). Nghiệm thu demo cần bản Flutter và deployment Fuji của nhóm.
 
 ## Ranh giới trách nhiệm
 
@@ -33,7 +33,7 @@ MVP UniHack cho quản lý ký quỹ dịch vụ trả trước trên Avalanche.
 ## Bước tiếp theo
 
 1. Chốt docs/business-rules.md và shared/check-in.schema.json theo hướng dẫn trong shared/README.md.
-2. Khởi tạo Flutter, FastAPI và Hardhat trong các thư mục tương ứng.
+2. Khởi tạo Flutter và Hardhat, chạy backend theo hướng dẫn trong thư mục backend.
 3. Thử luồng kết nối ví, ký EIP-712 và xác thực contract trước khi mở rộng giao diện.
 4. Làm tạo gói → đăng ký → check-in → refund bằng token thử nghiệm trên Fuji.
 
@@ -41,7 +41,7 @@ Xem [docs/tasks.md](docs/tasks.md) để phân công chi tiết.
 
 ## Tài liệu thiết kế
 
-Các tài liệu dưới đây là bản thiết kế dự kiến, chưa phải mô tả API đã triển khai. Đọc project.md trước; các quyết định B1–B6 vẫn cần nhóm xác nhận.
+Đọc project.md trước. Backend triển khai theo baseline B1–B6 dự kiến và OpenAPI sinh từ mã nguồn. Nhóm cần xác nhận baseline cùng ABI thực tế trước demo.
 
 - [Tổng quan dự án](docs/project.md)
 - [Data objects, DTO và EIP-712](docs/schema.md)
