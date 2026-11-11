@@ -210,6 +210,58 @@ def test_metadata_ownership_and_exact_amounts(harness):
     )
 
 
+def test_filtered_plan_list_recovers_after_chain_reorg(harness):
+    client, app, vault, rpc = harness
+    original, replacement = Account.create().address, Account.create().address
+
+    def list_for(wallet):
+        return client.get(API + "/plans", params={"merchant_address": wallet})
+
+    def mine_plan(tx_number, wallet, reference):
+        plan = {
+            "planId": 1,
+            "merchant": wallet,
+            "clientReference": reference,
+            "token": TOKEN,
+            "pricePerPeriod": 50_000_000,
+            "totalPeriods": 2,
+            "periodDuration": 10,
+            "gracePeriod": 20,
+        }
+        rpc.plans[1] = plan
+        rpc.add_tx(
+            tx_number,
+            100,
+            wallet,
+            "createPlan",
+            [reference, TOKEN, 50_000_000, 2, 10, 20],
+            event_name="PlanCreated",
+            event_args=plan,
+        )
+
+    mine_plan(1, original, b"a" * 32)
+    settings = app.state.settings
+    assert run_scan(app.state.engine, vault, settings, max_batches=1) == (100, True)
+    assert list_for(original).json()["items"][0]["merchant_address"] == original.lower()
+
+    rpc.hashes[100] = "0x" + "de" * 32
+    rpc.logs.clear()
+    mine_plan(2, replacement, b"b" * 32)
+    assert_error(list_for(original), 503, "RPC_UNAVAILABLE")
+
+    rpc.plans.clear()
+    assert_error(list_for(original), 503, "RPC_UNAVAILABLE")
+    rpc.logs.clear()
+    mine_plan(3, replacement, b"b" * 32)
+
+    assert run_scan(app.state.engine, vault, settings, max_batches=1) == (100, True)
+    assert list_for(original).json() == {"items": [], "next_cursor": None}
+    assert (
+        list_for(replacement).json()["items"][0]["merchant_address"]
+        == replacement.lower()
+    )
+
+
 def test_retry_publication_after_correcting_draft_terms(harness):
     client, app, vault, rpc = harness
     merchant = Account.create()

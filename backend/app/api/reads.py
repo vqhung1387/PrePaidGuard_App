@@ -8,7 +8,7 @@ from app.api.metadata import merchant_response
 from app.api.system import Chain
 from app.blockchain.vault import Block, chain_time, hex_value
 from app.core.db import lock
-from app.core.errors import config_error, not_found, rpc_error
+from app.core.errors import ApiError, config_error, not_found, rpc_error
 from app.models.entities import (
     EventRecord,
     Merchant,
@@ -98,10 +98,21 @@ def list_plans(
         limit,
         cursor,
     )
-    items = [
-        plan_response(db, vault, vault.plan(event.plan_id, block), block)
-        for event in events
-    ]
+    items = []
+    for event in events:
+        try:
+            plan = vault.plan(event.plan_id, block)
+        except ApiError as error:
+            if error.status == 404:
+                raise rpc_error() from None
+            raise
+        # A reorg can reuse a plan ID while the index still describes the old plan.
+        if (
+            plan["merchant"].lower() != event.merchant_address
+            or hex_value(plan["clientReference"]) != event.payload["clientReference"]
+        ):
+            raise rpc_error()
+        items.append(plan_response(db, vault, plan, block))
     vault.require_canonical(block)
     return {"items": items, "next_cursor": next_cursor}
 
