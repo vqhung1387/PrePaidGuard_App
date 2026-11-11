@@ -21,6 +21,10 @@
 - B10 cần URL HTTPS đã deploy, `/ready` trả 200 và Android gọi được URL đó. I01 cần hai ví/thiết bị trên Fuji, có tx hash publish, subscribe, release và refund của gói đủ hạn. Kiểm tra thêm việc sync lịch sử khi client chưa báo hash.
 - I04 cần link repo/slide/video, cấu hình demo công khai, ABI và địa chỉ thật, cùng explorer evidence. I06 cần kiểm lại trên thiết bị và dashboard, xem link với tư cách người chấm rồi xác nhận đã submit. Trạng thái hiện tại của các bước này phụ thuộc bản Flutter, Vault Fuji, quyền host và bộ bài nộp của nhóm.
 
+### Kiểm thử I01 local
+
+Đã chạy BE tại commit `ce8e154` với PostgreSQL 16, Anvil chain 31337 và Vault fixture biên dịch bằng Solidity 0.8.28. Hai ví test ký SIWE và CheckIn EIP-712. API xác nhận publish, subscribe, giải ngân và refund từ receipt thật trên Anvil. Scanner khôi phục gói thứ hai từ log khi client chưa báo hash. Giao dịch quét lại trả REVERTED. Với 200 mUSDC cấp ban đầu, kết thúc luồng có 50 mUSDC ở ví merchant, 100 ở ví subscriber và 50 còn trong Vault của gói đang chạy. Fixture tắt yield. Vẫn cần chạy luồng này với bản Flutter và deployment Fuji thật để nghiệm thu I01.
+
 ## I04 — Nội dung nháp cho pitch và demo
 
 1. **Vấn đề.** Khách trả trước toàn bộ gói dịch vụ. Nhóm muốn merchant nhận tiền theo kỳ đã sử dụng và khách có thể hoàn phần chưa dùng theo thời hạn đã công bố.
