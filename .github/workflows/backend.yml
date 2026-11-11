@@ -46,3 +46,11 @@ jobs:
       - run: uv run --locked pytest -q
       - run: docker build -f backend/Dockerfile -t prepaidguard-backend:ci .
         working-directory: .
+      - name: Start backend container
+        run: |
+          docker run -d --name prepaidguard-ci --network host \
+            -e DATABASE_URL -e PORT=8089 prepaidguard-backend:ci
+          trap 'docker rm -f prepaidguard-ci >/dev/null' EXIT
+          curl --retry 8 --retry-connrefused --retry-delay 1 --max-time 5 \
+            --fail --silent --show-error http://127.0.0.1:8089/health ||
+            { docker logs prepaidguard-ci; exit 1; }

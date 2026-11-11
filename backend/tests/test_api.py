@@ -1,6 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 
+import jwt
 from eth_account import Account
 from eth_account.messages import encode_defunct
 from sqlalchemy import func, select, update
@@ -97,7 +98,20 @@ def test_wallet_session_replay_and_revocation(harness):
     success = next(result for result in results if result.status_code == 200)
     rejected = next(result for result in results if result.status_code == 401)
     assert_error(rejected, 401, "CHALLENGE_USED")
-    headers = {"Authorization": "Bearer " + success.json()["access_token"]}
+    access_token = success.json()["access_token"]
+    headers = {"Authorization": "Bearer " + access_token}
+    claims = jwt.decode(access_token, options={"verify_signature": False})
+    key = app.state.settings.access_token_secret.get_secret_value()
+    for changes, code in (
+        ({"exp": int(utcnow().timestamp()) - 1}, "TOKEN_EXPIRED"),
+        ({"chain_id": 1}, "UNAUTHORIZED"),
+    ):
+        invalid = jwt.encode({**claims, **changes}, key, algorithm="HS256")
+        assert_error(
+            client.get(API + "/me", headers={"Authorization": "Bearer " + invalid}),
+            401,
+            code,
+        )
     assert (
         client.get(API + "/me", headers=headers).json()["wallet_address"]
         == wallet.address.lower()
