@@ -118,6 +118,7 @@ class FakeRpc:
         self.codec = Web3().codec
         self.chain_id = 43113
         self.head = 101
+        self.log_ranges = []
         self.outage = False
         self.timestamps = {}
         self.hashes = {}
@@ -155,6 +156,7 @@ class FakeRpc:
         elif method == "eth_getLogs":
             filter_ = params[0]
             first, last = int(filter_["fromBlock"], 16), int(filter_["toBlock"], 16)
+            self.log_ranges.append((first, last))
             result = [
                 log for log in self.logs if first <= int(log["blockNumber"], 16) <= last
             ]

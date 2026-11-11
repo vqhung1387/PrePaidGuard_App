@@ -24,7 +24,7 @@ uv run --locked uvicorn app.main:app --reload
 
 Đặt `ABI_FILE` và `DEPLOYMENT_FILE` trỏ tới file do contract team xuất trong `shared/`. Đường dẫn tương đối tính từ `backend/`. `CHAIN_ID` phải khớp manifest, mặc định Fuji 43113. Có thể đặt `RPC_URL` riêng cho server. API `/config` chỉ trả URL công khai đã cấu hình trong manifest. Khi chưa có ABI/manifest, health và OpenAPI vẫn hoạt động, endpoint cần Vault trả `503 CONFIG_MISMATCH`.
 
-ABI nhận mảng ABI hoặc artifact có khóa `abi`. Backend đối chiếu tên getter, calldata và event theo [schema](../docs/schema.md) và [API](../docs/api.md). Bên contract cần xác nhận mã enum thật và các trường dưới đây khi xuất manifest. Đây là **ví dụ định dạng** với placeholder, cần thay bằng dữ liệu từ deployment:
+ABI nhận mảng ABI hoặc artifact có khóa `abi`. Khi nạp cấu hình, backend đối chiếu các trường getter, calldata, event và thứ tự/kiểu của tuple CheckIn theo [schema](../docs/schema.md) và [API](../docs/api.md). ABI không tương thích trả `503 CONFIG_MISMATCH`. Bên contract cần xác nhận mã enum thật và các trường dưới đây khi xuất manifest. Đây là **ví dụ định dạng** với placeholder, cần thay bằng dữ liệu từ deployment:
 
 ```json
 {
@@ -52,7 +52,7 @@ uv run --locked python -m app.services.sync --max-batches 100
 uv run --locked python -m app.services.sync --rebuild --max-batches 100
 ```
 
-Chạy lệnh đầu sau khi deploy và trước demo để bắt kịp chain. `SYNC_INTERVAL_SECONDS` lớn hơn 0 bật sync định kỳ cho API. CLI và API dùng cùng khóa theo deployment để ghi event và cursor. Nếu gặp RPC giới hạn block range, giảm `SYNC_BATCH_SIZE` và `SYNC_OVERLAP` rồi chạy lại. `--rebuild` xóa bản đọc trong phạm vi Vault đang cấu hình, bỏ liên kết publish cũ và đưa tracking về SUBMITTED để đối chiếu lại. Hồ sơ, nội dung draft và phiên đăng nhập được giữ. Dùng lệnh này khi đã kiểm tra config và có thể chờ scan từ deployment block. Event ID có thể thay đổi khi dựng lại.
+Chạy lệnh đầu sau khi deploy và trước demo để bắt kịp chain. `SYNC_INTERVAL_SECONDS` lớn hơn 0 bật sync định kỳ cho API. CLI và API dùng cùng khóa theo deployment để ghi event và cursor. Mặc định quét tối đa 90 block mới và 8 block chồng lấn mỗi lần. Giữ tổng `SYNC_BATCH_SIZE` và `SYNC_OVERLAP` không quá 100 nếu dùng RPC công khai Fuji. `--rebuild` xóa bản đọc trong phạm vi Vault đang cấu hình, bỏ liên kết publish cũ và đưa tracking về SUBMITTED để đối chiếu lại. Hồ sơ, nội dung draft và phiên đăng nhập được giữ. Dùng lệnh này khi đã kiểm tra config và có thể chờ scan từ deployment block. Event ID có thể thay đổi khi dựng lại.
 
 Receipt chỉ thành CONFIRMED khi match sender, Vault, chain, calldata và event đã đủ xác nhận. API scan tối đa hai batch mỗi lần đối chiếu receipt. Nếu cursor chưa tới block, response vẫn SUBMITTED và client có thể poll. Phải giữ tx hash qua khi mất mạng. RPC lỗi trả 503 và giữ trạng thái để thử lại.
 

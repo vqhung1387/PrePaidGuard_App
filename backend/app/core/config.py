@@ -86,7 +86,7 @@ class Settings(BaseSettings):
     challenge_rate_limit: int = Field(default=10, ge=1)
     cors_origins: list[str] = Field(default_factory=list)
     rpc_timeout_seconds: float = Field(default=5, gt=0, le=30)
-    sync_batch_size: int = Field(default=500, ge=1, le=2000)
+    sync_batch_size: int = Field(default=90, ge=1, le=2000)
     sync_overlap: int = Field(default=8, ge=0, le=100)
     sync_interval_seconds: int = Field(default=0, ge=0)
 

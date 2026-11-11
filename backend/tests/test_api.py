@@ -7,6 +7,7 @@ from eth_account.messages import encode_defunct
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
+from app.core.config import Settings
 from app.core.db import lock
 from app.models.entities import (
     AuthChallenge,
@@ -15,10 +16,19 @@ from app.models.entities import (
     TransactionRecord,
 )
 from app.schemas.types import UINT_MAX, utcnow
-from app.services.sync import sync_through
+from app.services.sync import run_scan, sync_through
 from tests.fake_rpc import BASE_TIME, TOKEN
 
 API = "/api/v1"
+
+
+def test_default_log_windows_fit_public_fuji(harness):
+    _, app, vault, rpc = harness
+    rpc.head = 285
+    settings = Settings(_env_file=None)
+    assert run_scan(app.state.engine, vault, settings, max_batches=3) == (284, True)
+    assert rpc.log_ranges == [(100, 189), (182, 279), (272, 284)]
+    assert all(last - first + 1 <= 100 for first, last in rpc.log_ranges)
 
 
 def signed_challenge(client, wallet):

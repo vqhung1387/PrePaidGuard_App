@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
+from eth_abi.exceptions import DecodingError
 from eth_utils import event_abi_to_log_topic, function_signature_to_4byte_selector
 from pydantic import ValidationError
 from requests.exceptions import RequestException
@@ -98,6 +99,40 @@ SUBSCRIPTION_FIELDS = (
     "nextReleaseAt",
     "status",
 )
+CHECK_IN_FIELDS = (
+    ("subscriptionId", "uint256"),
+    ("merchant", "address"),
+    ("periodIndex", "uint256"),
+    ("nonce", "uint256"),
+    ("deadline", "uint256"),
+)
+FIELD_TYPES = {
+    "merchant": "address",
+    "subscriber": "address",
+    "token": "address",
+    "clientReference": "bytes32",
+    "completed": "bool",
+}
+
+
+def named_fields(abi_fields: list[dict], fields: tuple[str, ...]) -> bool:
+    types = {item["name"]: item["type"] for item in abi_fields}
+    return len(abi_fields) == len(fields) and all(
+        name in types
+        and (
+            types[name] == FIELD_TYPES[name]
+            if name in FIELD_TYPES
+            else types[name].startswith("uint") and types[name][4:].isdigit()
+        )
+        for name in fields
+    )
+
+
+def struct_outputs(abi: dict) -> list[dict]:
+    outputs = abi["outputs"]
+    if len(outputs) == 1 and outputs[0]["type"] == "tuple":
+        return outputs[0]["components"]
+    return outputs
 
 
 def hex_value(value) -> str:
@@ -181,20 +216,13 @@ class Vault:
             }
             self.address = Web3.to_checksum_address(deployment.vault_address)
             self.contract = self.web3.eth.contract(address=self.address, abi=abi)
-            functions = {entry["name"] for entry in abi if entry["type"] == "function"}
-            required = {
-                "getPlan",
-                "getSubscription",
-                *(name for name, _ in ACTION.values()),
-            }
-            if deployment.yield_mode == "MOCK":
-                required.add("estimateYield")
-            if not required <= functions:
-                raise config_error()
+            self._validate_functions()
             self.events = {}
             for name, (kind, fields) in EVENTS.items():
                 event = self.contract.get_event_by_name(name)
-                if {arg["name"] for arg in event.abi["inputs"]} != set(fields):
+                if event.abi["anonymous"] or not named_fields(
+                    event.abi["inputs"], fields
+                ):
                     raise config_error()
                 self.events[hex_value(event_abi_to_log_topic(event.abi))] = kind, event
         except (
@@ -206,6 +234,56 @@ class Vault:
             Web3Exception,
         ):
             raise config_error() from None
+
+    def _validate_functions(self) -> None:
+        def abi(name: str) -> dict:
+            return self.contract.get_function_by_name(name).abi
+
+        for name, id_name in (("subscribe", "planId"), ("refund", "subscriptionId")):
+            inputs = abi(name)["inputs"]
+            if [(field["name"], field["type"]) for field in inputs] != [
+                (id_name, "uint256")
+            ]:
+                raise config_error()
+        if not named_fields(
+            abi("createPlan")["inputs"],
+            (
+                "clientReference",
+                "token",
+                "pricePerPeriod",
+                "totalPeriods",
+                "periodDuration",
+                "gracePeriod",
+            ),
+        ):
+            raise config_error()
+        check_in = abi("checkInWithSignature")["inputs"]
+        if [field["type"] for field in check_in] != ["tuple", "bytes"] or tuple(
+            (field["name"], field["type"]) for field in check_in[0]["components"]
+        ) != CHECK_IN_FIELDS:
+            raise config_error()
+        for name, fields in (
+            ("getPlan", PLAN_FIELDS),
+            ("getSubscription", SUBSCRIPTION_FIELDS),
+        ):
+            getter = abi(name)
+            if [field["type"] for field in getter["inputs"]] != ["uint256"]:
+                raise config_error()
+            outputs = struct_outputs(getter)
+            expected = (
+                fields
+                if any(field["name"] == fields[0] for field in outputs)
+                else fields[1:]
+            )
+            relevant = [field for field in outputs if field["name"] in expected]
+            if not named_fields(relevant, expected):
+                raise config_error()
+        if self.deployment.yield_mode == "MOCK":
+            estimate = abi("estimateYield")
+            if [field["type"] for field in estimate["inputs"]] != ["uint256"] or [
+                field["type"] for field in estimate["outputs"]
+            ] != ["uint256"]:
+                raise config_error()
 
     @property
     def scope(self) -> dict:
@@ -248,7 +326,7 @@ class Vault:
             ):
                 raise config_error()
             self.require_canonical(block)
-        except ContractLogicError:
+        except (ContractLogicError, DecodingError):
             raise config_error() from None
         except (Web3Exception, RequestException, OSError, ValueError):
             raise rpc_error() from None
@@ -274,9 +352,7 @@ class Vault:
         try:
             fn = self.contract.get_function_by_name(name)(id_)
             result = fn.call(block_identifier=block.number)
-            outputs = fn.abi["outputs"]
-            if len(outputs) == 1 and outputs[0]["type"] == "tuple":
-                outputs = outputs[0]["components"]
+            outputs = struct_outputs(fn.abi)
             values = dict(zip((item["name"] for item in outputs), result, strict=True))
             # Some Solidity getters omit the ID because it is already an input.
             values.setdefault(fields[0], id_)
@@ -358,7 +434,7 @@ class Vault:
                 decoded["blockNumber"],
                 hex_value(decoded["blockHash"]),
             )
-        except (Web3Exception, ValueError, TypeError, KeyError):
+        except (Web3Exception, DecodingError, ValueError, TypeError, KeyError):
             raise rpc_error() from None
 
     def logs(self, first: int, last: int) -> list[Log]:
