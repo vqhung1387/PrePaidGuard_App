@@ -1,0 +1,63 @@
+name: Contracts and API integration
+
+on:
+  push:
+    branches: [backend, main]
+    paths: ["contracts/**", "shared/**", "backend/**", ".github/workflows/contracts.yml"]
+  pull_request:
+    paths: ["contracts/**", "shared/**", "backend/**", ".github/workflows/contracts.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: prepaidguard_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 3s --health-retries 12
+    env:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@127.0.0.1:5432/prepaidguard_test
+      TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@127.0.0.1:5432/prepaidguard_test
+      CONTRACT_TEST_RPC: http://127.0.0.1:8545
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: contracts/package-lock.json
+      - run: npm ci
+        working-directory: contracts
+      - run: npm run typecheck
+        working-directory: contracts
+      - run: npm test
+        working-directory: contracts
+      - run: npm run export
+        working-directory: contracts
+      - run: git diff --exit-code -- shared/abi shared/check-in.types.json shared/check-in.fixture.json shared/check-in.schema.json
+      - name: Start local EVM
+        run: |
+          cd contracts
+          npx hardhat node --hostname 127.0.0.1 > /tmp/prepaidguard-node.log 2>&1 &
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}' http://127.0.0.1:8545; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/prepaidguard-node.log
+          exit 1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
+        with:
+          version: "0.13.7"
+          enable-cache: false
+      - run: uv sync --locked
+        working-directory: backend
+      - run: uv run --locked pytest -q
+        working-directory: backend

@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: prepaidguard-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: ENVIRONMENT
+        value: demo
+      - key: CHAIN_ID
+        value: "43113"
+      - key: ABI_FILE
+        sync: false
+      - key: DEPLOYMENT_FILE
+        sync: false
+      - key: ACCESS_TOKEN_SECRET
+        generateValue: true
+      - key: SYNC_INTERVAL_SECONDS
+        value: "20"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: prepaidguard-db
+          property: connectionString
+
+databases:
+  - name: prepaidguard-db
+    plan: free
+    ipAllowList: []
