@@ -68,7 +68,7 @@ Receipt chỉ thành CONFIRMED khi match sender, Vault, chain, calldata và even
 
 ## Test và deploy demo
 
-Tạo PostgreSQL database dành cho test rồi đặt `TEST_DATABASE_URL`. Test tạo schema riêng cho mỗi case, chạy Alembic và dọn schema sau đó. CI chạy với PostgreSQL 16. Bộ test mô phỏng RPC nhưng dùng Web3 thực để giải mã ABI.
+Tạo PostgreSQL database dành cho test rồi đặt `TEST_DATABASE_URL`. Test tạo schema riêng cho mỗi case, chạy Alembic và dọn schema sau đó. CI chạy với PostgreSQL 16. Bộ test RPC mô phỏng dùng Web3 thực để giải mã ABI. Bộ test bundle kiểm ABI xuất từ Solidity và chữ ký TypeScript/Python. Khi đặt thêm `CONTRACT_TEST_RPC=http://127.0.0.1:8545` với node local và contract đã build, test tích hợp chạy PrepaidVault thật ở cả DISABLED và MOCK. Xem [contracts/README.md](../contracts/README.md).
 
 ```sh
 uv run --locked ruff check .

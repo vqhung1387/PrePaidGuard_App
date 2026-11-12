@@ -1,6 +1,6 @@
 # Luật nghiệp vụ cần chốt
 
-Trạng thái: đề xuất, chưa được nhóm xác nhận.
+Backend và Solidity hiện dùng baseline B1–B6 trong project.md theo phạm vi người dùng giao. Các điểm dưới đây cần nhóm nghiệm thu trên bản demo.
 
 - [ ] Giải ngân theo tháng hay từng buổi; thời điểm giải ngân kỳ đầu.
 - [ ] Một kỳ chỉ giải ngân một lần; quy tắc với kỳ bị bỏ qua.
@@ -10,4 +10,4 @@ Trạng thái: đề xuất, chưa được nhóm xác nhận.
 - [ ] Tỷ lệ yield dự kiến 70/20/10; làm tròn và phân phối khi refund.
 - [ ] Yield mô phỏng hay tích hợp thật theo yêu cầu cuộc thi.
 
-Không check-in không chứng minh cơ sở đóng cửa. Chưa triển khai refund cho đến khi nhóm thống nhất chính sách này.
+Refund được triển khai theo điều kiện thời gian tại B3/B4, với ý nghĩa khách hủy do không sử dụng. Không check-in không chứng minh cơ sở đóng cửa. Thay chính sách refund cần sửa đồng bộ contract, API và Flutter.

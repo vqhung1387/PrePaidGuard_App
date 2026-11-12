@@ -27,6 +27,7 @@ node_modules/
 contracts/artifacts/
 contracts/cache/
 contracts/coverage/
+shared/deployments/local*.json
 
 # Editor / OS
 .idea/

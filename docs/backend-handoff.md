@@ -11,7 +11,7 @@
 - Chạy API và mở `/docs` hoặc tải `/openapi.json`. Đối chiếu đủ 24 thao tác với [docs/api.md](api.md). HTTP body gồm DTO trực tiếp. Số tiền/ID chain/block number là chuỗi số nguyên. Phiên JWT mang chain ID, ví và session; logout thu hồi session ở DB.
 - Mobile ký chính xác chuỗi SIWE do `POST /api/v1/auth/challenge` trả về. Client chỉ gửi `challenge_id` và chữ ký 65 byte đến verify. Kiểm thử ví Flutter trên thiết bị thật vẫn thuộc D04.
 - Ký CheckIn theo domain, thứ tự, kiểu trường và TTL trong [docs/schema.md](schema.md). API eligibility chỉ trả điều kiện theo block, QR và giao dịch do ví ký. Payload QR và fixture chữ ký dùng chung cần bên C chốt cùng A/B trước nghiệm thu.
-- Adapter BE đọc tên trường getter, calldata và event theo ABI do contract xuất. Hai getter có thể trả tuple có tên trường hoặc các đầu ra có tên. Xem [backend/README.md](../backend/README.md) cho manifest, mã enum, đường dẫn và dữ liệu cần xác nhận với C. Test RPC hiện dùng ABI fixture theo tài liệu draft. Chạy lại test với ABI thật trước khi deploy demo.
+- Adapter BE đọc tên trường getter, calldata và event theo ABI xuất tại shared/abi/PrepaidVault.json. Hai getter có thể trả tuple có tên trường hoặc các đầu ra có tên. Test backend kiểm ABI thật trước RPC và chạy với receipt thật của PrepaidVault ở cả DISABLED và MOCK trên node local. Xem contracts/README.md cho deploy và export.
 - Backend dùng B1–B6 trong [docs/project.md](project.md) làm baseline đọc trạng thái. Đặc biệt, tại đúng `refund_available_at` thì check-in đóng và refund mở. Luồng chuyển tiền vẫn thực thi trong Vault.
 
 ## D06, B10, I01, I04 và I06 — Môi trường và điều kiện nghiệm thu
@@ -24,6 +24,10 @@
 ### Kiểm thử I01 local
 
 Đã chạy BE tại commit `ce8e154` với PostgreSQL 16, Anvil chain 31337 và Vault fixture biên dịch bằng Solidity 0.8.28. Hai ví test ký SIWE và CheckIn EIP-712. API xác nhận publish, subscribe, giải ngân và refund từ receipt thật trên Anvil. Scanner khôi phục gói thứ hai từ log khi client chưa báo hash. Giao dịch quét lại trả REVERTED. Với 200 mUSDC cấp ban đầu, kết thúc luồng có 50 mUSDC ở ví merchant, 100 ở ví subscriber và 50 còn trong Vault của gói đang chạy. Fixture tắt yield. Vẫn cần chạy luồng này với bản Flutter và deployment Fuji thật để nghiệm thu I01.
+
+Cập nhật 12/11/2026: bộ backend hiện chạy với PrepaidVault thật từ contracts/ trên Hardhat chain 31337 và PostgreSQL 16 bằng tests/test_live_contract.py. Cả DISABLED và MOCK đều qua. Kiểm thêm phục hồi draft sau sửa terms, receipt REVERTED, scanner khôi phục tx chưa được client báo và chia yield theo event. Mode MOCK nạp riêng 101 và 21 atomic units cho hai subscription. Sau release/refund, merchant nhận tổng 50,000,084, subscriber còn 100,000,024, treasury nhận 14 và adapter giữ 50,000,000 gốc của vị thế còn hoạt động. Test xóa schema DB riêng sau khi chạy.
+
+Đã xuất ABI và vector CheckIn TypeScript/Python. D05 còn cần Flutter kiểm vector và ký trên thiết bị. C08 còn cần AVAX Fuji cho ví deploy để chạy script và ghi tx evidence. B10 còn cần host HTTPS với PostgreSQL được cấp quyền triển khai.
 
 ## I04 — Nội dung nháp cho pitch và demo
 
