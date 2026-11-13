@@ -280,3 +280,31 @@ class SyncCursor(Base):
         DateTime(timezone=True), default=utcnow, onupdate=utcnow
     )
     __table_args__ = uint_checks("last_processed_block")
+
+
+class ProjectionIssue(Identity, VaultScope, Base):
+    """Explicit quarantine; raw chain events remain authoritative and retained."""
+
+    __tablename__ = "projection_issues"
+    subscription_id: Mapped[int] = mapped_column(UInt256)
+    plan_id: Mapped[int] = mapped_column(UInt256)
+    merchant_address: Mapped[str] = mapped_column(String(42))
+    subscriber_address: Mapped[str] = mapped_column(String(42))
+    code: Mapped[str] = mapped_column(String(64))
+    raw_timestamps: Mapped[dict] = mapped_column(JSONB)
+    synced_block_number: Mapped[int] = mapped_column(UInt256)
+    synced_block_hash: Mapped[str] = mapped_column(String(66))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
+    )
+    __table_args__ = (
+        UniqueConstraint(
+            "chain_id", "vault_address", "subscription_id", name="uq_projection_issue"
+        ),
+        Index("ix_issue_subscriber", "chain_id", "vault_address", "subscriber_address"),
+        Index("ix_issue_merchant", "chain_id", "vault_address", "merchant_address"),
+        *uint_checks("subscription_id", "plan_id", "synced_block_number"),
+        CheckConstraint(
+            "code = 'UNSUPPORTED_TIMESTAMP'", name="ck_projection_issue_code"
+        ),
+    )

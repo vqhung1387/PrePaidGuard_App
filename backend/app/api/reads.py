@@ -13,6 +13,7 @@ from app.models.entities import (
     EventRecord,
     Merchant,
     PlanDraft,
+    ProjectionIssue,
     SubscriptionSnapshot,
     User,
 )
@@ -21,12 +22,13 @@ from app.schemas.api import (
     EventResponse,
     Page,
     PlanResponse,
+    SubscriptionPage,
     SubscriptionResponse,
     SubscriptionStatus,
     SyncInfo,
     YieldSummary,
 )
-from app.schemas.types import Address, UintString, utcnow
+from app.schemas.types import Address, UintString, timestamp_supported, utcnow
 from app.services.pagination import TIMESTAMP_KEY, Cursor, Limit, paginate
 from app.services.sync import plan_terms, sync_through
 
@@ -174,7 +176,7 @@ def projection_response(
 
 
 def subscription_page(
-    db: Db, vault: Chain, query, status, limit: int, cursor: str | None
+    db: Db, vault: Chain, query, status, limit: int, cursor: str | None, issue_query
 ):
     if status is not None:
         query = query.filter_by(status=status)
@@ -189,10 +191,13 @@ def subscription_page(
     return {
         "items": [projection_response(vault, row) for row in rows],
         "next_cursor": next_cursor,
+        "issues": list(
+            db.scalars(issue_query.order_by(ProjectionIssue.subscription_id))
+        ),
     }
 
 
-@router.get("/me/subscriptions", response_model=Page[SubscriptionResponse])
+@router.get("/me/subscriptions", response_model=SubscriptionPage)
 def my_subscriptions(
     db: Db,
     principal: Current,
@@ -205,10 +210,13 @@ def my_subscriptions(
         **vault.scope,
         subscriber_address=principal.user.wallet_address,
     )
-    return subscription_page(db, vault, query, status, limit, cursor)
+    issues = select(ProjectionIssue).filter_by(
+        **vault.scope, subscriber_address=principal.user.wallet_address
+    )
+    return subscription_page(db, vault, query, status, limit, cursor, issues)
 
 
-@router.get("/merchant/subscriptions", response_model=Page[SubscriptionResponse])
+@router.get("/merchant/subscriptions", response_model=SubscriptionPage)
 def merchant_subscriptions(
     db: Db,
     principal: Current,
@@ -235,7 +243,10 @@ def merchant_subscriptions(
         if event_id is None:
             raise not_found()
         query = query.filter_by(plan_id=int(plan_id))
-    return subscription_page(db, vault, query, status, limit, cursor)
+    issues = select(ProjectionIssue).filter_by(**vault.scope, merchant_address=wallet)
+    if plan_id is not None:
+        issues = issues.filter_by(plan_id=int(plan_id))
+    return subscription_page(db, vault, query, status, limit, cursor, issues)
 
 
 def participant(
@@ -245,6 +256,15 @@ def participant(
     plan = vault.plan(sub["planId"], block)
     if wallet not in {sub["subscriber"].lower(), plan["merchant"].lower()}:
         raise not_found()
+    times = [sub["startedAt"]]
+    if sub["status"] == "ACTIVE":
+        times.extend([sub["nextReleaseAt"], sub["nextReleaseAt"] + plan["gracePeriod"]])
+    if not all(timestamp_supported(value) for value in times):
+        raise ApiError(
+            409,
+            "UNSUPPORTED_TIMESTAMP",
+            "Lịch của gói vượt phạm vi thời gian hỗ trợ; xem lịch sử on-chain.",
+        )
     return sub, plan
 
 
@@ -376,9 +396,14 @@ def subscription_events(
             subscription_id=int(subscription_id),
         )
     )
-    if snapshot is None or principal.user.wallet_address not in {
-        snapshot.merchant_address,
-        snapshot.subscriber_address,
+    ownership = snapshot or db.scalar(
+        select(ProjectionIssue).filter_by(
+            **vault.scope, subscription_id=int(subscription_id)
+        )
+    )
+    if ownership is None or principal.user.wallet_address not in {
+        ownership.merchant_address,
+        ownership.subscriber_address,
     }:
         raise not_found()
     query = select(EventRecord).filter_by(

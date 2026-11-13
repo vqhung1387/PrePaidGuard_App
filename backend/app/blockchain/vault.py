@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from eth_abi.exceptions import DecodingError
@@ -16,6 +16,7 @@ from web3.exceptions import (
 
 from app.core.config import Deployment, Settings, backend_path
 from app.core.errors import config_error, not_found, rpc_error
+from app.schemas.types import timestamp_supported
 
 ZERO = "0x" + "0" * 40
 EVENTS = {
@@ -140,10 +141,10 @@ def hex_value(value) -> str:
 
 
 def chain_time(seconds: int) -> datetime:
-    try:
-        return datetime.fromtimestamp(seconds, UTC)
-    except (ValueError, OverflowError, OSError):
-        raise config_error() from None
+    if not timestamp_supported(seconds):
+        raise config_error()
+    # Avoid the platform C runtime: Windows fromtimestamp stops before year 9999.
+    return datetime(1970, 1, 1, tzinfo=UTC) + timedelta(seconds=seconds)
 
 
 @dataclass(frozen=True)

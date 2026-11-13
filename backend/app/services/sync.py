@@ -12,12 +12,13 @@ from app.models.entities import (
     EventRecord,
     Merchant,
     PlanDraft,
+    ProjectionIssue,
     SubscriptionSnapshot,
     SyncCursor,
     TransactionRecord,
     User,
 )
-from app.schemas.types import UINT_MAX, utcnow
+from app.schemas.types import UINT_MAX, timestamp_supported, utcnow
 
 
 def plan_terms(values: dict) -> tuple:
@@ -195,6 +196,37 @@ def _project_subscription(db: Session, vault: Vault, sub_id: int, block: Block) 
         for name in paid:
             paid[name] += int(payload[name])
     remaining = principal - released - refunded
+    raw_times = {"started_at": int(opened.payload["startedAt"])}
+    if status == "ACTIVE":
+        raw_times.update(
+            next_release_at=next_release,
+            refund_available_at=next_release + int(plan["gracePeriod"]),
+        )
+    issue = db.scalar(
+        select(ProjectionIssue).filter_by(**vault.scope, subscription_id=sub_id)
+    )
+    if not all(timestamp_supported(value) for value in raw_times.values()):
+        # Preserve event evidence and explicitly quarantine just this read model.
+        # Never retain a stale balance from an earlier valid snapshot.
+        db.execute(
+            delete(SubscriptionSnapshot).filter_by(
+                **vault.scope, subscription_id=sub_id
+            )
+        )
+        if issue is None:
+            issue = ProjectionIssue(**vault.scope, subscription_id=sub_id)
+            db.add(issue)
+        issue.plan_id = opened.plan_id
+        issue.merchant_address = opened.merchant_address
+        issue.subscriber_address = opened.subscriber_address
+        issue.code = "UNSUPPORTED_TIMESTAMP"
+        issue.raw_timestamps = {key: str(value) for key, value in raw_times.items()}
+        issue.synced_block_number = block.number
+        issue.synced_block_hash = block.hash
+        issue.updated_at = utcnow()
+        return
+    if issue is not None:
+        db.delete(issue)
     snapshot = db.scalars(
         select(SubscriptionSnapshot).filter_by(
             **vault.scope,
@@ -233,7 +265,7 @@ def _project_subscription(db: Session, vault: Vault, sub_id: int, block: Block) 
 
 
 def reset_projection(db: Session, vault: Vault) -> None:
-    for model in (EventRecord, SubscriptionSnapshot, SyncCursor):
+    for model in (EventRecord, SubscriptionSnapshot, ProjectionIssue, SyncCursor):
         db.execute(delete(model).filter_by(**vault.scope))
     db.execute(
         update(PlanDraft)

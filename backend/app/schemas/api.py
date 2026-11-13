@@ -12,7 +12,16 @@ from pydantic import (
 )
 
 from app.core.config import TokenConfig
-from app.schemas.types import Address, ChainId, Hash32, Signature, UintOut, UintString
+from app.schemas.types import (
+    MAX_TIMESTAMP,
+    Address,
+    ChainId,
+    Hash32,
+    Signature,
+    UintOut,
+    UintString,
+    utcnow,
+)
 
 Name = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)
@@ -22,7 +31,7 @@ Location = Annotated[str, StringConstraints(max_length=300)]
 DisplayName = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)
 ]
-Duration = Annotated[int, Field(strict=True, gt=0, le=2**63 - 1)]
+Duration = Annotated[int, Field(strict=True, gt=0, le=MAX_TIMESTAMP)]
 Periods = Annotated[int, Field(strict=True, ge=1, le=120)]
 SubscriptionStatus = Literal["ACTIVE", "COMPLETED", "REFUNDED"]
 Action = Literal["CREATE_PLAN", "SUBSCRIBE", "CHECK_IN", "REFUND"]
@@ -143,8 +152,13 @@ class PlanTerms(Input):
         UintStringAdapter.validate_python(
             str(int(self.price_per_period) * self.total_periods)
         )
-        if self.period_duration_seconds + self.grace_period_seconds >= 2**63:
-            raise ValueError("period and grace exceed supported timestamp range")
+        if (
+            int(utcnow().timestamp())
+            + self.period_duration_seconds
+            + self.grace_period_seconds
+            > MAX_TIMESTAMP
+        ):
+            raise ValueError("next release and refund exceed supported timestamp range")
         return self
 
 
@@ -301,6 +315,16 @@ class TransactionResponse(Output):
     event_ids: list[UUID]
 
 
+class ProjectionIssueResponse(Output):
+    subscription_id: UintOut
+    code: Literal["UNSUPPORTED_TIMESTAMP"]
+    message: str = "Lịch của gói vượt phạm vi thời gian hỗ trợ; xem lịch sử on-chain."
+
+
 class Page[T](Output):
     items: list[T]
     next_cursor: str | None
+
+
+class SubscriptionPage(Page[SubscriptionResponse]):
+    issues: list[ProjectionIssueResponse] = Field(default_factory=list)

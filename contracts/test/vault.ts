@@ -70,6 +70,78 @@ describe("PrepaidVault", function () {
     expect(f.vault.interface.hasFunction("setTime")).to.equal(false);
   });
 
+  it("rejects schedules outside the shared datetime range, including the original regression", async () => {
+    const f = await fixture();
+    expect(await f.vault.MAX_TIMESTAMP()).to.equal(253402300799n);
+    await expect(f.vm.createPlan(id("huge-period"), f.token.target, 1n, 1, 1_000_000_000_000n, 20))
+      .to.be.revertedWithCustomError(f.vault, "InvalidTerms");
+    await expect(f.vm.createPlan(id("huge-grace"), f.token.target, 1n, 1, 10, 1_000_000_000_000n))
+      .to.be.revertedWithCustomError(f.vault, "InvalidTerms");
+    expect(await f.vault.planCount()).to.equal(1);
+  });
+
+  it("accepts the exact schedule limit at creation and revalidates it at subscription time", async () => {
+    const f = await fixture();
+    const max = await f.vault.MAX_TIMESTAMP();
+    const createAt = BigInt((await ethers.provider.getBlock("latest"))!.timestamp) + 1n;
+    const duration = max - createAt - 20n;
+    await f.at(createAt);
+    await f.vm.createPlan(id("limit"), f.token.target, 1n, 1, duration, 20);
+    expect((await f.vault.getPlan(2)).periodDuration).to.equal(duration);
+    const balance = await f.token.balanceOf(f.customer.address);
+    await expect(f.vc.subscribe(2)).to.be.revertedWithCustomError(f.vault, "InvalidTerms");
+    expect(await f.vault.subscriptionCount()).to.equal(0);
+    expect(await f.vault.totalPrincipal()).to.equal(0);
+    expect(await f.token.balanceOf(f.customer.address)).to.equal(balance);
+  });
+
+  it("keeps refund available at the exact supported maximum after a reschedule is rejected", async () => {
+    const snapshot = await ethers.provider.send("evm_snapshot", []);
+    try {
+      const f = await fixture();
+      const max = await f.vault.MAX_TIMESTAMP();
+      await f.at(max - 30n);
+      await f.vc.subscribe(1);
+      const before = await f.vault.getSubscription(1);
+      expect(before.nextReleaseAt + 20n).to.equal(max);
+      const p = await f.proof(1n, { deadline: max - 1n });
+      await f.at(max - 20n);
+      await expect(f.vm.checkInWithSignature(p.message, p.signature))
+        .to.be.revertedWithCustomError(f.vault, "InvalidTerms");
+      expect(await f.vault.getSubscription(1)).to.deep.equal(before);
+      await f.at(max);
+      await f.vc.refund(1);
+      expect((await f.vault.getSubscription(1)).status).to.equal(3);
+      expect(await f.vault.totalPrincipal()).to.equal(0);
+      expect(await f.token.balanceOf(f.customer.address)).to.equal(1_000_000_000n);
+    } finally {
+      await ethers.provider.send("evm_revert", [snapshot]);
+    }
+  });
+
+  it("completes the final release near the maximum without scheduling a nonexistent period", async () => {
+    const snapshot = await ethers.provider.send("evm_snapshot", []);
+    try {
+      const f = await fixture();
+      await f.vm.createPlan(id("last-period"), f.token.target, 50_000_000n, 1, 10, 20);
+      const max = await f.vault.MAX_TIMESTAMP();
+      await f.at(max - 30n);
+      await f.vc.subscribe(2);
+      const p = await f.proof(1n, { deadline: max - 1n });
+      await f.at(max - 20n);
+      await expect(f.vm.checkInWithSignature(p.message, p.signature))
+        .to.emit(f.vault, "PeriodReleased").withArgs(1, 2, 1, 50_000_000n, 0, 0, 0, 1, 0, true);
+      const sub = await f.vault.getSubscription(1);
+      expect(sub.status).to.equal(2);
+      expect(sub.nextReleaseAt).to.equal(0);
+      expect(sub.remainingPrincipal).to.equal(0);
+      expect(await f.vault.totalPrincipal()).to.equal(0);
+      expect(await f.token.balanceOf(f.merchant.address)).to.equal(50_000_000n);
+    } finally {
+      await ethers.provider.send("evm_revert", [snapshot]);
+    }
+  });
+
   it("requires allowance and exact principal, allowing multiple subscriptions", async () => {
     const f = await fixture();
     await f.tc.approve(f.vault.target, 99_999_999n);

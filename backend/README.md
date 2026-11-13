@@ -82,3 +82,11 @@ Blueprint [render.yaml](../render.yaml) cấu hình API và PostgreSQL cho demo.
 Có thể build cùng image ngoài Render từ repo root với `docker build -f backend/Dockerfile -t prepaidguard-backend .`. Container chạy migration lúc khởi động. Cấp DB URL và các biến môi trường demo từ secret store của host, rồi đặt HTTPS ở reverse proxy.
 
 Xem [handoff](../docs/backend-handoff.md) để đối chiếu nhiệm vụ và tiêu chí nghiệm thu trên thiết bị.
+
+## Unsupported legacy timestamps
+
+Contract và API dùng MAX_TIMESTAMP=253402300799 (9999-12-31T23:59:59Z). API từ chối draft nếu thời điểm hiện tại + duration + grace vượt giới hạn. Contract kiểm lại tại thời điểm giao dịch thực thi.
+
+Migration 0002 thêm projection_issues. Nếu event từ Vault cũ có lịch ngoài miền datetime, scanner giữ nguyên event/raw timestamps, xóa snapshot cũ của riêng subscription đó và tạo issue UNSUPPORTED_TIMESTAMP; cursor vẫn tiến để xử lý các gói hợp lệ phía sau. Rebuild/reorg dựng lại cả issue. Không bỏ qua bất kỳ chuyển tiền on-chain nào hay tự đánh dấu payout thành công.
+
+GET /me/subscriptions và /merchant/subscriptions trả thêm issues[] (subscription_id, code, message) thuộc đúng ví. Client phải hiển thị cảnh báo; issues không bị lọc mất theo status vì chưa có read model hợp lệ. GET detail/eligibility trả 409 UNSUPPORTED_TIMESTAMP cho legacy schedule; lịch sử event vẫn truy cập được bởi subscriber/merchant. Những endpoint tài chính chỉ đọc/đối chiếu, không thay thế quyền refund của contract. Khi lịch legacy trở lại miền hỗ trợ qua event terminal, projection có thể phục hồi và xóa issue.

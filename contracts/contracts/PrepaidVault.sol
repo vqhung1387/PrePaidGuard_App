@@ -49,6 +49,8 @@ contract PrepaidVault is EIP712, ReentrancyGuard {
         "CheckIn(uint256 subscriptionId,address merchant,uint256 periodIndex,uint256 nonce,uint256 deadline)"
     );
     uint256 public constant CHECK_IN_TTL = 900;
+    // Last Unix second representable by the API's UTC datetime contract.
+    uint256 public constant MAX_TIMESTAMP = 253402300799;
     IERC20 public immutable paymentToken;
     address public immutable treasury;
     IYieldAdapter public immutable adapter;
@@ -127,8 +129,8 @@ contract PrepaidVault is EIP712, ReentrancyGuard {
                 || totalPeriods == 0 || totalPeriods > 120
                 || pricePerPeriod > type(uint256).max / totalPeriods
                 || periodDuration == 0 || gracePeriod == 0
-                || uint256(periodDuration) + gracePeriod >= 2 ** 63
         ) revert InvalidTerms();
+        _nextReleaseAt(periodDuration, gracePeriod);
         if (usedReference[msg.sender][clientReference]) revert DuplicateReference();
         usedReference[msg.sender][clientReference] = true;
         planId = ++planCount;
@@ -145,7 +147,7 @@ contract PrepaidVault is EIP712, ReentrancyGuard {
         if (plan.merchant == address(0)) revert InvalidPlan();
         uint256 principal = plan.pricePerPeriod * plan.totalPeriods;
         uint64 startedAt = _timestamp(block.timestamp);
-        uint64 nextReleaseAt = _timestamp(block.timestamp + plan.periodDuration);
+        uint64 nextReleaseAt = _nextReleaseAt(plan.periodDuration, plan.gracePeriod);
         subscriptionId = ++subscriptionCount;
         subscriptions[subscriptionId] = Subscription(
             planId, msg.sender, principal, principal, 0, 0, startedAt, nextReleaseAt, Status.Active
@@ -187,9 +189,13 @@ contract PrepaidVault is EIP712, ReentrancyGuard {
         sub.nonce++;
         sub.remainingPrincipal -= plan.pricePerPeriod;
         totalPrincipal -= plan.pricePerPeriod;
-        sub.nextReleaseAt = _timestamp(block.timestamp + plan.periodDuration);
         bool completed = sub.completedPeriods == plan.totalPeriods;
-        if (completed) sub.status = Status.Completed;
+        if (completed) {
+            sub.status = Status.Completed;
+            sub.nextReleaseAt = 0;
+        } else {
+            sub.nextReleaseAt = _nextReleaseAt(plan.periodDuration, plan.gracePeriod);
+        }
         (uint256 merchantYield, uint256 subscriberYield, uint256 platformYield) =
             _pay(checkIn.subscriptionId, plan.pricePerPeriod, plan.merchant, sub.subscriber, plan.merchant);
         emit PeriodReleased(
@@ -225,8 +231,17 @@ contract PrepaidVault is EIP712, ReentrancyGuard {
     }
 
     function _timestamp(uint256 value) private pure returns (uint64) {
-        if (value > type(uint64).max) revert InvalidTerms();
+        if (value > MAX_TIMESTAMP) revert InvalidTerms();
         return uint64(value);
+    }
+
+    function _nextReleaseAt(uint64 periodDuration, uint64 gracePeriod) private view returns (uint64) {
+        // Check the refund endpoint too: a representable release alone is insufficient.
+        if (
+            block.timestamp > MAX_TIMESTAMP
+                || uint256(periodDuration) + gracePeriod > MAX_TIMESTAMP - block.timestamp
+        ) revert InvalidTerms();
+        return uint64(block.timestamp + periodDuration);
     }
 
     function _pay(uint256 subscriptionId, uint256 principal, address recipient, address subscriber, address merchant)

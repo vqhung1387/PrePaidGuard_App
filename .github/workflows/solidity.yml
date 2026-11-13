@@ -2,16 +2,15 @@ name: Solidity checks
 
 on:
   push:
-    branches: [solidity, main]
-    paths: ["contracts/**", "shared/**", ".github/workflows/solidity.yml"]
+    branches: [solidity, main, "codex/**"]
   pull_request:
-    paths: ["contracts/**", "shared/**", ".github/workflows/solidity.yml"]
 
 permissions:
   contents: read
 
 jobs:
-  test:
+  solidity-checks:
+    name: solidity-checks
     runs-on: ubuntu-latest
     defaults:
       run:

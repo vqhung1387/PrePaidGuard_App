@@ -4,6 +4,12 @@ from typing import Annotated
 from pydantic import AfterValidator, BeforeValidator, Field, StringConstraints
 
 UINT_MAX = 2**256 - 1
+# Largest Unix second representable by Python/API datetime (9999-12-31T23:59:59Z).
+MAX_TIMESTAMP = 253402300799
+
+
+def timestamp_supported(value: int) -> bool:
+    return type(value) is int and 0 <= value <= MAX_TIMESTAMP
 
 
 def bounded_uint(value: str) -> str:

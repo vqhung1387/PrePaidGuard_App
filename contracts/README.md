@@ -17,6 +17,7 @@ Test gồm quyền, allowance, amount, chữ ký EIP-712, thời hạn QR, repla
 ## Luật được triển khai
 
 - Plan bất biến, clientReference duy nhất theo merchant, 1–120 kỳ, token allowlisted có 6 decimals. Tổng gốc dùng integer, kiểm overflow.
+- Mọi lịch kỳ/refund phải nằm trong Unix timestamp tối đa 253402300799 (UTC 9999-12-31T23:59:59Z), cùng miền thời gian với API. Kiểm lại tại tạo gói, subscribe và mỗi kỳ tiếp; kỳ cuối hoàn tất đặt nextReleaseAt=0.
 - Kỳ đầu mở sau periodDuration. Release từng kỳ và lấy thời gian block release làm mốc cho kỳ sau. Không tự giải ngân kỳ bỏ lỡ.
 - Check-in trong khoảng nextReleaseAt <= now < nextReleaseAt + gracePeriod. Refund mở tại now >= nextReleaseAt + gracePeriod và trả phần gốc còn lại cho subscriber.
 - Caller check-in là merchant của plan. Subscriber ký CheckIn theo thứ tự trong shared/check-in.types.json. Domain có name PrepaidGuard, version 1, chainId và địa chỉ Vault. Deadline nằm từ now đến now + 900 giây.

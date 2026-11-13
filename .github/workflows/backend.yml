@@ -2,16 +2,15 @@ name: Backend checks
 
 on:
   push:
-    branches: [backend, main]
-    paths: ["backend/**", ".github/workflows/backend.yml"]
+    branches: [backend, main, "codex/**"]
   pull_request:
-    paths: ["backend/**", ".github/workflows/backend.yml"]
 
 permissions:
   contents: read
 
 jobs:
-  test:
+  backend-checks:
+    name: backend-checks
     runs-on: ubuntu-latest
     defaults:
       run:

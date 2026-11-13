@@ -2,16 +2,15 @@ name: Contracts and API integration
 
 on:
   push:
-    branches: [backend, main]
-    paths: ["contracts/**", "shared/**", "backend/**", ".github/workflows/contracts.yml"]
+    branches: [backend, solidity, main, "codex/**"]
   pull_request:
-    paths: ["contracts/**", "shared/**", "backend/**", ".github/workflows/contracts.yml"]
 
 permissions:
   contents: read
 
 jobs:
-  test:
+  contract-integration:
+    name: contract-integration
     runs-on: ubuntu-latest
     services:
       postgres:
