@@ -1,0 +1,46 @@
+{
+  "purpose": "TEST VECTOR ONLY; placeholder deployment, fixed test signer",
+  "domain": {
+    "name": "PrepaidGuard",
+    "version": "1",
+    "chainId": 43113,
+    "verifyingContract": "0x4444444444444444444444444444444444444444"
+  },
+  "types": {
+    "CheckIn": [
+      {
+        "name": "subscriptionId",
+        "type": "uint256"
+      },
+      {
+        "name": "merchant",
+        "type": "address"
+      },
+      {
+        "name": "periodIndex",
+        "type": "uint256"
+      },
+      {
+        "name": "nonce",
+        "type": "uint256"
+      },
+      {
+        "name": "deadline",
+        "type": "uint256"
+      }
+    ]
+  },
+  "primaryType": "CheckIn",
+  "message": {
+    "subscriptionId": "1",
+    "merchant": "0x5555555555555555555555555555555555555555",
+    "periodIndex": "1",
+    "nonce": "0",
+    "deadline": "1800000000"
+  },
+  "signer": "0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf",
+  "domainSeparator": "0x692e57120eae93d274bf29c03ea44cabfcc702822141dfd685e9363da86c0939",
+  "structHash": "0x78f8252dfb818ccfdedfe52c30b7f3475d29425d06b8ceaf1e2505c09b033a5a",
+  "digest": "0x842bf43e66d61816446aa2079b5fadc20489c9b1bba2a0a40cfd171a01ae1438",
+  "signature": "0xc1384c4db1676088c84cdfbb740508cfd9129e56e6f61cb63ed817305505b819699e1d303ba2ad50934f33509d6bd1099b9b3e3873a8b68570a61960af1880611c"
+}

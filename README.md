@@ -21,7 +21,7 @@ MVP UniHack cho quản lý ký quỹ dịch vụ trả trước trên Avalanche.
 
 ## Trạng thái
 
-Đã tạo khung thư mục và tài liệu hướng dẫn. Chưa khởi tạo Flutter SDK project, FastAPI app, Hardhat project hoặc cài dependencies. Các file .gitkeep giữ thư mục trống trong Git; có thể xóa khi thư mục có mã nguồn.
+Nhánh solidity có Vault Solidity, MockUSDC, adapter yield MOCK, test, script deploy/seed và bộ ABI/chữ ký dùng chung. Đọc [bản bàn giao role C](docs/solidity-handoff.md) để chạy và tiếp tục triển khai Fuji. Backend được phát triển ở nhánh backend, Flutter ở nhánh frontend.
 
 ## Ranh giới trách nhiệm
 
@@ -33,7 +33,7 @@ MVP UniHack cho quản lý ký quỹ dịch vụ trả trước trên Avalanche.
 ## Bước tiếp theo
 
 1. Chốt docs/business-rules.md và shared/check-in.schema.json theo hướng dẫn trong shared/README.md.
-2. Khởi tạo Flutter, FastAPI và Hardhat trong các thư mục tương ứng.
+2. Chạy Hardhat và kiểm thử theo [README contract](contracts/README.md). Đối chiếu backend và Flutter ở các nhánh tương ứng.
 3. Thử luồng kết nối ví, ký EIP-712 và xác thực contract trước khi mở rộng giao diện.
 4. Làm tạo gói → đăng ký → check-in → refund bằng token thử nghiệm trên Fuji.
 
