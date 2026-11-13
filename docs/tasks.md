@@ -1,6 +1,6 @@
 # Tasks — Phân công nhóm 3 người
 
-> Kế hoạch 14 ngày tương đối, design draft 0.1 — 11/11/2026. Chưa có task triển khai nào được đánh dấu Done.
+> Kế hoạch 14 ngày tương đối, design draft 0.1 — 11/11/2026. Tiến độ BE/Solidity cập nhật ngày 12/11/2026 ở mục 10.
 > Điền tên thật thay A/B/C sau khi nhóm phân công. Ngày 1 là ngày nhóm bắt đầu thực hiện kế hoạch, không tự suy ra deadline cuộc thi.
 
 ## 1. Owner và cách phối hợp
@@ -118,3 +118,20 @@ Mỗi ngày 10–15 phút: kết quả đã chạy được, blocker, task tiế
 Thay interface phải báo hai thành viên còn lại và cập nhật cả schema/api/flows trước khi ghép.
 Track issue theo ID trên bảng; log quyết định B1–B6 trong project.md.
 Không phân công riêng người “làm slide” toàn kỳ; chuẩn bị bài nộp là việc song song sau khi có demo.
+
+## 10. Tiến độ backend và Solidity — 12/11/2026
+
+Người dùng giao tiếp tục cả vai trò B và C trên nhánh backend. Trạng thái REVIEW thể hiện đã triển khai và có bằng chứng local, còn nghiệm thu/review độc lập theo Definition of Done.
+
+| Task | Trạng thái | Bằng chứng và phần còn lại |
+| --- | --- | --- |
+| B01–B09, B11 | REVIEW | API, migration, quyền, receipt/scanner/reorg/retry đã kiểm thử PostgreSQL. CI backend, README và OpenAPI. Nghiệm thu host/thiết bị còn mở. |
+| C01–C07 | REVIEW | Hardhat/lockfile, Vault/MockUSDC/adapter, typed signature, refund, ABI export. npm test chạy 14 test Mocha và 256 mẫu fuzz bảo toàn tiền. |
+| C08 | IN_PROGRESS | Script deploy/seed đã chạy local. Fuji cần ví deploy có AVAX testnet và receipt để xuất manifest thật. |
+| C09 | REVIEW | Vault không có owner/upgrade/withdraw tùy ý. Mock mint chỉ owner, adapter funding riêng và bind một lần. Test callback reentrancy, transfer/adapter shortfall, hai tx cùng block. Cần review độc lập và xác minh deployment Fuji. |
+| D02–D03 | REVIEW | B1–B6 được dùng nhất quán cho BE/Solidity, ABI thật ở shared. Nhóm cần nghiệm thu baseline. |
+| D05 | IN_PROGRESS | Vector TypeScript/Python và JSON Schema đã xuất. Flutter cần kiểm cùng digest/signature trên thiết bị. |
+| Y01 | REVIEW | Yield MOCK được cấp token riêng từng subscription, payout 70/20/remainder, test rounding và bảo toàn. |
+| Y02 | IN_PROGRESS | API đối chiếu yield paid với event thật. UI còn cần nối API và hiển thị mode MOCK. |
+| I01–I02 | IN_PROGRESS | Luồng local API/DB/contract thật qua ở cả hai mode. Còn Fuji và hai thiết bị Flutter. |
+| B10, I04–I06 | IN_PROGRESS | Blueprint và tài liệu có sẵn. Còn URL HTTPS, tx Fuji, app đã nối API, bộ slide/video và nộp bài. |

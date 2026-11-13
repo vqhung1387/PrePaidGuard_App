@@ -1,0 +1,31 @@
+name: Solidity checks
+
+on:
+  push:
+    branches: [solidity, main, "codex/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  solidity-checks:
+    name: solidity-checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: contracts/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run export
+      - name: Verify exported ABI and signing vector
+        run: git diff --exit-code -- shared/abi shared/check-in.types.json shared/check-in.fixture.json shared/check-in.schema.json
+        working-directory: .

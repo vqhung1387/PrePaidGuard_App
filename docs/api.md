@@ -1,6 +1,6 @@
 # API — Flutter ↔ FastAPI và contract integration
 
-> Design draft 0.1 — chưa có endpoint được triển khai. B1–B6 trong [project.md](project.md) còn cần chốt.
+> Backend đã triển khai các endpoint bên dưới và có OpenAPI ở /openapi.json. ABI thực tế và tích hợp Fuji cần nghiệm thu riêng. B1–B6 trong [project.md](project.md) còn cần chốt.
 > DTO định nghĩa tại [schema.md](schema.md). API tài chính là đọc/xác minh; giao dịch ghi được ví gửi trực tiếp tới Vault.
 
 ## 1. Convention
@@ -20,34 +20,34 @@
 
 Tham khảo cấu trúc tab api (gid=1522506644) của [ProActive Hợp đồng API](https://docs.google.com/spreadsheets/d/1RTI0Hv0DydDX5S0DMq1clSFmGggCuGkAMORynke6J0w/edit?gid=1522506644). Chỉ áp dụng bố cục 10 cột; giữ schema và semantics của PrePaidGuard. Không sao chép endpoints, trạng thái kiểm thử, idempotency policy hoặc response envelope của ProActive.
 
-Mọi endpoint đều **chưa triển khai**. Status là tiến độ công việc; HTTP status nằm trong Success JSON / Fail JSON. Authority Owner/Participant được kiểm bằng wallet trong session; tài nguyên private không thuộc ví trả 404. Success/Fail JSON trong bảng dẫn tới ví dụ đầy đủ ngay trong file.
+Các endpoint bên dưới đã được triển khai ở backend. Status là tiến độ công việc; HTTP status nằm trong Success JSON / Fail JSON. Authority Owner/Participant được kiểm bằng wallet trong session; tài nguyên private không thuộc ví trả 404. Success/Fail JSON trong bảng dẫn tới ví dụ đầy đủ ngay trong file.
 
 | Method | Endpoint | Description | RequestBody / Params | Authority | Token | Status | Success JSON | Fail JSON | Thành viên thực hiện |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| GET | `/health` | Kiểm tra tiến trình API | [Không](#api-01) | Public | Không | Chưa triển khai | [200 · Health](#api-01) | [503 SERVICE_UNAVAILABLE](#api-01) | B: API; A: mobile |
-| GET | `/ready` | Kiểm tra DB, RPC và chain | [Không](#api-02) | Public | Không | Chưa triển khai | [200 · Readiness](#api-02) | [503 DATABASE_UNAVAILABLE, 503 RPC_UNAVAILABLE, 503 CONFIG_MISMATCH](#api-02) | B: API; A: mobile |
-| GET | `/api/v1/config` | Cấu hình công khai cho mobile | [Không](#api-03) | Public | Không | Chưa triển khai | [200 · ConfigResponse](#api-03) | [503 CONFIG_MISMATCH](#api-03) | B: API; A: mobile |
-| POST | `/api/v1/auth/challenge` | Tạo SIWE challenge | [body: wallet_address, chain_id](#api-04) | Public | Không | Chưa triển khai | [201 · AuthChallengeResponse](#api-04) | [422 VALIDATION_ERROR, 400 UNSUPPORTED_CHAIN, 429 RATE_LIMITED](#api-04) | B: API; A: mobile |
-| POST | `/api/v1/auth/verify` | Xác thực chữ ký và tạo phiên | [body: challenge_id, signature](#api-05) | Public | Không | Chưa triển khai | [200 · AuthTokenResponse](#api-05) | [422 VALIDATION_ERROR, 401 INVALID_SIGNATURE, 401 CHALLENGE_EXPIRED, 401 CHALLENGE_USED](#api-05) | B: API; A: mobile |
-| POST | `/api/v1/auth/logout` | Thu hồi session hiện tại | [Không](#api-06) | User | Bearer access_token | Chưa triển khai | [204 · No content](#api-06) | [401 UNAUTHORIZED](#api-06) | B: API; A: mobile |
-| GET | `/api/v1/me` | Đọc profile ví hiện tại | [Không](#api-07) | User | Bearer access_token | Chưa triển khai | [200 · UserResponse](#api-07) | [401 UNAUTHORIZED](#api-07) | B: API; A: mobile |
-| PATCH | `/api/v1/me` | Đổi tên hiển thị | [body: display_name](#api-08) | User | Bearer access_token | Chưa triển khai | [200 · UserResponse](#api-08) | [401 UNAUTHORIZED, 422 VALIDATION_ERROR](#api-08) | B: API; A: mobile |
-| POST | `/api/v1/merchants` | Tạo hồ sơ cơ sở cho ví đã login | [body: business_name, description, location_text](#api-09) | User | Bearer access_token | Chưa triển khai | [201 · MerchantResponse](#api-09) | [401 UNAUTHORIZED, 422 VALIDATION_ERROR, 409 MERCHANT_EXISTS](#api-09) | B: API; A: mobile |
-| GET | `/api/v1/merchants/{merchant_id}` | Đọc hồ sơ cơ sở | [path: merchant_id](#api-10) | Public | Không | Chưa triển khai | [200 · MerchantResponse](#api-10) | [404 NOT_FOUND, 422 VALIDATION_ERROR](#api-10) | B: API; A: mobile |
-| PATCH | `/api/v1/merchants/{merchant_id}` | Sửa profile cơ sở mình sở hữu | [path: merchant_id; body: description](#api-11) | Owner | Bearer access_token | Chưa triển khai | [200 · MerchantResponse](#api-11) | [401 UNAUTHORIZED, 404 NOT_FOUND, 422 VALIDATION_ERROR](#api-11) | B: API; A: mobile |
-| POST | `/api/v1/plan-drafts` | Tạo nháp điều khoản gói | [body: title, description, price_per_period, total_periods, period_duration_seconds, grace_period_seconds](#api-12) | Merchant | Bearer access_token | Chưa triển khai | [201 · PlanDraftResponse](#api-12) | [401 UNAUTHORIZED, 422 VALIDATION_ERROR, 403 MERCHANT_REQUIRED](#api-12) | B: API; A: mobile |
-| GET | `/api/v1/plan-drafts` | Danh sách draft thuộc merchant | [query: limit](#api-13) | Merchant | Bearer access_token | Chưa triển khai | [200 · Page&lt;PlanDraftResponse&gt;](#api-13) | [401 UNAUTHORIZED, 403 MERCHANT_REQUIRED, 422 VALIDATION_ERROR](#api-13) | B: API; A: mobile |
-| GET | `/api/v1/plan-drafts/{draft_id}` | Đọc draft của mình | [path: draft_id](#api-14) | Owner | Bearer access_token | Chưa triển khai | [200 · PlanDraftResponse](#api-14) | [401 UNAUTHORIZED, 404 NOT_FOUND, 422 VALIDATION_ERROR](#api-14) | B: API; A: mobile |
-| PATCH | `/api/v1/plan-drafts/{draft_id}` | Chỉnh draft chưa publish | [path: draft_id; body: title](#api-15) | Owner | Bearer access_token | Chưa triển khai | [200 · PlanDraftResponse](#api-15) | [401 UNAUTHORIZED, 404 NOT_FOUND, 422 VALIDATION_ERROR, 409 PLAN_IMMUTABLE](#api-15) | B: API; A: mobile |
-| GET | `/api/v1/plans` | Danh sách plan đã publish | [query: merchant_address, limit](#api-16) | Public | Không | Chưa triển khai | [200 · Page&lt;PlanResponse&gt;](#api-16) | [422 VALIDATION_ERROR, 503 RPC_UNAVAILABLE](#api-16) | B: API; A: mobile |
-| GET | `/api/v1/plans/{plan_id}` | Đọc plan và điều khoản on-chain | [path: plan_id](#api-17) | Public | Không | Chưa triển khai | [200 · PlanResponse](#api-17) | [404 NOT_FOUND, 422 VALIDATION_ERROR, 503 RPC_UNAVAILABLE](#api-17) | B: API; A: mobile |
-| GET | `/api/v1/me/subscriptions` | Gói thuộc subscriber hiện tại | [query: status, limit](#api-18) | User | Bearer access_token | Chưa triển khai | [200 · Page&lt;SubscriptionResponse&gt;](#api-18) | [401 UNAUTHORIZED, 422 VALIDATION_ERROR](#api-18) | B: API; A: mobile |
-| GET | `/api/v1/merchant/subscriptions` | Gói khách thuộc merchant hiện tại | [query: plan_id, status, limit](#api-19) | Merchant | Bearer access_token | Chưa triển khai | [200 · Page&lt;SubscriptionResponse&gt;](#api-19) | [401 UNAUTHORIZED, 422 VALIDATION_ERROR, 404 NOT_FOUND, 403 MERCHANT_REQUIRED](#api-19) | B: API; A: mobile |
-| GET | `/api/v1/subscriptions/{subscription_id}` | Chi tiết gói và số dư | [path: subscription_id](#api-20) | Participant | Bearer access_token | Chưa triển khai | [200 · SubscriptionResponse](#api-20) | [401 UNAUTHORIZED, 404 NOT_FOUND, 422 VALIDATION_ERROR, 503 RPC_UNAVAILABLE](#api-20) | B: API; A: mobile |
-| GET | `/api/v1/subscriptions/{subscription_id}/eligibility` | Kiểm điều kiện check-in/refund live | [path: subscription_id](#api-21) | Participant | Bearer access_token | Chưa triển khai | [200 · EligibilityResponse](#api-21) | [401 UNAUTHORIZED, 404 NOT_FOUND, 422 VALIDATION_ERROR, 503 RPC_UNAVAILABLE](#api-21) | B: API; A: mobile |
-| GET | `/api/v1/subscriptions/{subscription_id}/events` | Lịch sử event đã đối chiếu | [path: subscription_id; query: limit](#api-22) | Participant | Bearer access_token | Chưa triển khai | [200 · Page&lt;EventResponse&gt;](#api-22) | [401 UNAUTHORIZED, 404 NOT_FOUND, 422 VALIDATION_ERROR](#api-22) | B: API; A: mobile |
-| POST | `/api/v1/transactions` | Theo dõi giao dịch đã broadcast | [body: tx_hash, action, plan_id](#api-23) | User | Bearer access_token | Chưa triển khai | [202 · TransactionResponse](#api-23) | [401 UNAUTHORIZED, 422 VALIDATION_ERROR, 503 RPC_UNAVAILABLE, 409 TX_MISMATCH, 409 TRANSACTION_CONFLICT](#api-23) | B: API; A: mobile; C: receipt/ABI |
-| GET | `/api/v1/transactions/{tx_hash}` | Tra cứu và đối chiếu trạng thái tx | [path: tx_hash](#api-24) | Submitter | Bearer access_token | Chưa triển khai | [200 · TransactionResponse](#api-24) | [401 UNAUTHORIZED, 404 NOT_FOUND, 422 VALIDATION_ERROR, 503 RPC_UNAVAILABLE](#api-24) | B: API; A: mobile; C: receipt/ABI |
+| GET | `/health` | Kiểm tra tiến trình API | [Không](#api-01) | Public | Không | Đã triển khai (BE) | [200 · Health](#api-01) | [503 SERVICE_UNAVAILABLE](#api-01) | B: API; A: mobile |
+| GET | `/ready` | Kiểm tra DB, RPC và chain | [Không](#api-02) | Public | Không | Đã triển khai (BE) | [200 · Readiness](#api-02) | [503 DATABASE_UNAVAILABLE, 503 RPC_UNAVAILABLE, 503 CONFIG_MISMATCH](#api-02) | B: API; A: mobile |
+| GET | `/api/v1/config` | Cấu hình công khai cho mobile | [Không](#api-03) | Public | Không | Đã triển khai (BE) | [200 · ConfigResponse](#api-03) | [503 CONFIG_MISMATCH](#api-03) | B: API; A: mobile |
+| POST | `/api/v1/auth/challenge` | Tạo SIWE challenge | [body: wallet_address, chain_id](#api-04) | Public | Không | Đã triển khai (BE) | [201 · AuthChallengeResponse](#api-04) | [422 VALIDATION_ERROR, 400 UNSUPPORTED_CHAIN, 429 RATE_LIMITED](#api-04) | B: API; A: mobile |
+| POST | `/api/v1/auth/verify` | Xác thực chữ ký và tạo phiên | [body: challenge_id, signature](#api-05) | Public | Không | Đã triển khai (BE) | [200 · AuthTokenResponse](#api-05) | [422 VALIDATION_ERROR, 401 INVALID_SIGNATURE, 401 CHALLENGE_EXPIRED, 401 CHALLENGE_USED](#api-05) | B: API; A: mobile |
+| POST | `/api/v1/auth/logout` | Thu hồi session hiện tại | [Không](#api-06) | User | Bearer access_token | Đã triển khai (BE) | [204 · No content](#api-06) | [401 UNAUTHORIZED](#api-06) | B: API; A: mobile |
+| GET | `/api/v1/me` | Đọc profile ví hiện tại | [Không](#api-07) | User | Bearer access_token | Đã triển khai (BE) | [200 · UserResponse](#api-07) | [401 UNAUTHORIZED](#api-07) | B: API; A: mobile |
+| PATCH | `/api/v1/me` | Đổi tên hiển thị | [body: display_name](#api-08) | User | Bearer access_token | Đã triển khai (BE) | [200 · UserResponse](#api-08) | [401 UNAUTHORIZED, 422 VALIDATION_ERROR](#api-08) | B: API; A: mobile |
+| POST | `/api/v1/merchants` | Tạo hồ sơ cơ sở cho ví đã login | [body: business_name, description, location_text](#api-09) | User | Bearer access_token | Đã triển khai (BE) | [201 · MerchantResponse](#api-09) | [401 UNAUTHORIZED, 422 VALIDATION_ERROR, 409 MERCHANT_EXISTS](#api-09) | B: API; A: mobile |
+| GET | `/api/v1/merchants/{merchant_id}` | Đọc hồ sơ cơ sở | [path: merchant_id](#api-10) | Public | Không | Đã triển khai (BE) | [200 · MerchantResponse](#api-10) | [404 NOT_FOUND, 422 VALIDATION_ERROR](#api-10) | B: API; A: mobile |
+| PATCH | `/api/v1/merchants/{merchant_id}` | Sửa profile cơ sở mình sở hữu | [path: merchant_id; body: description](#api-11) | Owner | Bearer access_token | Đã triển khai (BE) | [200 · MerchantResponse](#api-11) | [401 UNAUTHORIZED, 404 NOT_FOUND, 422 VALIDATION_ERROR](#api-11) | B: API; A: mobile |
+| POST | `/api/v1/plan-drafts` | Tạo nháp điều khoản gói | [body: title, description, price_per_period, total_periods, period_duration_seconds, grace_period_seconds](#api-12) | Merchant | Bearer access_token | Đã triển khai (BE) | [201 · PlanDraftResponse](#api-12) | [401 UNAUTHORIZED, 422 VALIDATION_ERROR, 403 MERCHANT_REQUIRED](#api-12) | B: API; A: mobile |
+| GET | `/api/v1/plan-drafts` | Danh sách draft thuộc merchant | [query: limit](#api-13) | Merchant | Bearer access_token | Đã triển khai (BE) | [200 · Page&lt;PlanDraftResponse&gt;](#api-13) | [401 UNAUTHORIZED, 403 MERCHANT_REQUIRED, 422 VALIDATION_ERROR](#api-13) | B: API; A: mobile |
+| GET | `/api/v1/plan-drafts/{draft_id}` | Đọc draft của mình | [path: draft_id](#api-14) | Owner | Bearer access_token | Đã triển khai (BE) | [200 · PlanDraftResponse](#api-14) | [401 UNAUTHORIZED, 404 NOT_FOUND, 422 VALIDATION_ERROR](#api-14) | B: API; A: mobile |
+| PATCH | `/api/v1/plan-drafts/{draft_id}` | Chỉnh draft chưa publish | [path: draft_id; body: title](#api-15) | Owner | Bearer access_token | Đã triển khai (BE) | [200 · PlanDraftResponse](#api-15) | [401 UNAUTHORIZED, 404 NOT_FOUND, 422 VALIDATION_ERROR, 409 PLAN_IMMUTABLE](#api-15) | B: API; A: mobile |
+| GET | `/api/v1/plans` | Danh sách plan đã publish | [query: merchant_address, limit](#api-16) | Public | Không | Đã triển khai (BE) | [200 · Page&lt;PlanResponse&gt;](#api-16) | [422 VALIDATION_ERROR, 503 RPC_UNAVAILABLE](#api-16) | B: API; A: mobile |
+| GET | `/api/v1/plans/{plan_id}` | Đọc plan và điều khoản on-chain | [path: plan_id](#api-17) | Public | Không | Đã triển khai (BE) | [200 · PlanResponse](#api-17) | [404 NOT_FOUND, 422 VALIDATION_ERROR, 503 RPC_UNAVAILABLE](#api-17) | B: API; A: mobile |
+| GET | `/api/v1/me/subscriptions` | Gói thuộc subscriber hiện tại | [query: status, limit](#api-18) | User | Bearer access_token | Đã triển khai (BE) | [200 · Page&lt;SubscriptionResponse&gt;](#api-18) | [401 UNAUTHORIZED, 422 VALIDATION_ERROR](#api-18) | B: API; A: mobile |
+| GET | `/api/v1/merchant/subscriptions` | Gói khách thuộc merchant hiện tại | [query: plan_id, status, limit](#api-19) | Merchant | Bearer access_token | Đã triển khai (BE) | [200 · Page&lt;SubscriptionResponse&gt;](#api-19) | [401 UNAUTHORIZED, 422 VALIDATION_ERROR, 404 NOT_FOUND, 403 MERCHANT_REQUIRED](#api-19) | B: API; A: mobile |
+| GET | `/api/v1/subscriptions/{subscription_id}` | Chi tiết gói và số dư | [path: subscription_id](#api-20) | Participant | Bearer access_token | Đã triển khai (BE) | [200 · SubscriptionResponse](#api-20) | [401 UNAUTHORIZED, 404 NOT_FOUND, 422 VALIDATION_ERROR, 503 RPC_UNAVAILABLE](#api-20) | B: API; A: mobile |
+| GET | `/api/v1/subscriptions/{subscription_id}/eligibility` | Kiểm điều kiện check-in/refund live | [path: subscription_id](#api-21) | Participant | Bearer access_token | Đã triển khai (BE) | [200 · EligibilityResponse](#api-21) | [401 UNAUTHORIZED, 404 NOT_FOUND, 422 VALIDATION_ERROR, 503 RPC_UNAVAILABLE](#api-21) | B: API; A: mobile |
+| GET | `/api/v1/subscriptions/{subscription_id}/events` | Lịch sử event đã đối chiếu | [path: subscription_id; query: limit](#api-22) | Participant | Bearer access_token | Đã triển khai (BE) | [200 · Page&lt;EventResponse&gt;](#api-22) | [401 UNAUTHORIZED, 404 NOT_FOUND, 422 VALIDATION_ERROR](#api-22) | B: API; A: mobile |
+| POST | `/api/v1/transactions` | Theo dõi giao dịch đã broadcast | [body: tx_hash, action, plan_id](#api-23) | User | Bearer access_token | Đã triển khai (BE) | [202 · TransactionResponse](#api-23) | [401 UNAUTHORIZED, 422 VALIDATION_ERROR, 503 RPC_UNAVAILABLE, 409 TX_MISMATCH, 409 TRANSACTION_CONFLICT](#api-23) | B: API; A: mobile; C: receipt/ABI |
+| GET | `/api/v1/transactions/{tx_hash}` | Tra cứu và đối chiếu trạng thái tx | [path: tx_hash](#api-24) | Submitter | Bearer access_token | Đã triển khai (BE) | [200 · TransactionResponse](#api-24) | [401 UNAUTHORIZED, 404 NOT_FOUND, 422 VALIDATION_ERROR, 409 TX_MISMATCH, 503 RPC_UNAVAILABLE](#api-24) | B: API; A: mobile; C: receipt/ABI |
 
 Participant = subscriber hoặc merchant của chính subscription. Submitter = user đăng ký tracking record. Blockchain vẫn công khai; đây là access policy của backend.
 
@@ -100,7 +100,7 @@ Trong lúc ký publish, mobile khóa chỉnh sửa draft. Backend đối chiếu
 Không có API đặt state=PUBLISHED. Mobile gọi createPlan qua ví merchant, rồi POST /transactions với action=CREATE_PLAN và plan_draft_id.
 Backend chỉ publish draft khi receipt/event từ đúng Vault, đúng merchant, đúng client_reference và toàn bộ điều khoản khớp draft.
 Nếu giao dịch đã xác nhận nhưng app chưa gửi hash, log scanner khôi phục linkage qua merchant + client_reference.
-Published plan GET trả metadata cùng financial terms đọc on-chain; không dùng database draft ghi đè terms.
+Published plan GET trả metadata cùng financial terms đọc từ block đã đủ xác nhận. Terms lấy từ chain.
 
 ### Lists
 /plan-drafts chỉ owner; /plans chỉ published, cursor theo projection block/ID hoặc metadata stable key.
@@ -112,7 +112,7 @@ Không có DELETE plan hoặc sửa terms on-chain trong MVP.
 /me/subscriptions và /merchant/subscriptions dùng danh sách đã index, có thể chậm sau block mới.
 Sau transaction CONFIRMED, backend cập nhật projection ngay; scanner phục hồi các tx chưa được client báo.
 
-/subscriptions/{id} trả nguồn và block sync. Trước ký check-in/refund, eligibility phải đọc live; RPC lỗi trả 503, không giả can_refund=true từ cache.
+/subscriptions/{id} trả trạng thái từ block đã đủ xác nhận theo deployment, cùng nguồn và block sync. Trước ký check-in/refund, eligibility đọc block mới nhất; RPC lỗi trả 503, không giả can_refund=true từ cache.
 Status filter chỉ ACTIVE|COMPLETED|REFUNDED.
 Không cho client truyền subscriber_address để đọc danh sách của ví khác.
 Merchant filter plan_id chỉ chấp nhận plan thuộc merchant đó.
@@ -212,7 +212,7 @@ Các case độc lập, không phải một chuỗi fixture đã ký. Địa ch�
 
 ### API-01 — GET /health
 
-Kiểm tra tiến trình API. Authority: **Public**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**.
+Kiểm tra tiến trình API. Authority: **Public**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
@@ -255,7 +255,7 @@ Kiểm tra tiến trình API. Authority: **Public**. Status: **Chưa triển kha
 
 ### API-02 — GET /ready
 
-Kiểm tra DB, RPC và chain. Authority: **Public**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**.
+Kiểm tra DB, RPC và chain. Authority: **Public**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
@@ -320,7 +320,7 @@ Kiểm tra DB, RPC và chain. Authority: **Public**. Status: **Chưa triển kha
 
 ### API-03 — GET /api/v1/config
 
-Cấu hình công khai cho mobile. Authority: **Public**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**.
+Cấu hình công khai cho mobile. Authority: **Public**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
@@ -378,7 +378,7 @@ Cấu hình công khai cho mobile. Authority: **Public**. Status: **Chưa triể
 
 ### API-04 — POST /api/v1/auth/challenge
 
-Tạo SIWE challenge. Authority: **Public**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**.
+Tạo SIWE challenge. Authority: **Public**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
@@ -450,7 +450,7 @@ Tạo SIWE challenge. Authority: **Public**. Status: **Chưa triển khai**. Own
 
 ### API-05 — POST /api/v1/auth/verify
 
-Xác thực chữ ký và tạo phiên. Authority: **Public**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**.
+Xác thực chữ ký và tạo phiên. Authority: **Public**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
@@ -540,7 +540,7 @@ Xác thực chữ ký và tạo phiên. Authority: **Public**. Status: **Chưa t
 
 ### API-06 — POST /api/v1/auth/logout
 
-Thu hồi session hiện tại. Authority: **User**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**.
+Thu hồi session hiện tại. Authority: **User**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
@@ -585,7 +585,7 @@ Thu hồi session hiện tại. Authority: **User**. Status: **Chưa triển kha
 
 ### API-07 — GET /api/v1/me
 
-Đọc profile ví hiện tại. Authority: **User**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**.
+Đọc profile ví hiện tại. Authority: **User**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
@@ -634,7 +634,7 @@ Thu hồi session hiện tại. Authority: **User**. Status: **Chưa triển kha
 
 ### API-08 — PATCH /api/v1/me
 
-Đổi tên hiển thị. Authority: **User**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**.
+Đổi tên hiển thị. Authority: **User**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
@@ -697,7 +697,7 @@ Thu hồi session hiện tại. Authority: **User**. Status: **Chưa triển kha
 
 ### API-09 — POST /api/v1/merchants
 
-Tạo hồ sơ cơ sở cho ví đã login. Authority: **User**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**.
+Tạo hồ sơ cơ sở cho ví đã login. Authority: **User**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
@@ -777,7 +777,7 @@ Tạo hồ sơ cơ sở cho ví đã login. Authority: **User**. Status: **Chưa
 
 ### API-10 — GET /api/v1/merchants/{merchant_id}
 
-Đọc hồ sơ cơ sở. Authority: **Public**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**.
+Đọc hồ sơ cơ sở. Authority: **Public**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
@@ -839,7 +839,7 @@ Tạo hồ sơ cơ sở cho ví đã login. Authority: **User**. Status: **Chưa
 
 ### API-11 — PATCH /api/v1/merchants/{merchant_id}
 
-Sửa profile cơ sở mình sở hữu. Authority: **Owner**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**.
+Sửa profile cơ sở mình sở hữu. Authority: **Owner**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
@@ -920,7 +920,7 @@ Sửa profile cơ sở mình sở hữu. Authority: **Owner**. Status: **Chưa t
 
 ### API-12 — POST /api/v1/plan-drafts
 
-Tạo nháp điều khoản gói. Authority: **Merchant**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**.
+Tạo nháp điều khoản gói. Authority: **Merchant**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
@@ -1012,7 +1012,7 @@ Tạo nháp điều khoản gói. Authority: **Merchant**. Status: **Chưa tri�
 
 ### API-13 — GET /api/v1/plan-drafts
 
-Danh sách draft thuộc merchant. Authority: **Merchant**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**.
+Danh sách draft thuộc merchant. Authority: **Merchant**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
@@ -1106,7 +1106,7 @@ Danh sách draft thuộc merchant. Authority: **Merchant**. Status: **Chưa tri�
 
 ### API-14 — GET /api/v1/plan-drafts/{draft_id}
 
-Đọc draft của mình. Authority: **Owner**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**.
+Đọc draft của mình. Authority: **Owner**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
@@ -1193,7 +1193,7 @@ Danh sách draft thuộc merchant. Authority: **Merchant**. Status: **Chưa tri�
 
 ### API-15 — PATCH /api/v1/plan-drafts/{draft_id}
 
-Chỉnh draft chưa publish. Authority: **Owner**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**.
+Chỉnh draft chưa publish. Authority: **Owner**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
@@ -1296,7 +1296,7 @@ Chỉnh draft chưa publish. Authority: **Owner**. Status: **Chưa triển khai*
 
 ### API-16 — GET /api/v1/plans
 
-Danh sách plan đã publish. Authority: **Public**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**.
+Danh sách plan đã publish. Authority: **Public**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
@@ -1391,7 +1391,7 @@ Danh sách plan đã publish. Authority: **Public**. Status: **Chưa triển kha
 
 ### API-17 — GET /api/v1/plans/{plan_id}
 
-Đọc plan và điều khoản on-chain. Authority: **Public**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**.
+Đọc plan và điều khoản on-chain. Authority: **Public**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
@@ -1489,7 +1489,7 @@ Danh sách plan đã publish. Authority: **Public**. Status: **Chưa triển kha
 
 ### API-18 — GET /api/v1/me/subscriptions
 
-Gói thuộc subscriber hiện tại. Authority: **User**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**.
+Gói thuộc subscriber hiện tại. Authority: **User**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
@@ -1592,7 +1592,7 @@ Gói thuộc subscriber hiện tại. Authority: **User**. Status: **Chưa tri�
 
 ### API-19 — GET /api/v1/merchant/subscriptions
 
-Gói khách thuộc merchant hiện tại. Authority: **Merchant**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**.
+Gói khách thuộc merchant hiện tại. Authority: **Merchant**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
@@ -1718,7 +1718,7 @@ Gói khách thuộc merchant hiện tại. Authority: **Merchant**. Status: **Ch
 
 ### API-20 — GET /api/v1/subscriptions/{subscription_id}
 
-Chi tiết gói và số dư. Authority: **Participant**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**.
+Chi tiết gói và số dư. Authority: **Participant**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
@@ -1835,7 +1835,7 @@ Chi tiết gói và số dư. Authority: **Participant**. Status: **Chưa triể
 
 ### API-21 — GET /api/v1/subscriptions/{subscription_id}/eligibility
 
-Kiểm điều kiện check-in/refund live. Authority: **Participant**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**.
+Kiểm điều kiện check-in/refund live. Authority: **Participant**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
@@ -1935,7 +1935,7 @@ Kiểm điều kiện check-in/refund live. Authority: **Participant**. Status: 
 
 ### API-22 — GET /api/v1/subscriptions/{subscription_id}/events
 
-Lịch sử event đã đối chiếu. Authority: **Participant**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**.
+Lịch sử event đã đối chiếu. Authority: **Participant**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
@@ -2027,7 +2027,7 @@ Lịch sử event đã đối chiếu. Authority: **Participant**. Status: **Ch�
 
 ### API-23 — POST /api/v1/transactions
 
-Theo dõi giao dịch đã broadcast. Authority: **User**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**, C review chain verification.
+Theo dõi giao dịch đã broadcast. Authority: **User**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**, C review chain verification.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
@@ -2131,7 +2131,7 @@ Theo dõi giao dịch đã broadcast. Authority: **User**. Status: **Chưa tri�
 
 ### API-24 — GET /api/v1/transactions/{tx_hash}
 
-Tra cứu và đối chiếu trạng thái tx. Authority: **Submitter**. Status: **Chưa triển khai**. Owner: **B (API), A (mobile)**, C review chain verification.
+Tra cứu và đối chiếu trạng thái tx. Authority: **Submitter**. Status: **Đã triển khai (BE)**. Owner: **B (API), A (mobile)**, C review chain verification.
 
 **RequestBody / Params** — path/query/headers chỉ là các phần mô tả; HTTP body chỉ gửi object trong body.
 
