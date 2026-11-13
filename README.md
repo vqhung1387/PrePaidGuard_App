@@ -33,7 +33,7 @@ Backend đã có FastAPI, migration PostgreSQL và bộ kiểm thử. Xem [hư�
 ## Bước tiếp theo
 
 1. Chốt docs/business-rules.md và shared/check-in.schema.json theo hướng dẫn trong shared/README.md.
-2. Khởi tạo Flutter và Hardhat, chạy backend theo hướng dẫn trong thư mục backend.
+2. Chạy Flutter, Hardhat và backend theo README từng thư mục; kiểm tra deployment và ABI trước tích hợp.
 3. Thử luồng kết nối ví, ký EIP-712 và xác thực contract trước khi mở rộng giao diện.
 4. Làm tạo gói → đăng ký → check-in → refund bằng token thử nghiệm trên Fuji.
 
@@ -48,3 +48,5 @@ Xem [docs/tasks.md](docs/tasks.md) để phân công chi tiết.
 - [REST API và contract interface](docs/api.md)
 - [Phân công và kế hoạch 14 ngày](docs/tasks.md)
 - [Luồng người dùng và xử lý ngoại lệ](docs/user_flows.md)
+
+Solidity có Vault, adapter MOCK, kiểm thử và script deploy/seed. Xem [bàn giao Solidity](docs/solidity-handoff.md). Nhánh tích hợp giữ cả frontend, backend và contract; main chưa thay đổi.

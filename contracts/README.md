@@ -77,3 +77,5 @@ MockUSDC chỉ mint bởi owner để cấp token demo. MockYieldAdapter có fun
 Toolchain hiện có cảnh báo npm audit ở dependency gián tiếp zod, glob và minimatch. Registry chưa có bản vá tương thích cho toàn bộ toolchain đã chọn. Các gói này chạy ở máy build/test, không nằm trong bytecode Vault. Kiểm lại npm audit khi nâng Hardhat. Test nội bộ chưa thay thế đánh giá độc lập trước khi dùng tài sản thật.
 
 Tài liệu đối chiếu khi triển khai. [Hardhat](https://hardhat.org/docs/getting-started), [OpenZeppelin EIP712/ECDSA](https://docs.openzeppelin.com/contracts/5.x/api/utils/cryptography), [SafeERC20](https://docs.openzeppelin.com/contracts/5.x/api/token/erc20).
+
+Xem [bàn giao Solidity](../docs/solidity-handoff.md).

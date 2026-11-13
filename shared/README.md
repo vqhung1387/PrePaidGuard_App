@@ -9,3 +9,5 @@
 Thông điệp check-in gồm subscriptionId, merchant, periodIndex, nonce và deadline theo đúng thứ tự. Domain EIP-712 chứa name=PrepaidGuard, version=1, chainId, verifyingContract. Flutter và Solidity dùng cùng định nghĩa field/type/order. Chữ ký phải được đối chiếu bằng typed-data encoder.
 
 Backend test đối chiếu ABI xuất trước RPC và kiểm vector chữ ký do TypeScript tạo bằng eth-account của Python. Khi đổi contract hoặc typed-data fields, chạy export, test backend và contract, rồi commit bộ shared cùng thay đổi.
+
+Xem [bàn giao Solidity](../docs/solidity-handoff.md).
