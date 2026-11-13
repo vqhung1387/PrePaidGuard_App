@@ -43,6 +43,7 @@ class LiveController extends ChangeNotifier {
       issues = [],
       merchantIssues = [];
   List<Json> pending = [];
+  final Map<String, List<Json>> _memoryPending = {};
 
   bool get loggedIn => account != null && api.token != null;
   bool get isMerchant => user?['is_merchant'] == true;
@@ -226,24 +227,22 @@ class LiveController extends ChangeNotifier {
   }
 
   void _restorePending() {
-    try {
-      pending = _readStoredPending(_pendingKey);
-    } catch (_) {
-      notice =
-          'Không đọc được pending cache. Kiểm tra lịch sử ví/explorer trước khi gửi lại.';
-    }
+    pending = List<Json>.from(_memoryPending[_pendingKey] ?? []);
+    _mergeStoredPending();
   }
 
   void _mergeStoredPending() {
+    final seen = pending.map((item) => item['tx_hash']).toSet();
+    for (final item in _memoryPending[_pendingKey] ?? <Json>[]) {
+      if (seen.add(item['tx_hash'])) pending.add(item);
+    }
     try {
-      final stored = _readStoredPending(_pendingKey);
-      final seen = pending.map((item) => item['tx_hash']).toSet();
-      for (final item in stored) {
+      for (final item in _readStoredPending(_pendingKey)) {
         if (seen.add(item['tx_hash'])) pending.add(item);
       }
-      if (pending.length > 50) pending = pending.take(50).toList();
     } catch (_) {
-      /* Preserve in-memory pending entries if cache read fails. */
+      notice =
+          'Không đọc được pending cache. Kiểm tra lịch sử ví/explorer trước khi gửi lại.';
     }
   }
 
@@ -291,6 +290,15 @@ class LiveController extends ChangeNotifier {
 
   Future<void> publishPlan(Json terms) async {
     await assertContext();
+    _mergeStoredPending();
+    if (pending.any(
+      (item) =>
+          item['status'] == 'SUBMITTED' && item['action'] == 'CREATE_PLAN',
+    )) {
+      throw StateError(
+        'Đã có giao dịch tạo gói đang chờ. Kiểm tra hash trước khi gửi lại.',
+      );
+    }
     final draft = await _post('/api/v1/plan-drafts', terms);
     drafts.insert(0, draft);
     _emit();
@@ -298,16 +306,28 @@ class LiveController extends ChangeNotifier {
   }
 
   Future<void> publishDraft(Json draft) async {
-    await _send(
+    final sent = await _send(
       'CREATE_PLAN',
       config!['vault_address'],
       encodeCreatePlan(draft),
       {'plan_draft_id': draft['id']},
     );
-    await refresh();
+    await _refreshAfterSend(sent);
+  }
+
+  Future<void> _refreshAfterSend(Json item) async {
+    try {
+      await refresh();
+    } catch (error) {
+      item['last_error'] = 'Đã gửi giao dịch; chưa cập nhật được: $error';
+      notice =
+          'Đã gửi giao dịch ${item['tx_hash']}; chưa cập nhật được. Kiểm tra hash trước khi gửi lại.';
+      _emit();
+    }
   }
 
   Future<void> _noPending(String action, Json refs) async {
+    _mergeStoredPending();
     if (pending.any(
       (item) =>
           item['status'] == 'SUBMITTED' &&
@@ -324,21 +344,31 @@ class LiveController extends ChangeNotifier {
       !_disposed && _generation == generation && loggedIn && _pendingKey == key;
 
   void _persistForOrigin(String key, Json item) {
-    // Only transaction metadata is persisted; never JWT/private keys.
-    List<Json> saved = [];
-    final raw = store.read(key);
-    if (raw != null) {
-      try {
-        saved = (jsonDecode(raw) as List)
-            .map((value) => Map<String, dynamic>.from(value as Map))
-            .toList();
-      } catch (_) {
-        /* Preserve the new broadcast hash even if old cache is corrupt. */
+    final memory = _memoryPending.putIfAbsent(key, () => []);
+    memory.removeWhere((value) => value['tx_hash'] == item['tx_hash']);
+    memory.insert(0, item);
+    try {
+      // Only transaction metadata is persisted; never JWT/private keys.
+      List<Json> saved = [];
+      final raw = store.read(key);
+      if (raw != null) {
+        try {
+          saved = (jsonDecode(raw) as List)
+              .map((value) => Map<String, dynamic>.from(value as Map))
+              .toList();
+        } catch (_) {
+          /* Preserve the new broadcast hash even if old cache is corrupt. */
+        }
       }
+      saved.removeWhere((value) => value['tx_hash'] == item['tx_hash']);
+      saved.insert(0, Map<String, dynamic>.from(item));
+      store.write(key, jsonEncode(saved.take(50).toList()));
+      item.remove('storage_warning');
+    } catch (_) {
+      item['storage_warning'] =
+          'Không lưu được giao dịch trên thiết bị. Lưu hash và kiểm tra ví/explorer; nếu tải lại khi API lỗi, ứng dụng có thể không khôi phục được giao dịch.';
+      if (loggedIn && _pendingKey == key) notice = item['storage_warning'];
     }
-    saved.removeWhere((value) => value['tx_hash'] == item['tx_hash']);
-    saved.insert(0, Map<String, dynamic>.from(item));
-    store.write(key, jsonEncode(saved.take(50).toList()));
   }
 
   Future<Json> _send(String action, String to, String data, Json refs) async {
@@ -362,10 +392,22 @@ class LiveController extends ChangeNotifier {
     // A wallet/network event can invalidate the session while its prompt is open.
     // The hash still belongs to the initiating wallet/deployment, not the new UI.
     _persistForOrigin(originKey, item);
-    if (!_sameSession(generation, originKey)) return item;
+    if (!_sameSession(generation, originKey)) {
+      if (loggedIn && _pendingKey == originKey) _mergeStoredPending();
+      notice =
+          'Giao dịch đã gửi: ${item['tx_hash']}. Kiểm tra ví/explorer trước khi gửi lại.';
+      _emit();
+      return item;
+    }
     pending.insert(0, item);
     _emit();
-    await _track(item, originKey: originKey, generation: generation);
+    try {
+      await _track(item, originKey: originKey, generation: generation);
+    } catch (error) {
+      item['last_error'] = 'Đã gửi giao dịch; chưa theo dõi được: $error';
+      _persistForOrigin(originKey, item);
+      _emit();
+    }
     return item;
   }
 
@@ -426,6 +468,7 @@ class LiveController extends ChangeNotifier {
 
   Future<void> subscribe(Json plan) async {
     await assertContext();
+    await _noPending('SUBSCRIBE', {'plan_id': plan['plan_id']});
     final amount = uint(plan['total_price']);
     if (await _tokenRead(encodeBalance(account!)) < amount)
       throw StateError('Không đủ mUSDC thử nghiệm.');
@@ -445,13 +488,13 @@ class LiveController extends ChangeNotifier {
         return;
       }
     }
-    await _send(
+    final sent = await _send(
       'SUBSCRIBE',
       config!['vault_address'],
       encodeId('subscribe', plan['plan_id']),
       {'plan_id': plan['plan_id']},
     );
-    await refresh();
+    await _refreshAfterSend(sent);
   }
 
   Future<Json> eligibility(String id) =>
@@ -459,6 +502,50 @@ class LiveController extends ChangeNotifier {
   Future<Json> detail(String id) => _get('/api/v1/subscriptions/$id');
   Future<List<Json>> events(String id) async =>
       _items(await _get('/api/v1/subscriptions/$id/events?limit=100'));
+  int _chainTime(Json sub, Json eligible) {
+    if (sub['chain_id'] != config!['chain_id'] ||
+        address(sub['vault_address']) != address(config!['vault_address'])) {
+      throw StateError('Subscription sai deployment.');
+    }
+    final sync = eligible['sync'];
+    if (sync is! Map || sync['source'] != 'LIVE') {
+      throw StateError('Không có thời gian blockchain LIVE.');
+    }
+    DateTime? parse(dynamic value) {
+      if (value is! String) return null;
+      final match = RegExp(
+        r'^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[+-](\d{2}):(\d{2}))$',
+      ).firstMatch(value);
+      if (match == null) return null;
+      int part(int i) => int.parse(match.group(i)!);
+      final year = part(1), month = part(2), day = part(3);
+      final hour = part(4), minute = part(5), second = part(6);
+      if (month < 1 ||
+          month > 12 ||
+          day < 1 ||
+          hour > 23 ||
+          minute > 59 ||
+          second > 59 ||
+          (match.group(8) != null && (part(8) > 23 || part(9) > 59))) {
+        return null;
+      }
+      final date = DateTime.utc(year, month, day);
+      if (date.year != year || date.month != month || date.day != day)
+        return null;
+      return DateTime.tryParse(value)?.toUtc();
+    }
+
+    final block = parse(sync['block_timestamp']);
+    if (block == null) {
+      throw StateError('Thời gian blockchain không hợp lệ.');
+    }
+    final seconds = block.millisecondsSinceEpoch ~/ 1000;
+    if (seconds < 0 || seconds > 253402300799) {
+      throw StateError('Thời gian blockchain ngoài miền được hỗ trợ.');
+    }
+    return seconds;
+  }
+
   Future<String> createCheckIn(String id) async {
     await assertContext();
     final sub = await detail(id);
@@ -472,7 +559,7 @@ class LiveController extends ChangeNotifier {
       'merchant': sub['merchant_address'],
       'periodIndex': eligible['next_period_index'],
       'nonce': eligible['nonce'],
-      'deadline': (nowSeconds() + 900).toString(),
+      'deadline': (_chainTime(sub, eligible) + 900).toString(),
     };
     final typed = typedData(config!, message);
     final signature =
@@ -505,11 +592,13 @@ class LiveController extends ChangeNotifier {
     if (address(message['merchant']) != account)
       throw StateError('QR không dành cho ví merchant này.');
     final deadline = uint(message['deadline']);
-    if (deadline < BigInt.from(nowSeconds()) ||
-        deadline > BigInt.from(nowSeconds() + 900))
-      throw StateError('QR hết hạn hoặc deadline quá xa.');
     final sub = await detail(message['subscriptionId']);
     final eligible = await eligibility(message['subscriptionId']);
+    final chainTime = _chainTime(sub, eligible);
+    if (deadline < BigInt.from(chainTime) ||
+        deadline > BigInt.from(chainTime + 900)) {
+      throw StateError('QR hết hạn hoặc deadline quá xa.');
+    }
     if (eligible['can_check_in'] != true ||
         eligible['nonce'] != message['nonce'] ||
         eligible['next_period_index'] != message['periodIndex']) {
@@ -519,13 +608,13 @@ class LiveController extends ChangeNotifier {
     if (recoverCheckIn(domain, message, qr['signature']) !=
         address(sub['subscriber_address']))
       throw StateError('Chữ ký QR sai subscriber.');
-    await _send(
+    final sent = await _send(
       'CHECK_IN',
       config!['vault_address'],
       encodeCheckIn(message, qr['signature']),
       {'subscription_id': message['subscriptionId']},
     );
-    await refresh();
+    await _refreshAfterSend(sent);
   }
 
   Future<void> refund(String id) async {
@@ -536,10 +625,13 @@ class LiveController extends ChangeNotifier {
     final eligible = await eligibility(id);
     if (eligible['can_refund'] != true)
       throw StateError('Chưa đủ điều kiện refund: ${eligible['reasons']}');
-    await _send('REFUND', config!['vault_address'], encodeId('refund', id), {
-      'subscription_id': id,
-    });
-    await refresh();
+    final sent = await _send(
+      'REFUND',
+      config!['vault_address'],
+      encodeId('refund', id),
+      {'subscription_id': id},
+    );
+    await _refreshAfterSend(sent);
   }
 
   @override

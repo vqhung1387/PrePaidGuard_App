@@ -88,3 +88,9 @@ flutter build web --dart-define=CHAIN_ID=31337
 Bộ real-mode tests kiểm HTTP envelope, ABI với contract xuất thật, vector EIP-712 TypeScript/Python/Dart, QR sai network/size, pin deployment, logout/đổi ví, refund eligibility và phục hồi hash khi RPC/API lỗi hoặc đổi account/network trong lúc ví đang gửi.
 
 Tài liệu: [MetaMask RPC](https://docs.metamask.io/metamask-connect/evm/reference/json-rpc-api/eth_sendTransaction/), [ký dữ liệu](https://docs.metamask.io/metamask-connect/evm/guides/sign-data/), [Dart JS interop](https://dart.dev/interop/js-interop).
+
+## Khôi phục khi cache lỗi và đồng hồ lệch
+
+Tx hash được giữ ngay trong bộ nhớ theo ví/deployment trước khi ghi cache. Lỗi đọc/ghi cache không được coi là giao dịch chưa gửi; app vẫn đối chiếu API và hiển thị hash/cảnh báo. Khi cùng thao tác còn pending, app chặn gửi lặp trước cả bước approve. Bộ nhớ khôi phục được qua logout/login trong cùng controller; nếu vừa mất cache vừa mất API rồi reload/đóng app, cần đối chiếu lịch sử ví/explorer bằng hash đã giữ trước khi gửi lại.
+
+QR dùng timestamp block trong eligibility LIVE để tạo và kiểm deadline900giây, không dùng đồng hồ thiết bị hoặc synced_at của server làm căn cứ tài chính. Timestamp sai định dạng/ngoài miền0..253402300799 và nguồn PROJECTION bị từ chối; contract vẫn xác thực nonce, kỳ, chữ ký và deadline lần cuối.

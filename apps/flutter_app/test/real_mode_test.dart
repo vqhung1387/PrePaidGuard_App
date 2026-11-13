@@ -39,6 +39,8 @@ Json plan() => {
 };
 Json subscription(String owner) => {
   'subscription_id': '1',
+  'chain_id': 43113,
+  'vault_address': vault,
   'subscriber_address': owner,
   'merchant_address': merchant,
   'status': 'ACTIVE',
@@ -49,6 +51,11 @@ Json eligible() => {
   'reasons': ['READY'],
   'next_period_index': '1',
   'nonce': '0',
+  'sync': {
+    'source': 'LIVE',
+    'block_timestamp': '2027-01-15T07:45:00Z',
+    'synced_at': '2027-01-15T07:45:00Z',
+  },
 };
 
 class FakeWallet implements WalletPort {
@@ -101,6 +108,7 @@ class FakeApi implements ApiPort {
   bool merchantProfile = false;
   bool failTracking = false;
   bool canRefund = true;
+  Json? syncOverride;
   String transactionStatus = 'CONFIRMED';
   String owner = customer;
   int checkIns = 0;
@@ -152,7 +160,11 @@ class FakeApi implements ApiPort {
       return {'items': [], 'next_cursor': null};
     if (path == '/api/v1/plans/1') return plan();
     if (path.endsWith('/eligibility'))
-      return {...eligible(), 'can_refund': canRefund};
+      return {
+        ...eligible(),
+        'can_refund': canRefund,
+        if (syncOverride != null) 'sync': syncOverride,
+      };
     if (path == '/api/v1/subscriptions/1') return subscription(owner);
     if (path == '/api/v1/transactions') {
       if (failTracking)
@@ -173,7 +185,7 @@ class FakeApi implements ApiPort {
 Future<LiveController> signedIn({
   FakeWallet? wallet,
   FakeApi? api,
-  MemoryPendingStore? store,
+  PendingStore? store,
   int Function()? now,
 }) async {
   final w = wallet ?? FakeWallet(), a = api ?? FakeApi();
@@ -188,7 +200,247 @@ Future<LiveController> signedIn({
   return c;
 }
 
+class FailingStore extends MemoryPendingStore {
+  bool failReads = false, failWrites = false;
+  @override
+  String? read(String key) {
+    if (failReads) throw StateError('read failed');
+    return super.read(key);
+  }
+
+  @override
+  void write(String key, String value) {
+    if (failWrites) throw StateError('write failed');
+    super.write(key, value);
+  }
+}
+
 void main() {
+  test(
+    'cache failure retains submitted hash and blocks repeat after relogin',
+    () async {
+      final store = FailingStore(), wallet = FakeWallet(), api = FakeApi();
+      final c = await signedIn(store: store, wallet: wallet, api: api);
+      store.failWrites = true;
+      api.failTracking = true;
+      await c.subscribe(plan());
+      expect(c.pending.single['tx_hash'], hash);
+      expect(c.pending.single['status'], 'SUBMITTED');
+      await expectLater(c.subscribe(plan()), throwsStateError);
+      await c.logout();
+      await c.login();
+      expect(c.pending.single['tx_hash'], hash);
+      await expectLater(c.subscribe(plan()), throwsStateError);
+      expect(wallet.transactions.length, 1);
+      c.dispose();
+    },
+  );
+  test('fresh QR uses chain clock despite slow device', () async {
+    final fixture =
+        jsonDecode(
+              File('../../shared/check-in.fixture.json').readAsStringSync(),
+            )
+            as Json;
+    final wallet = FakeWallet()
+      ..account = fixture['signer'].toString().toLowerCase()
+      ..typedSignature = fixture['signature'];
+    final api = FakeApi()..owner = wallet.account;
+    final c = await signedIn(wallet: wallet, api: api, now: () => 1799999040);
+    final payload = await c.createCheckIn('1');
+    expect(jsonDecode(payload)['message'], fixture['message']);
+    c.dispose();
+  });
+  test('successful tracking survives cache write failure', () async {
+    final store = FailingStore(), wallet = FakeWallet(), api = FakeApi();
+    final c = await signedIn(store: store, wallet: wallet, api: api);
+    store.failWrites = true;
+    await c.subscribe(plan());
+    expect(c.pending.single['tx_hash'], hash);
+    expect(c.pending.single['status'], 'CONFIRMED');
+    expect(c.pending.single['storage_warning'], contains('hash'));
+    expect(wallet.transactions.length, 1);
+    c.dispose();
+  });
+  test(
+    'read failure after broadcast remains visible and retry blocked',
+    () async {
+      final store = FailingStore(), wallet = FakeWallet(), api = FakeApi();
+      final c = await signedIn(store: store, wallet: wallet, api: api);
+      store.failReads = true;
+      api.failTracking = true;
+      await c.subscribe(plan());
+      expect(c.pending.single['tx_hash'], hash);
+      expect(c.pending.single['storage_warning'], contains('hash'));
+      await c.refreshPending();
+      await expectLater(c.subscribe(plan()), throwsStateError);
+      expect(wallet.transactions.length, 1);
+      c.dispose();
+    },
+  );
+
+  test('read failure preserves old cache until reads recover', () async {
+    final store = FailingStore(), wallet = FakeWallet(), api = FakeApi();
+    final c = await signedIn(store: store, wallet: wallet, api: api);
+    final oldHash = '0x${'bb' * 32}';
+    final key = 'prepaidguard.pending.fixture.$customer';
+    final old = jsonEncode([
+      {
+        'tx_hash': oldHash,
+        'action': 'REFUND',
+        'refs': {'subscription_id': '9'},
+        'status': 'SUBMITTED',
+      },
+    ]);
+    store.values[key] = old;
+    store.failReads = true;
+    api.failTracking = true;
+    await c.subscribe(plan());
+    expect(store.values[key], old);
+    expect(c.pending.single['tx_hash'], hash);
+    store.failReads = false;
+    await c.refresh();
+    expect(c.pending.map((item) => item['tx_hash']).toSet(), {hash, oldHash});
+    expect(store.values[key], contains(oldHash));
+    expect(store.values[key], contains(hash));
+    c.dispose();
+  });
+
+  test(
+    'failed storage keeps delayed hash scoped to originating wallet',
+    () async {
+      final store = FailingStore(), wallet = FakeWallet(), api = FakeApi();
+      final c = await signedIn(store: store, wallet: wallet, api: api);
+      store.failWrites = true;
+      final gate = Completer<dynamic>();
+      wallet.sendGate = gate;
+      final sending = c.subscribe(plan());
+      while (wallet.transactions.isEmpty) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      wallet.account = merchant;
+      wallet.stream.add(null);
+      await Future<void>.delayed(Duration.zero);
+      api.owner = merchant;
+      await c.login();
+      gate.complete(hash);
+      await sending;
+      expect(c.pending, isEmpty);
+      await c.logout();
+      wallet.account = customer;
+      api.owner = customer;
+      api.failTracking = true;
+      await c.login();
+      expect(c.pending.single['tx_hash'], hash);
+      await expectLater(c.subscribe(plan()), throwsStateError);
+      c.dispose();
+    },
+  );
+
+  test(
+    'QR validation follows chain time and fails closed on bad sync',
+    () async {
+      final fixture =
+          jsonDecode(
+                File('../../shared/check-in.fixture.json').readAsStringSync(),
+              )
+              as Json;
+      final payload = jsonEncode({
+        'version': 1,
+        'kind': 'PREPAIDGUARD_CHECK_IN',
+        'chainId': 43113,
+        'verifyingContract': vault,
+        'message': fixture['message'],
+        'signature': fixture['signature'],
+      });
+      for (final skew in [-7200, -60, 60, 7200]) {
+        final wallet = FakeWallet()..account = merchant;
+        final api = FakeApi()
+          ..owner = merchant
+          ..merchantProfile = true;
+        final c = await signedIn(
+          wallet: wallet,
+          api: api,
+          now: () => 1799999100 + skew,
+        );
+        api.owner = fixture['signer'].toString().toLowerCase();
+        api.syncOverride = {
+          'source': 'LIVE',
+          'block_timestamp': '2027-01-15T07:45:00Z',
+          'synced_at': DateTime.fromMillisecondsSinceEpoch(
+            (1799999100 + skew) * 1000,
+            isUtc: true,
+          ).toIso8601String(),
+        };
+        await c.confirmQr(payload);
+        expect(wallet.transactions.length, 1);
+        c.dispose();
+      }
+      for (final timestamp in [
+        '2027-01-15T07:45:00.000Z',
+        '2027-01-15T14:45:00+07:00',
+        '2027-01-15T06:45:00-01:00',
+      ]) {
+        final wallet = FakeWallet()..account = merchant;
+        final api = FakeApi()
+          ..owner = merchant
+          ..merchantProfile = true;
+        final c = await signedIn(wallet: wallet, api: api);
+        api.owner = fixture['signer'].toString().toLowerCase();
+        api.syncOverride = {'source': 'LIVE', 'block_timestamp': timestamp};
+        await c.confirmQr(payload);
+        expect(wallet.transactions.length, 1);
+        c.dispose();
+      }
+      for (final sync in <Json>[
+        {},
+        ...[
+          '2027-01-14T31:45:00Z',
+          '2027-02-29T07:45:00Z',
+          '2027-01-15T07:60:00Z',
+          '2027-01-15T07:45:60Z',
+          '2027-01-15T07:45:00+24:00',
+          '2027-01-15T07:45:00+00:60',
+        ].map((timestamp) => {'source': 'LIVE', 'block_timestamp': timestamp}),
+        {
+          'source': 'PROJECTION',
+          'block_timestamp': '2027-01-15T07:45:00Z',
+          'synced_at': '2027-01-15T07:45:00Z',
+        },
+        {
+          'source': 'LIVE',
+          'block_timestamp': 'bad',
+          'synced_at': '2027-01-15T07:45:00Z',
+        },
+        {
+          'source': 'LIVE',
+          'block_timestamp': '2201-01-01T00:00:00Z',
+          'synced_at': '2027-01-15T08:00:00Z',
+        },
+        {
+          'source': 'LIVE',
+          'block_timestamp': '2027-01-15T08:00:01Z',
+          'synced_at': '2027-01-15T08:00:01Z',
+        },
+        {
+          'source': 'LIVE',
+          'block_timestamp': '2027-01-15T07:44:59Z',
+          'synced_at': '2027-01-15T07:44:59Z',
+        },
+      ]) {
+        final wallet = FakeWallet()..account = merchant;
+        final api = FakeApi()
+          ..owner = merchant
+          ..merchantProfile = true;
+        final c = await signedIn(wallet: wallet, api: api);
+        api.owner = fixture['signer'].toString().toLowerCase();
+        api.syncOverride = sync;
+        await expectLater(c.confirmQr(payload), throwsA(anything));
+        expect(wallet.transactions, isEmpty);
+        c.dispose();
+      }
+    },
+  );
+
   test(
     'HTTP sends DTO directly with bearer and normalizes error envelope',
     () async {
@@ -382,7 +634,7 @@ void main() {
       final store = MemoryPendingStore(), w = FakeWallet(), a = FakeApi();
       final c = await signedIn(wallet: w, api: a, store: store);
       a.failTracking = true;
-      await expectLater(c.subscribe(plan()), throwsA(isA<ApiFailure>()));
+      await c.subscribe(plan());
       expect(w.transactions.length, 1);
       expect(store.values.values.single, contains(hash));
       c.dispose();
@@ -554,7 +806,9 @@ void main() {
   test(
     'merchant and subscriber projection issues are tracked separately and delayed hash merges on refresh',
     () async {
-      final store = MemoryPendingStore(), wallet = FakeWallet(), api = FakeApi();
+      final store = MemoryPendingStore(),
+          wallet = FakeWallet(),
+          api = FakeApi();
       api.merchantProfile = true;
       final c = await signedIn(wallet: wallet, api: api, store: store);
       expect(c.issues.single['subscription_id'], '9');

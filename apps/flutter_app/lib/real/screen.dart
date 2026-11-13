@@ -600,7 +600,7 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
                     ListTile(
                       title: Text('${item['action']} · ${item['status']}'),
                       subtitle: SelectableText(
-                        '${item['tx_hash']}${item['last_error'] != null ? '\n${item['last_error']}' : ''}',
+                        '${item['tx_hash']}${item['last_error'] != null ? '\n${item['last_error']}' : ''}${item['storage_warning'] != null ? '\n${item['storage_warning']}' : ''}',
                       ),
                     ),
                 ],

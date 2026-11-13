@@ -50,6 +50,10 @@ def main():
     parser.add_argument("--rpc-url", type=local_url, default="http://127.0.0.1:8545")
     parser.add_argument("--browser", required=True)
     parser.add_argument("--output-dir", type=Path, default=Path("validation-results/browser"))
+    parser.add_argument("--merchant-clock-skew", type=int, default=0, help="Test browser clock offset in seconds")
+    parser.add_argument("--subscriber-clock-skew", type=int, default=0, help="Test browser clock offset in seconds")
+    parser.add_argument("--inject-cache-failure", action="store_true",
+        help="Fail subscriber pending writes AFTER broadcast plus simulate tracking API outage")
     args = parser.parse_args()
     if int(rpc(args.rpc_url, "eth_chainId", []), 16) != 31337:
         raise SystemExit("Acceptance requires local chain31337; no remote chain is used")
@@ -77,7 +81,10 @@ def main():
             result = check()
             if result:
                 return result
-            time.sleep(.2)
+            if browser and browser.contexts and browser.contexts[0].pages:
+                browser.contexts[0].pages[0].wait_for_timeout(200)
+            else:
+                time.sleep(.2)
         raise TimeoutError("Acceptance condition was not observed")
 
     def button(page, name):
@@ -121,10 +128,26 @@ def main():
             fill_field(page, label, value)
         click(page, "Xác nhận")
 
-    def provider_script(account):
+    def provider_script(account, skew):
         return """(() => {
           const account = ACCOUNT, rpcUrl = RPC;
           const listeners = new Map();
+          const NativeDate = Date, skewMillis = SKEW * 1000;
+          class TestDate extends NativeDate {
+            constructor(...args) { super(...(args.length ? args : [NativeDate.now() + skewMillis])); }
+            static now() { return NativeDate.now() + skewMillis; }
+          }
+          window.Date = TestDate;
+          window.__testFailPendingCache = false;
+          window.__testPendingWriteFailures = 0;
+          const originalSetItem = Storage.prototype.setItem;
+          Storage.prototype.setItem = function(key, value) {
+            if (window.__testFailPendingCache && String(key).startsWith('prepaidguard.pending.')) {
+              window.__testPendingWriteFailures++;
+              throw new DOMException('Injected pending-cache failure', 'QuotaExceededError');
+            }
+            return originalSetItem.call(this, key, value);
+          };
           window.__testTransactions = [];
           window.ethereum = {
             isMetaMask: true,
@@ -145,11 +168,18 @@ def main():
                 body:JSON.stringify({jsonrpc:'2.0', id:1, method, params})});
               const result = await response.json();
               if (result.error) throw new Error('Local RPC rejected ' + method);
-              if (method === 'eth_sendTransaction') window.__testTransactions.push(result.result);
+              if (method === 'eth_sendTransaction') {
+                window.__testTransactions.push(result.result);
+                if (CACHEFAULT && String(params[0].to).toLowerCase() === VAULT)
+                  window.__testFailPendingCache = true;
+              }
               return result.result;
             }
           };
-        })();""".replace("ACCOUNT", json.dumps(account)).replace("RPC", json.dumps(args.rpc_url))
+        })();""".replace("ACCOUNT", json.dumps(account)).replace("RPC", json.dumps(args.rpc_url)).replace(
+            "SKEW", str(skew)).replace("CACHEFAULT",
+            json.dumps(args.inject_cache_failure and account.lower() == accounts[2].lower())).replace(
+            "VAULT", json.dumps(config["vault_address"].lower()))
 
     def attach_token(page, key):
         def response_received(response):
@@ -159,7 +189,8 @@ def main():
 
     def open_session(browser, account, key):
         context = browser.new_context(viewport={"width": 1440, "height": 1100})
-        context.add_init_script(provider_script(account))
+        skew = args.merchant_clock_skew if key == "merchant" else args.subscriber_clock_skew
+        context.add_init_script(provider_script(account, skew))
         page = context.new_page()
         page.set_default_timeout(30000)
         attach_token(page, key)
@@ -208,6 +239,18 @@ def main():
             record("browser publish confirmed", plan_id=plan["plan_id"])
             customer_context, customer = open_session(browser, accounts[2], "customer")
             record("subscriber SIWE independent browser login")
+            blocked_tracking_calls = []
+            def tracking_outage(route):
+                body = route.request.post_data_json
+                if route.request.method == "POST" and body.get("action") == "SUBSCRIBE":
+                    blocked_tracking_calls.append(True)
+                    route.fulfill(status=503, content_type="application/json", body=json.dumps({
+                        "error": {"code": "RPC_UNAVAILABLE", "message": "Injected test outage",
+                                  "details": {}, "request_id": "cache-fault-test"}}))
+                else:
+                    route.continue_()
+            if args.inject_cache_failure:
+                customer_context.route("**/api/v1/transactions", tracking_outage)
             click(customer, "Đăng ký")
             click(customer, "Tiếp tục ký ví")
             def membership():
@@ -215,6 +258,31 @@ def main():
                 return next((item for item in rows if item["plan_id"] == plan["plan_id"]), None)
             sub = until(membership)
             sub_id = sub["subscription_id"]
+            if args.inject_cache_failure:
+                before_retry = len(customer.evaluate("window.__testTransactions"))
+                until(lambda: blocked_tracking_calls)
+                if customer.evaluate("window.__testPendingWriteFailures") < 1:
+                    raise RuntimeError("Pending-cache fault was not actually exercised")
+                # Repeating the financial intent during storage/API failure must emit no new wallet transaction.
+                click(customer, "Đăng ký")
+                click(customer, "Tiếp tục ký ví")
+                customer.get_by_text(re.compile("Đã có giao dịch cùng thao tác đang chờ")).first.wait_for(state="visible")
+                if len(customer.evaluate("window.__testTransactions")) != before_retry:
+                    raise RuntimeError("Cache failure retry broadcast an additional transaction")
+                if sum(item["plan_id"] == plan["plan_id"] for item in
+                       api("/api/v1/me/subscriptions?limit=100", tokens["customer"])["items"]) != 1:
+                    raise RuntimeError("Cache failure retry created duplicate subscriptions")
+                customer.evaluate("window.__testFailPendingCache = false")
+                customer_context.unroute("**/api/v1/transactions", tracking_outage)
+                click(customer, "Refresh trạng thái")
+                # Observe actual tracking completion; a chain event alone is insufficient.
+                until(lambda: any(tx["action"] == "SUBSCRIBE" and tx["status"] == "CONFIRMED"
+                    for tx in customer.evaluate("""Object.keys(localStorage)
+                      .filter(k => k.startsWith('prepaidguard.pending.'))
+                      .flatMap(k => JSON.parse(localStorage.getItem(k)))""")))
+                record("cache failure retains hash; retry emits no duplicate transaction; recovery confirms",
+                    wallet_transaction_count=before_retry,
+                    injected_write_failures=customer.evaluate("window.__testPendingWriteFailures"))
             record("browser approve and subscribe confirmed", subscription_id=sub_id)
             rpc(args.rpc_url, "evm_increaseTime", [7])
             rpc(args.rpc_url, "evm_mine", [])
@@ -227,7 +295,9 @@ def main():
             if message["kind"] != "PREPAIDGUARD_CHECK_IN":
                 raise RuntimeError("Unexpected QR payload")
             click(customer, "Đóng")
-            record("browser signs and renders CheckIn QR")
+            record("browser signs and renders CheckIn QR",
+                merchant_clock_skew_seconds=args.merchant_clock_skew,
+                subscriber_clock_skew_seconds=args.subscriber_clock_skew)
             click(merchant, "Nhập QR check-in")
             form(merchant, {"QR payload": payload})
             click(merchant, "Tiếp tục ký ví")
@@ -286,7 +356,10 @@ def main():
                 except Exception:
                     pass
     report = {"timestamp_utc": started, "status": status, "steps": results,
-        "scope": "Local EVM31337; test injected EIP1193 provider; no physical wallet/Fuji claims"}
+        "scope": "Local EVM31337; test injected EIP1193 provider; no physical wallet/Fuji claims",
+        "fault_injection": {"cache_failure": args.inject_cache_failure,
+            "merchant_clock_skew_seconds": args.merchant_clock_skew,
+            "subscriber_clock_skew_seconds": args.subscriber_clock_skew}}
     (args.output_dir / "browser-report.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     raise SystemExit(0 if status == "pass" else 1)

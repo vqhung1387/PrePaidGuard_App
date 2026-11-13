@@ -26,7 +26,7 @@ class BrowserPendingStore implements PendingStore {
     try {
       return storage.getItem(key.toJS)?.toDart;
     } catch (_) {
-      return null;
+      throw StateError('Không đọc được pending cache.');
     }
   }
 
