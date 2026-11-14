@@ -60,6 +60,32 @@ contract ConservationTest {
         }
     }
 
+    /// @dev Generate representable schedules whose refund endpoint is exactly the shared maximum.
+    function testFuzzRefundAtMaximum(uint32 periodSeed, uint32 graceSeed) public {
+        MockUSDC token = new MockUSDC(address(this));
+        PrepaidVault vault = new PrepaidVault(token, address(0xFEE), IYieldAdapter(address(0)));
+        uint64 period = uint64(periodSeed % 365 days) + 1;
+        uint64 grace = uint64(graceSeed % 90 days) + 1;
+        address customer = vm.addr(1);
+        token.mint(customer, 1);
+        vm.prank(customer);
+        token.approve(address(vault), 1);
+        vm.warp(vault.MAX_TIMESTAMP() - period - grace);
+        vault.createPlan(bytes32(uint256(1)), address(token), 1, 1, period, grace);
+        vm.prank(customer);
+        vault.subscribe(1);
+        PrepaidVault.Subscription memory sub = vault.getSubscription(1);
+        assert(uint256(sub.nextReleaseAt) + grace == vault.MAX_TIMESTAMP());
+        assert(sub.remainingPrincipal == 1);
+        vm.warp(vault.MAX_TIMESTAMP());
+        vm.prank(customer);
+        vault.refund(1);
+        assert(token.balanceOf(customer) == 1);
+        assert(token.balanceOf(address(vault)) == 0);
+        assert(vault.totalPrincipal() == 0);
+        assert(vault.getSubscription(1).status == PrepaidVault.Status.Refunded);
+    }
+
     function _release(PrepaidVault vault, uint256 id, PrepaidVault.Subscription memory sub) private {
         PrepaidVault.CheckIn memory message = PrepaidVault.CheckIn(
             id, address(this), uint256(sub.completedPeriods) + 1, sub.nonce, block.timestamp + 900
