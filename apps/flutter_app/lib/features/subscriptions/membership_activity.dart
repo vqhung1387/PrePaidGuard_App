@@ -36,23 +36,30 @@ class MembershipActivity extends StatelessWidget {
               ),
               const Divider(height: 1),
             ],
-            if (status == DemoCheckInStatus.confirmed) ...[
+            for (final release in membership.releases.reversed) ...[
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.check_circle_outline, color: accent),
-                title: const Text('Cơ sở xác nhận kỳ đầu'),
+                title: Text(
+                  release.period == 1
+                      ? 'Cơ sở xác nhận kỳ đầu'
+                      : 'Cơ sở xác nhận kỳ ${release.period}',
+                ),
                 subtitle: Text(
-                  'Đã giải ngân ${formatTokenAmount(membership.released)} USDC mô phỏng',
+                  'Đã giải ngân ${formatTokenAmount(release.amount)} USDC mô phỏng',
                 ),
               ),
               const Divider(height: 1),
             ],
-            if (status != DemoCheckInStatus.ready) ...[
-              const ListTile(
+            if (status == DemoCheckInStatus.awaitingMerchant) ...[
+              ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: Icon(Icons.how_to_reg_outlined, color: mutedText),
-                title: Text('Hội viên gửi check-in'),
-                subtitle: Text('Kỳ 1'),
+                leading: const Icon(
+                  Icons.how_to_reg_outlined,
+                  color: mutedText,
+                ),
+                title: const Text('Hội viên gửi check-in'),
+                subtitle: Text('Kỳ ${membership.nextPeriod}'),
               ),
               const Divider(height: 1),
             ],

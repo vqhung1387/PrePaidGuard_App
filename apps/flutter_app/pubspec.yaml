@@ -11,10 +11,14 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+  http: ^1.6.0
+  qr_flutter: ^4.1.0
+  web3dart: ^3.0.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  wallet: ^0.0.18
 
 flutter:
   uses-material-design: true
