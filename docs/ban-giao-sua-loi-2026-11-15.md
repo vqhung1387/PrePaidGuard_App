@@ -1,84 +1,157 @@
-# Bàn giao bản sửa tích hợp — 15/11/2026
+# Bàn giao theo từng role — PrePaidGuard
 
-Nhánh: **fix/tich-hop-va-phuc-hoi**. Đã merge frontend78d2295 và Solidity16e0d3f vào nền feat/integration a9096b2, giữ lịch sử cha. Không force-push nhánh của nhóm; main chưa được merge/deploy.
+Nhánh bàn giao: **fix/tich-hop-va-phuc-hoi**. Bản code đã kiểm: **a80c8ae**; các cập nhật phân công sau đó chỉ sửa tài liệu. Nhánh đã tích hợp frontend 78d2295 và Solidity 16e0d3f trên nền a9096b2. Tại thời điểm bàn giao, chưa merge main, chưa nghiệm thu Fuji/HTTPS.
 
-**Phân vai và phạm vi:** xem [một đầu mối cho mỗi việc + 10 điểm cần nhóm thống nhất](phan-vai-va-diem-can-thong-nhat.md). Các sửa tích hợp đã có không có nghĩa BE nhận luôn UI/Solidity trong các đợt tiếp theo. Phân công dưới đây là đầu mối đề xuất, chờ nhóm xác nhận tên người/quyết định chung.
+**Cách nhận việc:** A phụ trách UI/Flutter; B phụ trách BE/FastAPI; C phụ trách Solidity. Tên thật do nhóm điền. Mỗi mã việc bên dưới chỉ thuộc một role. “Nhận đầu vào” không có nghĩa cùng nhận trách nhiệm triển khai. Các quyết định phạm vi chưa chốt nằm ở mục 4.
 
-## Đã sửa
+## 1. Role UI/Flutter — A
 
-| Việc | Kết quả |
-|---|---|
-| Conflict real/screen.dart | Giữ UI mới và controller có bảo vệ pending/clock |
-| Biểu đồ giờ đông | Đo nhãn theo text scale, giảm số mốc; nếu cực hẹp thì cuộn cả chart/trục. Test54 cấu hình |
-| Script browser / CI | Đồng bộ locator/nhãn UI, thêm runner tự dựng môi trường và workflow browser; chạy trên feat/**, fix/** và PR. Flutter pin3.47.9, Node24 |
-| Cancel/speed-up | BE lưu nonce, xác minh owner + sender/nonce + canonical receipt + confirmations. Gốc thành CANCELLED/REPLACED; tracking hash mới nếu cùng action/resource |
-| APPROVE bị thay thế | Lưu nonce khi pending, đối chiếu hash mới qua provider ví và block/confirmations. Không gửi lại để thử khi chưa có chứng cứ |
-| Reorg sau cancel | BE hủy kết luận cũ khi block đổi; client đối chiếu lại trước khi thử lại cùng thao tác |
-| JWT hết hạn sau broadcast | Giữ hash trước, xóa phiên hết hạn ngay, yêu cầu SIWE lại |
-| Catalog timeout | Tải20 gói/cursor và nút Tải thêm; không trùng ID |
-| Readiness | Render dùng /ready; /health chỉ kiểm process |
-| Tech debt tài liệu | README ghi stack thực tế; task-board liên kết trạng thái mới |
+### Phần UI đã có, cần tiếp nhận bảo trì
 
-## Phần BE và UI hỗ trợ tích hợp đã làm tiếp
+- Giao diện catalog, so sánh/tìm kiếm, hội viên, merchant và training demo.
+- Workspace dùng ví EIP-1193; gọi API, ký SIWE/EIP-712, gửi transaction, hiển thị QR và dán payload.
+- Hiển thị tiền gốc, giải ngân, refund, eligibility, yield và lịch sử từ API trên tài khoản thật.
+- Catalog tải 20 gói/cursor; chart đã sửa màn hình nhỏ/chữ lớn.
+- UI đối chiếu hash cancel/speed-up, nhập raw gốc khi thiếu nonce; giữ hash khi hết phiên/cache lỗi.
+- Build có API_BASE_URL mở thẳng workspace thật; tài khoản demo có nút chuyển sang ví thật.
 
-- Phục hồi legacy bằng raw transaction gốc đã ký, tối đa16KiB; kiểm hash/signer/chain. Raw không lưu DB/cache, không broadcast. Không nhận nonce tự khai làm bằng chứng.
-- Endpoint original-proof cho APPROVE; replacement nhận bằng chứng optional cho giao dịch Vault. Không cần migration mới ngoài0003.
-- RPC catalog tối đa4luồng, giữ block/thứ tự và không trả một phần khi lỗi; đã đo case100 gói/RPC200ms5,44s.
-- Đã đo Fuji công khai ngày15/11:8lượt eth_getBalance, tuần tự0,875s vs4luồng1,250s. Đây không phải benchmark Vault; các số này không chứng minh song song luôn tốt hơn.
-- Core tài khoản thật hiển thị số tiền/eligibility/yield/lịch sử đọc từ API, không còn JSON mặc định. Build có API mở thẳng luồng này, demo có nút ví để chuyển.
-- Người dùng chọn **làm BE trước**. Đã kiểm ví deploy0x9B14012e9a4dccE26b4581086bC44Dc1BF5bE1f4 còn0AVAXFuji. Chưa có gas deploy; Chrome automation tự dừng do không xác minh URL. Không triển khai bằng ví khác hoặc tiền mainnet.
+**Phạm vi file:** apps/flutter_app và workflow frontend. Controller, Dart DTO, kết nối ví và việc hiển thị phản hồi API trong Flutter thuộc role này.
 
-## Bắt buộc khi nhận nhánh
+### Việc UI làm tiếp
 
-1. Pull đúng nhánh trên, review trước khi merge feat/integration/main.
-2. **Backup DB hiện hữu, chạy alembic upgrade head tới0003 trước frontend mới. Không reset/xóa DB.**
-3. Xem Actions của đúng commit cuối. Local dùng Flutter3.41.9 với dependency SDK tương thích; pubspec.lock commit giữ pin gốc3.47.9.
-4. /config trả thêm confirmations; TransactionResponse có sender_nonce và replacement_tx_hash. Hợp đồng chuẩn tại /openapi.json và docs/api.md.
-5. Nút đối chiếu giao dịch SUBMITTED nhận hash tăng phí/hủy **đã mined**. Chưa đủ xác nhận, sai ví/nonce/block đều bị từ chối; đừng bỏ guard để làm UI hết chờ.
+| ID | UI phải thực hiện | Đầu vào cần có | Đầu ra và tiêu chí hoàn thành |
+| --- | --- | --- | --- |
+| UI-01 | Build và host bản Flutter Web dùng dữ liệu thật | URL API HTTPS; origin web đã chọn; manifest Fuji | Một URL app; cấu hình API, pin chain/Vault/deployment đúng; kết nối ví và tải được gói. UI bàn giao origin chính xác để cấu hình CORS |
+| UI-02 | Nghiệm thu kết nối và ký bằng Core/MetaMask thật | Ví/thiết bị đã chọn; token/gas testnet; URL app | Test login/logout, từ chối ký, sai mạng, đổi ví, hết phiên và reload. Không dùng khóa riêng trong app |
+| UI-03 | Nghiệm thu UX pending/cancel/speed-up | API replacement/original-proof đã có; giao dịch testnet | Người dùng đối chiếu hash đã xác nhận, thấy rõ trạng thái và không gửi lặp. Mất cả nonce/raw thì hiển thị lý do, không tự xóa cache để mở guard |
+| UI-04 | Nghiệm thu QR trên hai thiết bị | Luật/domain EIP-712 và môi trường thật | Subscriber ký, merchant nhận QR, gửi release; replay/QR hết hạn/sai merchant bị từ chối. Đây là buổi test do UI tổ chức, không phải tự đổi contract |
+| UI-05 | Thêm tải tiếp subscriptions/drafts/events | API cursor hiện có | Xem được mục 101, giữ filter, không trùng/mất mục khi tải tiếp. Catalog đã có phân trang; ba danh sách này còn giới hạn 100 trên UI |
+| UI-06 | Camera hoặc native wallet nếu nhóm đưa vào scope | Quyết định Web/native và camera ở mục 4 | Camera/deep-link chạy trên thiết bị được chọn. Nếu nhóm chọn Web+dán payload thì đánh dấu ngoài scope, không ghi là đã triển khai |
+| UI-07 | Chốt và thể hiện phần demo ngoài core | Quyết định về training/booking/giờ đông | Giữ nhãn mô phỏng cho dữ liệu RAM. Nếu muốn dữ liệu thật, UI bàn giao màn hình, field, thao tác và nguồn dữ liệu cần dùng trước khi yêu cầu API mới |
+| UI-08 | Hoàn thiện nhãn yield và lịch sử cho người dùng | DTO API hiện có và mode do contract cung cấp | Phân biệt MOCK/DISABLED, estimated/paid; không gọi token được cấp thử là lãi DeFi thật; không tự thay tỷ lệ hay điều kiện payout |
+| UI-09 | Duy trì kiểm thử Flutter và locator khi đổi UI | Bộ unit/widget test và browser script đang có | Analyze/test/build qua đúng Flutter 3.47.9/lockfile; bàn giao tên/key/accessible label mới cho script nghiệm thu khi đổi nút hoặc ô nhập |
 
-## Kiểm thử
+**UI không tự nhận:** sửa migration/auth/receipt verification của BE; sửa Vault/chính sách tiền; deploy contract; chọn nguồn yield mới.
 
-- Flutter: test hiện có +54 layout +128 chuỗi giải ngân + phân trang/JWT/recovery/approval/reorg.
-- BE: quyền sở hữu, sai nonce/ví/block, pending/confirmations, idempotence, reorg, legacy nonce.
-- Live EVM: cancel cùng nonce rồi retry chỉ tạo1 subscription; speed-up tracking hash mới.
-- Browser12 bước: cache/API lỗi, clock lệch60giây, replay/refund, hủy qua UI rồi retry đúng1 lần.
-- Contract:18 Mocha +2 fuzz test ×256 input; migration upgrade/check và readiness.
-- Local pass không có nghĩa ví extension/Fuji/HTTPS đã nghiệm thu. CI fail ở commit cuối phải sửa trước merge.
+## 2. Role BE/FastAPI — B
 
-## Chưa sửa / còn cần tiếp tục
+### Phần BE đã hoàn thành trong code
 
-| Việc | Đầu mối đề xuất / đầu ra cụ thể | Tiêu chí |
-|---|---|---|
-| **Pending cũ mất cả nonce và raw** | Người giữ ví | BE đã hỗ trợ raw signed transaction để chứng minh hash/signer/chain rồi phục hồi nonce. Chỉ khi không còn cả raw gốc và nonce đã lưu thì vẫn không thể chứng minh an toàn; cần tìm lại lịch sử nguồn gốc, không sửa DB/xóa cache theo cảm tính |
-| **Deploy contract Fuji** | C — Solidity (C-FUJI) | Gas testnet, deploy/verify, receipt và manifest/ABI; giao địa chỉ/chain/block cho B và A. Chưa deploy trong lượt này |
-| **Host API/DB HTTPS** | B — BE (B-HOST) | Nhận manifest từ C, migrate/backup DB, cấu hình RPC/AUTH/CORS và kiểm /ready. Không nhận luôn deploy contract |
-| **Build/host app** | A — UI (A-RELEASE) | Nhận URL API từ B và manifest từ C, pin chain/Vault/deployment; một URL dùng được trên thiết bị demo |
-| **Core/MetaMask + hai thiết bị** | A — UI dẫn nghiệm thu (A-WALLET) | B hỗ trợ API/log, C kiểm receipt; người giữ ví ký. Provider test không thay thế extension thật |
-| **Camera/native** | UI | Web EIP-1193/dán payload hiện hoạt động. Camera, Android/iOS chưa triển khai/nghiệm thu; chốt Web làm demo nếu thiếu thời gian |
-| **Subscriptions/drafts/events vượt100** | UI | Catalog đã phân trang20; các danh sách còn lại vẫn giới hạn100, cần tải tiếp nếu pilot vượt ngưỡng |
-| **Đo trên Vault Fuji đã deploy** | BE sau deploy | Đã đo transport Fuji và tối ưu đọc tối đa4 plan cùng block, giữ canonical/error handling. Test100 gói/RPC200ms giảm20,42→5,44s. Mẫu8lượt eth_getBalance trên Fuji không nhanh hơn với4luồng, nên cần benchmark Vault thật, không cam kết mọi RPC đều nhanh hơn |
-| **Demo ngoài core** | A — UI trình scope (D5) | Build có API mở workspace thật; core đọc API/chain. Training/booking/giờ đông vẫn mô phỏng. Nhóm chốt tính năng nào làm thật rồi mới giao API mới cho B |
-| **Yield contract/nguồn token** | C — Solidity (C-YIELD) | Nhóm chốt D3; hiện MOCK/DISABLED, chưa DeFi/BENQI thật; giao hành vi/event cho B và A |
-| **Nhãn yield trên app** | A — UI (A-YIELD) | Tiêu thụ DTO B có sẵn; phân biệt estimate/paid/MOCK theo đầu ra C, không tự đổi chính sách |
-| **Video/slide/nộp bài** | Một người nhóm chỉ định tại D10 | A cung cấp demo, B/C cung cấp bằng chứng; người điều phối chịu trách nhiệm kiểm hồ sơ và xác nhận nộp |
+- Auth SIWE/JWT, phân quyền metadata, PostgreSQL và migration tới 0003.
+- Tracking transaction, sender nonce, receipt/confirmation policy, replacement, reorg và projection/event sync.
+- Phục hồi legacy bằng raw transaction đã ký: kiểm hash/signer/chain; không lưu DB/cache hoặc broadcast raw.
+- Endpoint original-proof cho APPROVE; replacement nhận bằng chứng optional cho transaction Vault.
+- Catalog đọc tối đa 4 plan đồng thời tại cùng block, giữ thứ tự và lỗi; không cache số dư hoặc trả một phần khi RPC lỗi.
+- API cung cấp principal/release/refund/eligibility/yield/events; /ready và blueprint Render đã có.
+- Test PostgreSQL/EVM, runner browser tự dựng môi trường, workflow tích hợp và bản mô tả OpenAPI.
 
-## Chạy lại browser giống CI
+**Phạm vi file:** backend, render.yaml, scripts/validation, scripts/browser_acceptance và workflow backend/browser/integration. OpenAPI và tài liệu REST thuộc BE.
 
-Sau khi cài dependencies đã khóa, compile contracts và build Web với CHAIN_ID31337/API_BASE_URL=http://127.0.0.1:18010:
+### Việc BE làm tiếp
 
-```powershell
-$env:TEST_DATABASE_URL='postgresql+psycopg://postgres@127.0.0.1:55427/prepaidguard_test'
-cd backend
-uv run --locked --with playwright==1.65.2 python ../scripts/browser_acceptance/local.py --browser 'C:/Program Files/Google/Chrome/Application/chrome.exe'
-```
+| ID | BE phải thực hiện | Đầu vào cần có | Đầu ra và tiêu chí hoàn thành |
+| --- | --- | --- | --- |
+| BE-01 | Host DB/API HTTPS | Nơi host/ngân sách đã chốt; manifest/ABI Fuji; origin web | URL API, cấu hình RPC/DB/AUTH/CORS; backup rồi migrate head 0003, /ready đạt. Không reset DB để migrate |
+| BE-02 | Kiểm chứng API trên deployment thật | BE-01 và Vault Fuji đã có | SIWE/domain, quyền truy cập, publish metadata, tracking, scanner/reorg và error envelope chạy trên URL thật. Thu bằng chứng bằng request ID/hash, không log seed/raw/JWT |
+| BE-03 | Đo hiệu năng Vault Fuji thật | Manifest, RPC và dữ liệu plan/receipt đã triển khai | Báo cáo getPlan/logs/receipt, latency/error/rate limit; chỉnh giới hạn khi có số đo. Đo transport công khai đã làm không thay thế benchmark Vault |
+| BE-04 | Hỗ trợ case pending legacy có vấn đề dữ liệu | Hash gốc, trạng thái tracking; raw đã ký nếu còn | Xác minh bằng endpoint/test đã có. Nếu mất cả raw lẫn nonce và không truy được nguồn gốc thì ghi rõ không đủ chứng cứ; không sửa status bằng tay để cho gửi lại |
+| BE-05 | Duy trì CI và browser nghiệm thu | Locator UI do UI cung cấp; ABI/fixture do Solidity cung cấp | Chạy trên commit cuối, lưu báo cáo và chỉ rõ local/Fuji. Khi test lỗi, truy vết về role gây lỗi; việc điều phối không có nghĩa BE viết lại màn hình hoặc contract |
+| BE-06 | Kiểm tra phân trang và DTO khi UI nghiệm thu | Case UI-05 phát hiện và dữ liệu trên 100 mục | API cursor trả đúng thứ tự/quyền/filter. Sửa API nếu có lỗi; nút tải tiếp và state Flutter vẫn thuộc UI |
+| BE-07 | Thiết kế API cho tính năng ngoài core nếu được chọn | Scope được nhóm chốt; đặc tả UI-07 và nguồn dữ liệu thật | DTO, lưu trữ/quyền/validation, test và tài liệu cho đúng tính năng đã nhận. Chưa có scope thì không tự mở backend cho mọi trang demo |
+| BE-08 | Cập nhật tài liệu kỹ thuật backend | Kết quả deploy/test mới | URL công khai, migration, error/DTO, cách chạy và bằng chứng đúng commit. Không ghi đã nghiệm thu extension/thiết bị nếu mới chạy provider test |
 
-Runner yêu cầu cổng18545/18010/18090 trống, tự mở/dừng EVM/API/web, tạo/xóa schema UUID riêng. Không dùng node người khác hoặc DB production. Bỏ --browser thì cài Playwright Chromium trước như browser.yml. Báo cáo tại validation-results/browser/browser. Không commit .env, JWT, seed/private key hay ví deploy vào Git.
+**BE không tự nhận:** thiết kế/viết tất cả UI, camera/native, xuất ABI, deploy contract hoặc đổi luật tài chính. Phần Flutter từng sửa để tích hợp đã được ghi trong mục UI, không tạo trách nhiệm UI lâu dài cho BE.
 
-## Xác minh phần BE tiếp theo
+### Dữ liệu BE bàn giao cho UI
 
-- 55 test BE không cần EVM pass; 6 ca live EVM pass (MOCK/DISABLED và cancel/speed-up có/không có nonce legacy). Ca chữ ký unprotected thêm sau bộ live đã được kiểm riêng trong 55 ca.
-- 103 test Flutter pass; analyze không lỗi. Browser 13 bước pass, gồm kiểm số tiền chi tiết tài khoản thật rồi hủy/retry.
-- Test 100 gói, mỗi đọc plan bị chèn 200 ms trễ: 5,44 giây so với 20,42 giây trước tối ưu. Không dùng con số này để cam kết tốc độ mạng thật.
-- Đã đo RPC Fuji thật tại block 61101199; ví deploy vẫn 0 AVAX testnet. Deploy/HTTPS được để sau theo lựa chọn của người dùng, không phải phần code BE chưa làm.
+- API_BASE_URL và /openapi.json đúng phiên bản.
+- AUTH_DOMAIN/AUTH_URI công khai; chain/Vault/token/deployment/confirmations từ /config.
+- Mẫu request/response/error cho auth, plan, subscription, eligibility, transaction/replacement và events.
+- Cách dùng cursor; trạng thái pending/confirmed/reverted/replaced/cancelled.
+- Giới hạn đã biết và bằng chứng test. Không gửi DB password, JWT secret hoặc thông tin ví deploy vào app/Git.
 
-CI đúng head sau push là bằng chứng SDK pin; xem Actions của nhánh, không suy từ kết quả local dùngFlutter3.41.9. Lockfile gốc3.47.9 được giữ khi commit.
+## 3. Role Solidity — C
+
+### Phần Solidity đã có, cần tiếp nhận bảo trì
+
+- Vault/token/adapter, immutable plan, subscribe, check-in theo chữ ký và refund.
+- Giới hạn lịch/timestamp, xử lý kỳ cuối, nonce/domain, reentrancy và accounting.
+- Yield MOCK được cấp token theo vị thế; chế độ DISABLED; tỷ lệ payout theo baseline hiện có.
+- ABI export, signing vector/schema EIP-712, script deploy/seed và bộ contract/fuzz test.
+
+**Phạm vi file:** contracts, shared/abi, shared/deployments, shared/check-in.* và workflow solidity. C xuất file chuẩn; các role khác đọc, tránh sửa tay các bản ABI riêng.
+
+### Việc Solidity làm tiếp
+
+| ID | Solidity phải thực hiện | Đầu vào cần có | Đầu ra và tiêu chí hoàn thành |
+| --- | --- | --- | --- |
+| SOL-01 | Chuẩn bị deployment Fuji | Quyết định ví deploy/treasury/token/yield; gas testnet | Ví đúng chain 43113 có đủ gas. Lần kiểm gần nhất ví deploy 0x9B14012e9a4dccE26b4581086bC44Dc1BF5bE1f4 có 0 AVAX Fuji; người giữ ví thực hiện cấp gas/ký nếu cần |
+| SOL-02 | Deploy và verify contract | SOL-01 và source đã freeze/review | Token/Vault/adapter theo mode đã chọn; receipt thành công, địa chỉ/code đúng source. Không lấy test local làm bằng chứng đã deploy |
+| SOL-03 | Xuất bundle triển khai | SOL-02 | ABI, manifest, chain ID, deployment_id, addresses, block/hash, confirmations, mode và signing vector đúng phiên bản; giao cùng một bundle cho BE/UI |
+| SOL-04 | Đối chiếu luật tiền và số dư trên Fuji | Giao dịch demo thật và baseline nhóm đã chốt | Kiểm principal/yield, release/refund boundary, replay, terminal state; cung cấp hash/receipt cho các kết quả. Không thay chính sách một mình |
+| SOL-05 | Quản lý yield/funding và phạm vi DeFi | Quyết định giữ MOCK/DISABLED hay làm yield thật | Với MOCK: funding đủ token testnet, hạch toán đúng, mô tả rõ nguồn token. Yield DeFi thật chỉ triển khai khi nhóm chốt scope và yêu cầu cuộc thi |
+| SOL-06 | Duy trì contract test, export và hướng dẫn | Thay đổi source/ABI hoặc yêu cầu chính sách đã được chốt | Mocha/fuzz/export drift qua, ABI/manifest đồng bộ, ghi tác động nếu cần deploy lại Vault. Không đổi deployment_id lặng lẽ dưới frontend cũ |
+
+**Solidity không tự nhận:** host FastAPI/DB/HTTPS, state Flutter, camera hoặc thiết kế REST. Vai trò này bàn giao contract/bundle/receipt để các role còn lại làm phần của mình.
+
+### Bundle Solidity phải bàn giao
+
+- Chain/network và các địa chỉ công khai: Vault, token, adapter nếu có, treasury.
+- Deployment transaction hash, block, code hash và source/commit tương ứng.
+- ABI và schema/domain EIP-712 đúng contract; token decimals, status codes và confirmations.
+- Mode MOCK/DISABLED và cách cấp token/yield thử nghiệm.
+- Không đưa seed/private key, file khóa đã giải mã hay mật khẩu ví vào repo.
+
+## 4. Các điểm cần nhóm thống nhất trước khi chia thêm việc
+
+Đây là **quyết định chung**, không phải một task triển khai gán đồng thời cho nhiều role. Chưa có xác nhận thì giữ hành vi hiện tại, không tự đổi contract/interface hoặc mở scope.
+
+| Điểm cần chốt | Điều cần trả lời rõ | Người chuẩn bị thông tin | Sau khi chốt, ai làm phần nào |
+| --- | --- | --- | --- |
+| Nền tảng | Web là bản chính hay phải có Android/native? | UI | UI làm nền tảng đã chọn; BE giữ API; Solidity giữ contract |
+| Cách nhận QR | Camera bắt buộc trong MVP hay chấp nhận dán payload? | UI | UI thực hiện; BE/Solidity không nhận việc camera |
+| Chính sách tiền | Giữ baseline B1–B6, lịch release/refund hiện tại hay đổi? | Solidity | Solidity sửa contract nếu được giao; BE đổi validation/read model tương ứng; UI đổi điều khoản/UX tương ứng thành các task riêng |
+| Yield | MOCK/DISABLED đủ hay thể lệ buộc DeFi thật? | Solidity kiểm yêu cầu và khả thi | Solidity làm nguồn yield/adapter; BE ánh xạ dữ liệu; UI hiển thị. Chưa chốt thì không tự thêm BENQI |
+| Scope sản phẩm | Training/booking/giờ đông tiếp tục demo hay làm thật? Nguồn số liệu là gì? | UI mô tả màn hình và thao tác | UI chốt đặc tả; chỉ sau đó BE nhận API cụ thể. Không mặc định mọi màn hình cần backend mới |
+| Ví và gas | Ai giữ deployer/treasury, ai cấp AVAX Fuji và tài khoản demo nào? | Solidity | Solidity chuẩn bị deploy; người giữ ví làm thao tác cá nhân cần ký/mở khóa. Không chia sẻ khóa |
+| Hosting | Nơi host, URL web/API, DB, ngân sách tối đa và người giữ cấu hình? | BE chuẩn bị API/DB; UI chuẩn bị web | BE host API/DB; UI host app; Solidity không nhận host API |
+| Git và merge | Nhánh chuẩn, người merge, review và mốc freeze? | BE chuẩn bị diff/CI | Mỗi role có nhánh riêng; một người được nhóm chỉ định merge, không tự force-push nhánh người khác |
+| Buổi nghiệm thu | Core hay MetaMask, thiết bị nào, ai đóng vai khách/cơ sở? | UI | UI tổ chức thao tác; BE cung cấp log/API; Solidity cung cấp đối chiếu receipt. Mỗi role ghi kết quả riêng |
+| Nộp bài | Deadline thật, format, ai chịu trách nhiệm xác nhận nộp? | Nhóm chọn một người điều phối | UI giao bản demo/video; BE giao URL/API/bằng chứng; Solidity giao địa chỉ/receipt; người điều phối kiểm hồ sơ và xác nhận nộp |
+
+Mẫu chốt: “Chọn …; scope …; UI nhận …; BE nhận …; Solidity nhận …; người merge/nộp …; mốc hoàn thành …”. Không tự điền tên người, ngân sách hoặc hạn thay nhóm.
+
+## 5. Thứ tự bàn giao đầu vào
+
+1. Nhóm chốt nền tảng, scope, luật tiền/yield, ví và hosting.
+2. Solidity hoàn thành SOL-01→SOL-03, giao bundle cho BE và UI.
+3. BE thực hiện BE-01→BE-02, giao URL/OpenAPI; UI giao origin web chính xác để BE cấu hình CORS.
+4. UI hoàn thành UI-01→UI-04 trên môi trường thật.
+5. BE chạy BE-05; lỗi thuộc UI/API/contract được giao lại đúng role để sửa, không biến thành task “tích hợp” không có chủ.
+6. Người nhóm chỉ định thực hiện merge/freeze/nộp bài sau bằng chứng và review.
+
+Các task không phụ thuộc deployment vẫn làm trước được: UI phân trang/UX, BE test/DTO, Solidity contract tests/bundle. Không bắt mọi việc phải đợi nhau.
+
+## 6. Bằng chứng hiện có và điều kiện nhận nhánh
+
+- Code a80c8ae đã có 5 nhóm CI xanh: backend, frontend, Solidity, API–contract integration và browser.
+- Local: 55 test BE không cần EVM; 6 ca live EVM; 103 test Flutter; browser 13 bước. Bộ contract có 18 Mocha và 2 bài fuzz ×256 input.
+- Catalog giả lập 100 gói, RPC trễ 200 ms/lượt: 20,42→5,44 giây sau sửa. Đây không phải benchmark Vault Fuji.
+- Đo 8 lượt eth_getBalance trên Fuji: tuần tự 0,875 giây, 4 luồng 1,250 giây; không chứng minh song song luôn nhanh hơn. BE còn cần đo Vault đã deploy.
+- Local Flutter 3.41.9 khác pin CI 3.47.9; lockfile commit giữ pin gốc. CI đúng commit mới là bằng chứng cấu hình pin.
+- **BE backup DB rồi chạy alembic upgrade head tới 0003 trước frontend mới. Không reset/xóa DB.**
+- Pending mất cả nonce lẫn raw gốc không thể tự chứng minh. UI giữ guard; BE trả lỗi rõ; người giữ ví tìm dữ liệu nguồn. Không “sửa cho hết pending” bằng cách xóa cache/status tùy ý.
+- Người dùng đã chọn làm BE trước. Tại lần kiểm gần nhất, ví deploy chưa có gas Fuji; chưa deploy/kiểm HTTPS hoặc ví extension/hai thiết bị thật. Không dùng tiền mainnet để thay thế.
+- Chưa có nguồn dữ liệu thật cho training/booking/giờ đông; chưa có camera/native, DeFi yield thật hoặc xác nhận hoàn tất bài nộp.
+
+### BE chạy lại browser giống CI
+
+Sau khi có compiled contracts và Web build CHAIN_ID=31337, API_BASE_URL=http://127.0.0.1:18010:
+
+    $env:TEST_DATABASE_URL='postgresql+psycopg://postgres@127.0.0.1:55427/prepaidguard_test'
+    cd backend
+    uv run --locked --with playwright==1.65.2 python ../scripts/browser_acceptance/local.py --browser 'C:/Program Files/Google/Chrome/Application/chrome.exe'
+
+Runner cần cổng 18545/18010/18090 trống; tự mở/dừng EVM/API/web và tạo/xóa schema UUID riêng. Không dùng DB production/node người khác. Bỏ --browser thì cài Playwright Chromium như workflow browser.yml. Báo cáo ở validation-results/browser/browser.
+
+**Ranh giới cuối cùng:** tài liệu này giao rõ từng role. Các thay đổi BE và Flutter từng làm trong đợt sửa được ghi nhận theo phần code của chúng; chúng không tự chuyển trách nhiệm bảo trì UI hoặc deploy contract sang BE.
