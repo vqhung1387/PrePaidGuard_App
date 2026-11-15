@@ -110,3 +110,11 @@ Kiểm tra trên Node v24.22.3: typecheck PASS, build PASS, contract tests **20 
 Giữ nguyên createPlan permissionless và yield MOCK trả toàn bộ yield đã tích lũy ở mỗi settlement. Hai vấn đề QA này cần quyết định nghiệp vụ trước khi đổi contract. Các vấn đề sync backend/UI không thuộc phạm vi cập nhật này.
 
 Vault không upgradeable: source/ABI mới không làm đổi bytecode contract đã deploy. Môi trường muốn dùng bản sửa phải deploy Vault mới và cập nhật manifest/deployment_id cho backend/frontend; không ghi đè địa chỉ cũ rồi coi contract đã được nâng cấp.
+
+## 9. Công cụ deploy và rehearsal trên nhánh tích hợp
+
+Trên nhánh `codex/solidity-fuji-handoff` đã bổ sung preflight/verifier read-only, attempt journal có timeout cho deploy/seed/yield và kiểm input trước broadcast. Người dùng chốt **DISABLED cho Fuji**. Contract runtime, ABI và luật tiền giữ nguyên.
+
+Nghiệm thu local:34 tests pass (32 Mocha +2 Solidity fuzz256 mẫu mỗi bài), typecheck/build/export drift pass; actual-script rehearsal MOCK/DISABLED pass. Bốn ca mất response sau token/adapter/Vault/bind giữ journal, không publish manifest và không tự retry. Các node test sở hữu bởi runner đã đóng.
+
+Xem [báo cáo thực hiện](solidity-execution-report.md), [runbook](solidity-operations.md), [kế hoạch phase](solidity-execution-plan.md). Các thay đổi này được đóng gói trên codex/solidity-fuji-handoff để review bằng PR vào nhánh tích hợp. Chưa deploy Fuji: ví công khai từ bản bàn giao có0wei ở lần kiểm mới, quyền ký và các địa chỉ role chưa xác nhận. LOCAL_ARTIFACT_MATCH không thay thế việc freeze/source commit hoặc explorer verification còn thiếu.

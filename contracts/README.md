@@ -80,3 +80,7 @@ Toolchain hiện có cảnh báo npm audit ở dependency gián tiếp zod, glob
 Tài liệu đối chiếu khi triển khai. [Hardhat](https://hardhat.org/docs/getting-started), [OpenZeppelin EIP712/ECDSA](https://docs.openzeppelin.com/contracts/5.x/api/utils/cryptography), [SafeERC20](https://docs.openzeppelin.com/contracts/5.x/api/token/erc20).
 
 Xem [bàn giao Solidity](../docs/solidity-handoff.md).
+
+## Công cụ triển khai có checkpoint
+
+Xem [hướng dẫn vận hành](../docs/solidity-operations.md) cho preflight/verifier chỉ đọc, attempt journal, replay/funding và rehearsal local. Deployment Fuji của nhánh này chọn DISABLED; mode MOCK vẫn được kiểm thử. Các mẫu cũ dùng yield chỉ áp dụng khi chủ động chọn MOCK.

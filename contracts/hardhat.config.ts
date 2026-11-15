@@ -15,7 +15,7 @@ export default defineConfig({
       type: "edr-simulated", chainType: "l1", chainId: 31337,
       throwOnTransactionFailures: false,
     },
-    localhost: { type: "http", chainType: "l1", url: "http://127.0.0.1:8545" },
+    localhost: { type: "http", chainType: "l1", url: process.env.RPC_URL ?? "http://127.0.0.1:8545" },
     fuji: {
       type: "http",
       chainType: "l1",

@@ -2,7 +2,9 @@
   "name": "prepaidguard-contracts",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=24.0.0 <25" },
+  "engines": {
+    "node": ">=24.0.0 <25"
+  },
   "scripts": {
     "build": "hardhat build",
     "test": "hardhat test",
@@ -13,7 +15,9 @@
     "seed:local": "hardhat run scripts/seed-demo.ts --network localhost",
     "seed:fuji": "hardhat run scripts/seed-demo.ts --network fuji",
     "yield:local": "hardhat run scripts/fund-yield.ts --network localhost",
-    "yield:fuji": "hardhat run scripts/fund-yield.ts --network fuji"
+    "yield:fuji": "hardhat run scripts/fund-yield.ts --network fuji",
+    "preflight": "hardhat run scripts/preflight.ts --network localhost",
+    "verify:deployment": "hardhat run scripts/verify-deployment.ts --network localhost"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "4.2.2",
