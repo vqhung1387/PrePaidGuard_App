@@ -649,6 +649,13 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
                       ),
                     ),
                 ],
+                if (connected && c!.plansCursor != null)
+                  OutlinedButton(
+                    onPressed: busy
+                        ? null
+                        : () => _run(() => c.loadMorePlans()),
+                    child: const Text('Tải thêm gói'),
+                  ),
                 if (logged) ...[
                   _heading('Gói của tôi'),
                   for (final issue in c!.issues)
@@ -712,8 +719,30 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
                     ListTile(
                       title: Text('${item['action']} · ${item['status']}'),
                       subtitle: SelectableText(
-                        '${item['tx_hash']}${item['last_error'] != null ? '\n${item['last_error']}' : ''}${item['storage_warning'] != null ? '\n${item['storage_warning']}' : ''}',
+                        '${item['tx_hash']}${item['replacement_tx_hash'] != null ? '\nHash thay thế: ${item['replacement_tx_hash']}' : ''}${item['last_error'] != null ? '\n${item['last_error']}' : ''}${item['storage_warning'] != null ? '\n${item['storage_warning']}' : ''}',
                       ),
+                      trailing: item['status'] != 'SUBMITTED'
+                          ? null
+                          : IconButton(
+                              tooltip:
+                                  'Đối chiếu giao dịch tăng phí hoặc hủy trong ví',
+                              onPressed: busy
+                                  ? null
+                                  : () async {
+                                      final fields = await _form(
+                                        'Đối chiếu giao dịch thay thế đã xác nhận',
+                                        {'Hash giao dịch mới': ''},
+                                      );
+                                      if (fields != null)
+                                        await _run(
+                                          () => c.replaceTransaction(
+                                            item,
+                                            fields['Hash giao dịch mới']!,
+                                          ),
+                                        );
+                                    },
+                              icon: const Icon(Icons.find_replace),
+                            ),
                     ),
                 ],
               ],

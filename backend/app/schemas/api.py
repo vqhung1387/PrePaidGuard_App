@@ -63,6 +63,7 @@ class ConfigResponse(Output):
     yield_mode: Literal["MOCK", "DISABLED"]
     check_in_ttl_seconds: Literal[900] = 900
     supported_wallet_kind: Literal["EOA"] = "EOA"
+    confirmations: int = Field(ge=1)
     auth_domain: str
     auth_uri: str
 
@@ -307,12 +308,19 @@ class TransactionResponse(Output):
     tx_hash: Hash32
     chain_id: ChainId
     expected_action: Action
-    status: Literal["SUBMITTED", "CONFIRMED", "REVERTED"]
+    status: Literal["SUBMITTED", "CONFIRMED", "REVERTED", "REPLACED", "CANCELLED"]
     block_number: UintOut | None
     failure_code: str | None
     checked_at: datetime | None
     explorer_url: str
     event_ids: list[UUID]
+    sender_nonce: UintOut | None
+    replacement_tx_hash: Hash32 | None
+
+
+class ReplacementResponse(Output):
+    original: TransactionResponse
+    replacement: TransactionResponse | None
 
 
 class ProjectionIssueResponse(Output):

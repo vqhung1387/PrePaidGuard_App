@@ -1,5 +1,6 @@
 from eth_abi.exceptions import DecodingError
 from fastapi import APIRouter
+from pydantic import TypeAdapter
 from sqlalchemy import select
 from web3.exceptions import Web3Exception
 
@@ -10,7 +11,12 @@ from app.blockchain.vault import ACTION, hex_value
 from app.core.db import lock
 from app.core.errors import ApiError, not_found, rpc_error
 from app.models.entities import EventRecord, TransactionRecord, User
-from app.schemas.api import TransactionResponse, TransactionSubmit
+from app.schemas.api import (
+    ReplacementResponse,
+    TransactionHash,
+    TransactionResponse,
+    TransactionSubmit,
+)
 from app.schemas.types import Hash32, utcnow
 from app.services.sync import (
     draft_terms,
@@ -39,6 +45,7 @@ def _clear(record: TransactionRecord) -> None:
     record.block_hash = None
     record.block_number = None
     record.failure_code = None
+    record.replacement_tx_hash = None
 
 
 def _verify_input(
@@ -147,6 +154,7 @@ def _track(
     if tx is None:
         return
     _verify_input(vault, record, draft, tx, user.wallet_address)
+    record.sender_nonce = tx["nonce"]
     if record.subscription_id is not None:
         try:
             sub = vault.subscription(record.subscription_id, head)
@@ -249,12 +257,7 @@ def _response(db: Db, vault: Chain, record: TransactionRecord):
     )
 
 
-@router.post("/transactions", status_code=202, response_model=TransactionResponse)
-def submit(
-    body: TransactionSubmit, db: Db, principal: Current, vault: Chain, settings: Config
-):
-    lock(db, vault.lock_key)
-    user = principal.user
+def _submit_record(body, db, user, vault, settings):
     refs = {
         "plan_draft_id": getattr(body, "plan_draft_id", None),
         "plan_id": int(body.plan_id) if hasattr(body, "plan_id") else None,
@@ -297,8 +300,129 @@ def submit(
     ):
         raise conflict()
     _track(db, vault, settings, record, user, lookup)
+    return record
+
+
+@router.post("/transactions", status_code=202, response_model=TransactionResponse)
+def submit(
+    body: TransactionSubmit, db: Db, principal: Current, vault: Chain, settings: Config
+):
+    lock(db, vault.lock_key)
+    record = _submit_record(body, db, principal.user, vault, settings)
     db.commit()
     return _response(db, vault, record)
+
+
+@router.post("/transactions/{tx_hash}/replacement", response_model=ReplacementResponse)
+def replace_transaction(
+    tx_hash: Hash32,
+    body: TransactionHash,
+    db: Db,
+    principal: Current,
+    vault: Chain,
+    settings: Config,
+):
+    lock(db, vault.lock_key)
+    record = db.scalar(
+        select(TransactionRecord).filter_by(
+            **vault.scope,
+            tx_hash=tx_hash,
+            submitted_by_user_id=principal.user.id,
+        )
+    )
+    if record is None:
+        raise not_found()
+    _track(db, vault, settings, record, principal.user)
+    if (
+        record.status not in {"SUBMITTED", "REPLACED", "CANCELLED"}
+        or body.tx_hash == tx_hash
+    ):
+        raise conflict()
+    if record.status != "SUBMITTED" and record.replacement_tx_hash != body.tx_hash:
+        raise conflict()
+    if record.sender_nonce is None:
+        raise ApiError(
+            409,
+            "ORIGINAL_TX_UNAVAILABLE",
+            "Chưa có nonce của giao dịch gốc; không thể tự xác nhận thay thế.",
+        )
+    tx, receipt = vault.tx_receipt(body.tx_hash)
+    if tx is None or receipt is None:
+        raise ApiError(
+            409, "REPLACEMENT_NOT_CONFIRMED", "Giao dịch thay thế chưa được xác nhận."
+        )
+    if (
+        tx["from"].lower() != principal.user.wallet_address
+        or tx["nonce"] != record.sender_nonce
+        or hex_value(tx["hash"]) != body.tx_hash
+        or (
+            tx.get("chainId") is not None and tx["chainId"] != vault.deployment.chain_id
+        )
+    ):
+        raise mismatch()
+    head = vault.checked_head()
+    number = receipt["blockNumber"]
+    if number > vault.confirmed_height(head):
+        raise ApiError(
+            409, "REPLACEMENT_NOT_CONFIRMED", "Giao dịch thay thế chưa đủ xác nhận."
+        )
+    block = vault.block(number)
+    if (
+        number < vault.deployment.deployment_block
+        or tx["blockNumber"] != number
+        or hex_value(receipt["transactionHash"]) != body.tx_hash
+        or receipt["from"].lower() != principal.user.wallet_address
+        or (receipt.get("to") or "").lower() != (tx.get("to") or "").lower()
+        or hex_value(tx["blockHash"]) != block.hash
+        or hex_value(receipt["blockHash"]) != block.hash
+        or receipt["status"] not in {0, 1}
+    ):
+        raise rpc_error()
+    record.status = "REPLACED"
+    if (
+        (tx.get("to") or "").lower() == principal.user.wallet_address
+        and tx.get("value", 0) == 0
+        and hex_value(tx["input"]) == "0x"
+        and receipt["status"] == 1
+    ):
+        record.status = "CANCELLED"
+    record.replacement_tx_hash = body.tx_hash
+    record.block_number, record.block_hash = number, block.hash
+    record.failure_code = "TRANSACTION_" + record.status
+    draft = (
+        own_draft(db, record.plan_draft_id, principal.user.id, vault)
+        if record.plan_draft_id
+        else None
+    )
+    try:
+        candidate = TransactionRecord(
+            tx_hash=body.tx_hash,
+            expected_action=record.expected_action,
+            plan_id=record.plan_id,
+            subscription_id=record.subscription_id,
+        )
+        _verify_input(vault, candidate, draft, tx, principal.user.wallet_address)
+    except ApiError as error:
+        if error.code != "TX_MISMATCH":
+            raise
+        replacement = None
+    else:
+        payload = {"tx_hash": body.tx_hash, "action": record.expected_action}
+        for field in ("plan_id", "subscription_id", "plan_draft_id"):
+            value = getattr(record, field)
+            if value is not None:
+                payload[field] = str(value)
+        new_record = _submit_record(
+            TypeAdapter(TransactionSubmit).validate_python(payload),
+            db,
+            principal.user,
+            vault,
+            settings,
+        )
+        replacement = _response(db, vault, new_record)
+    vault.require_canonical(block)
+    db.commit()
+    return {"original": _response(db, vault, record), "replacement": replacement}
 
 
 @router.get("/transactions/{tx_hash}", response_model=TransactionResponse)

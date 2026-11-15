@@ -139,31 +139,64 @@ class _HourChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final endHour = firstHour + counts.length;
-    return Column(
-      children: [
-        Row(
-          children: [
-            for (final (index, count) in counts.indexed)
-              Expanded(child: _hourBar(context, firstHour + index, count)),
-          ],
-        ),
-        const Divider(height: 1),
-        Padding(
-          padding: const EdgeInsets.only(top: 4, bottom: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              for (var hour = firstHour; hour <= endHour; hour += 3)
-                Text(
-                  formatHour(hour),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelSmall?.copyWith(color: mutedText),
+    final style = Theme.of(
+      context,
+    ).textTheme.labelSmall?.copyWith(color: mutedText);
+    final scaler = MediaQuery.textScalerOf(context);
+    double labelWidth = 0;
+    for (var hour = firstHour; hour <= endHour; hour += 3) {
+      final painter = TextPainter(
+        text: TextSpan(text: formatHour(hour), style: style),
+        textDirection: Directionality.of(context),
+        textScaler: scaler,
+      )..layout();
+      if (painter.width > labelWidth) labelWidth = painter.width;
+      painter.dispose();
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth < labelWidth * 2 + 16
+            ? labelWidth * 2 + 16
+            : constraints.maxWidth;
+        final divisions = [
+          4,
+          2,
+          1,
+        ].firstWhere((n) => labelWidth * (n + 1) + 8 * n <= width);
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: width,
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    for (final (index, count) in counts.indexed)
+                      Expanded(
+                        child: _hourBar(context, firstHour + index, count),
+                      ),
+                  ],
                 ),
-            ],
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.only(top: 4, bottom: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      for (
+                        var hour = firstHour;
+                        hour <= endHour;
+                        hour += counts.length ~/ divisions
+                      )
+                        Text(formatHour(hour), style: style),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 

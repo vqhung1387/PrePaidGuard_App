@@ -88,7 +88,8 @@ Có thể lấy live contract khi snapshot cũ; API phải công khai block fres
 - tx_hash: Hash32; UNIQUE(chain_id, tx_hash).
 - expected_action: CREATE_PLAN | SUBSCRIBE | CHECK_IN | REFUND.
 - plan_draft_id: UUID?; subscription_id: UintString?; plan_id: UintString?.
-- status: SUBMITTED | CONFIRMED | REVERTED.
+- status: SUBMITTED | CONFIRMED | REVERTED | REPLACED | CANCELLED.
+- sender_nonce: UintString?; replacement_tx_hash: Hash32?. Chỉ đánh dấu thay thế sau khi chứng minh cùng sender/nonce và receipt canonical đủ xác nhận. Xem endpoint replacement trong api.md.
 - block_number: UintString?; block_hash: Hash32?; failure_code: string?.
 - created_at, checked_at?: Timestamp.
 Expected fields là gợi ý đối chiếu, không chứng minh giao dịch. APPROVE được mobile theo dõi trực tiếp, không cần lưu ở API MVP.

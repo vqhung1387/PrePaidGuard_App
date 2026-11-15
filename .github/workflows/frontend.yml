@@ -2,7 +2,7 @@ name: Frontend checks
 
 on:
   push:
-    branches: [frontend, mobile, main, "codex/**"]
+    branches: [frontend, mobile, main, "codex/**", "feat/**", "fix/**"]
   pull_request:
 
 permissions:

@@ -30,3 +30,6 @@ Fault injection bật lỗi localStorage.setItem CHỈ SAU khi subscriber đã b
 Kết quả browser-report.json và ảnh được lưu trong output-dir (validation-results đã gitignore). Script trả exitcode1 nếu bước cần thiết không đạt; không ghi JWT/chữ ký vào log hoặc trace. Kết quả pass không thay thế nghiệm thu ví extension thật, hai thiết bị vật lý hoặc Fuji.
 
 Script thay đổi thời gian và trạng thái EVM TEST. Chỉ trỏ tới môi trường test riêng; không trỏ vào node đang dùng cho công việc khác. Script không tự dựng/tắt DB/API/EVM của bạn.
+
+## Runner giống CI
+Sau khi build contracts/Web và khai báo TEST_DATABASE_URL, chạy từ backend: `uv run --locked --with playwright==1.65.2 python ../scripts/browser_acceptance/local.py --browser <chrome.exe>`. Runner chỉ sở hữu loopback EVM/API/web của chính nó và schema UUID riêng. Bỏ --browser thì dùng Chromium đã cài bởi Playwright. Kiểm cả cancel/retry qua UI; báo cáo ở validation-results/browser/browser.

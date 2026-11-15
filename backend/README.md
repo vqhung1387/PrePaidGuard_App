@@ -1,5 +1,7 @@
 # FastAPI backend
 
+Migration mới nhất: **0003**. Chạy `alembic upgrade head` trước khi dùng frontend phục hồi giao dịch; không xóa DB đang có. Endpoint replacement và phần cần nghiệm thu được ghi trong [bàn giao 15/11](../docs/ban-giao-sua-loi-2026-11-15.md). Health check phục vụ traffic dùng `/ready`; `/health` chỉ kiểm process còn sống.
+
 API cho SIWE, merchant, plan draft, subscription, receipt tracking và đồng bộ event. PostgreSQL giữ metadata và bản đọc từ chain. Ví người dùng ký giao dịch trực tiếp tới Vault.
 
 ## Chạy local

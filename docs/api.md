@@ -150,7 +150,7 @@ Quy trình verify:
 8. Receipt thành công nhưng action/reference không khớp → 409 TX_MISMATCH; không gắn thành công với tài nguyên đã yêu cầu.
 
 POST lặp cùng tx/action/reference bởi cùng user trả cùng record (202). Khác action/ref trả 409. User khác không claim record của người gửi.
-GET chỉ chủ tracking record. Transaction replacement: mobile đăng ký hash mới; hash cũ có thể ở SUBMITTED, UI cho thử lại/tra explorer, không tự kết luận đã revert.
+GET chỉ chủ tracking record. POST `/api/v1/transactions/{tx_hash}/replacement` nhận `{ "tx_hash": "hash_mới" }` và chỉ chủ tracking gốc được gọi. Backend phải đã lưu nonce gốc; hash mới phải cùng sender/nonce, có receipt canonical và đủ confirmations. Trả `{original: TransactionResponse, replacement: TransactionResponse | null}`. Gốc trở thành CANCELLED (self-transfer 0 thành công) hoặc REPLACED; chỉ tracking hash mới nếu calldata khớp cùng action/resource. Sai ví/nonce trả TX_MISMATCH; chưa mined/đủ xác nhận trả REPLACEMENT_NOT_CONFIRMED; nonce gốc chưa từng được lưu và RPC đã mất tx trả ORIGINAL_TX_UNAVAILABLE. Không xóa pending theo timeout. Migration 0003 thêm sender_nonce và replacement_tx_hash; `/openapi.json` là DTO chuẩn cho các trường mới.
 RPC lỗi không đổi SUBMITTED sang REVERTED.
 
 Worker/scanner MVP chạy bằng command quản lý backend, không endpoint public. Quét từ deployment block đến block đã xác nhận, upsert logs, chỉ commit cursor sau commit projection. Có thể chạy khi startup/demo và lặp có giới hạn theo cấu hình; không dùng vòng lặp vô hạn trong HTTP request.

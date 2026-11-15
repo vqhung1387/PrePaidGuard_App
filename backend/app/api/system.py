@@ -54,4 +54,5 @@ def config(settings: Config, vault: Chain):
         yield_mode=deployment.yield_mode,
         auth_domain=settings.auth_domain,
         auth_uri=settings.auth_uri,
+        confirmations=deployment.confirmations,
     )

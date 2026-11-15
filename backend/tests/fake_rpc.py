@@ -221,6 +221,7 @@ class FakeRpc:
             "blockHash": self.block_hash(block),
             "blockNumber": hex(block),
             "chainId": hex(self.chain_id),
+            "nonce": hex(num),
             "from": sender,
             "to": to,
             "input": self.vault.contract.encode_abi(fn, args=args),

@@ -213,15 +213,18 @@ class TransactionRecord(Identity, VaultScope, Base):
     block_number: Mapped[int | None] = mapped_column(UInt256)
     block_hash: Mapped[str | None] = mapped_column(String(66))
     failure_code: Mapped[str | None] = mapped_column(String(40))
+    sender_nonce: Mapped[int | None] = mapped_column(UInt256)
+    replacement_tx_hash: Mapped[str | None] = mapped_column(String(66))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow
     )
     checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     __table_args__ = (
         UniqueConstraint("chain_id", "tx_hash", name="uq_transaction_hash"),
-        *uint_checks("subscription_id", "plan_id", "block_number"),
+        *uint_checks("subscription_id", "plan_id", "block_number", "sender_nonce"),
         CheckConstraint(
-            "status IN ('SUBMITTED','CONFIRMED','REVERTED')", name="ck_tx_status"
+            "status IN ('SUBMITTED','CONFIRMED','REVERTED','REPLACED','CANCELLED')",
+            name="ck_tx_status",
         ),
         CheckConstraint(
             "(expected_action = 'CREATE_PLAN' AND plan_draft_id IS NOT NULL AND plan_id IS NULL "

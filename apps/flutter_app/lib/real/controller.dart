@@ -43,6 +43,7 @@ class LiveController extends ChangeNotifier {
       issues = [],
       merchantIssues = [];
   List<Json> pending = [];
+  String? plansCursor;
   final Map<String, List<Json>> _memoryPending = {};
 
   bool get loggedIn => account != null && api.token != null;
@@ -117,7 +118,9 @@ class LiveController extends ChangeNotifier {
       );
     }
     config = value;
-    plans = _items(await _get('/api/v1/plans?limit=100'));
+    final page = await _get('/api/v1/plans?limit=20');
+    plans = _items(page);
+    plansCursor = page['next_cursor'] as String?;
     _emit();
   }
 
@@ -248,7 +251,9 @@ class LiveController extends ChangeNotifier {
 
   Future<void> refresh() async {
     if (config == null) return;
-    plans = _items(await _get('/api/v1/plans?limit=100'));
+    final planPage = await _get('/api/v1/plans?limit=20');
+    plans = _items(planPage);
+    plansCursor = planPage['next_cursor'] as String?;
     if (!loggedIn) {
       _emit();
       return;
@@ -278,6 +283,19 @@ class LiveController extends ChangeNotifier {
   List<Json> _itemsOrEmpty(dynamic value) => value is List
       ? value.map((v) => Map<String, dynamic>.from(v as Map)).toList()
       : [];
+
+  Future<void> loadMorePlans() async {
+    final cursor = plansCursor;
+    if (cursor == null) return;
+    final page = await _get(
+      '/api/v1/plans?limit=20&cursor=${Uri.encodeQueryComponent(cursor)}',
+    );
+    final seen = plans.map((plan) => plan['plan_id']).toSet();
+    plans.addAll(_items(page).where((plan) => seen.add(plan['plan_id'])));
+    plansCursor = page['next_cursor'] as String?;
+    _emit();
+  }
+
   Future<void> createMerchant(String name) async {
     await assertContext();
     await _post('/api/v1/merchants', {
@@ -320,6 +338,14 @@ class LiveController extends ChangeNotifier {
       await refresh();
     } catch (error) {
       item['last_error'] = 'Đã gửi giao dịch; chưa cập nhật được: $error';
+      if (error is ApiFailure &&
+          error.status == 401 &&
+          pending.contains(item)) {
+        invalidate(
+          'Phiên hết hạn; đăng nhập lại. Giao dịch đã gửi: ${item['tx_hash']}.',
+        );
+        return;
+      }
       notice =
           'Đã gửi giao dịch ${item['tx_hash']}; chưa cập nhật được. Kiểm tra hash trước khi gửi lại.';
       _emit();
@@ -328,6 +354,31 @@ class LiveController extends ChangeNotifier {
 
   Future<void> _noPending(String action, Json refs) async {
     _mergeStoredPending();
+    final key = _pendingKey;
+    for (final item
+        in pending
+            .where(
+              (item) =>
+                  item['action'] == action &&
+                  jsonEncode(item['refs']) == jsonEncode(refs) &&
+                  ['CANCELLED', 'REPLACED'].contains(item['status']),
+            )
+            .toList()) {
+      final status = item['action'] == 'APPROVE'
+          ? (await _replaceApproval(
+              item,
+              item['replacement_tx_hash'],
+            ))['original']['status']
+          : (await _get('/api/v1/transactions/${item['tx_hash']}'))['status'];
+      if (status != item['status']) {
+        item['status'] = status;
+        _persistForOrigin(key, item);
+        _emit();
+        throw StateError(
+          'Trạng thái giao dịch gốc đã thay đổi; hãy kiểm tra lại trước khi gửi.',
+        );
+      }
+    }
     if (pending.any(
       (item) =>
           item['status'] == 'SUBMITTED' &&
@@ -361,9 +412,9 @@ class LiveController extends ChangeNotifier {
         }
       }
       saved.removeWhere((value) => value['tx_hash'] == item['tx_hash']);
+      item.remove('storage_warning');
       saved.insert(0, Map<String, dynamic>.from(item));
       store.write(key, jsonEncode(saved.take(50).toList()));
-      item.remove('storage_warning');
     } catch (_) {
       item['storage_warning'] =
           'Không lưu được giao dịch trên thiết bị. Lưu hash và kiểm tra ví/explorer; nếu tải lại khi API lỗi, ứng dụng có thể không khôi phục được giao dịch.';
@@ -406,6 +457,13 @@ class LiveController extends ChangeNotifier {
     } catch (error) {
       item['last_error'] = 'Đã gửi giao dịch; chưa theo dõi được: $error';
       _persistForOrigin(originKey, item);
+      if (error is ApiFailure &&
+          error.status == 401 &&
+          _sameSession(generation, originKey)) {
+        invalidate(
+          'Phiên hết hạn; đăng nhập lại. Giao dịch đã gửi: ${item['tx_hash']}.',
+        );
+      }
       _emit();
     }
     return item;
@@ -421,6 +479,15 @@ class LiveController extends ChangeNotifier {
       ]);
       if (receipt != null) {
         item['status'] = receipt['status'] == '0x1' ? 'CONFIRMED' : 'REVERTED';
+      } else if (item['sender_nonce'] == null) {
+        final tx = await wallet.request('eth_getTransactionByHash', [
+          item['tx_hash'],
+        ]);
+        if (tx != null &&
+            tx['hash'].toString().toLowerCase() == item['tx_hash'] &&
+            address(tx['from']) == account) {
+          item['sender_nonce'] = _rpcUint(tx['nonce']).toString();
+        }
       }
     } else {
       final result = await _post('/api/v1/transactions', {
@@ -431,6 +498,8 @@ class LiveController extends ChangeNotifier {
       item['status'] = result['status'];
       item.remove('last_error');
       item['explorer_url'] = result['explorer_url'];
+      item['sender_nonce'] = result['sender_nonce'];
+      item['replacement_tx_hash'] = result['replacement_tx_hash'];
     }
     _persistForOrigin(key, item);
     if (_sameSession(session, key)) _emit();
@@ -454,6 +523,106 @@ class LiveController extends ChangeNotifier {
       }
     }
     if (_sameSession(generation, key)) _emit();
+  }
+
+  BigInt _rpcUint(dynamic value) => value is String && value.startsWith('0x')
+      ? uint(BigInt.parse(value.substring(2), radix: 16).toString())
+      : uint(value.toString());
+
+  Future<Json> _replaceApproval(Json item, String hash) async {
+    final nonce = item['sender_nonce'];
+    if (nonce == null)
+      throw StateError('Chưa có nonce gốc; không thể tự xác nhận thay thế.');
+    final tx = await wallet.request('eth_getTransactionByHash', [hash]);
+    final receipt = await wallet.request('eth_getTransactionReceipt', [hash]);
+    if (tx == null || receipt == null)
+      throw StateError('Giao dịch thay thế chưa được xác nhận.');
+    if (tx['hash'].toString().toLowerCase() != hash ||
+        address(tx['from']) != account ||
+        _rpcUint(tx['nonce']) != uint(nonce) ||
+        tx['blockNumber'] != receipt['blockNumber'] ||
+        receipt['transactionHash'].toString().toLowerCase() != hash ||
+        address(receipt['from']) != account ||
+        tx['to'].toString().toLowerCase() !=
+            receipt['to'].toString().toLowerCase() ||
+        !['0x0', '0x1'].contains(receipt['status'])) {
+      throw StateError('Giao dịch thay thế không khớp ví/nonce/receipt.');
+    }
+    final height = _rpcUint(await wallet.request('eth_blockNumber'));
+    final number = _rpcUint(receipt['blockNumber']);
+    final confirmations = config!['confirmations'] as int? ?? 1;
+    if (number + BigInt.from(confirmations - 1) > height)
+      throw StateError('Chưa đủ xác nhận.');
+    final block = await wallet.request('eth_getBlockByNumber', [
+      receipt['blockNumber'],
+      false,
+    ]);
+    if (block == null ||
+        block['hash'] != receipt['blockHash'] ||
+        tx['blockHash'] != receipt['blockHash']) {
+      throw StateError('Block giao dịch đã thay đổi; hãy kiểm tra lại.');
+    }
+    final matches =
+        tx['to'].toString().toLowerCase() ==
+            config!['token']['address'].toString().toLowerCase() &&
+        tx['input'].toString().toLowerCase() ==
+            encodeApprove(config!['vault_address'], item['refs']['amount']);
+    final cancelled =
+        tx['to'].toString().toLowerCase() == account &&
+        _rpcUint(tx['value']) == BigInt.zero &&
+        tx['input'] == '0x' &&
+        receipt['status'] == '0x1';
+    return {
+      'original': {'status': cancelled ? 'CANCELLED' : 'REPLACED'},
+      'replacement': matches
+          ? {'status': receipt['status'] == '0x1' ? 'CONFIRMED' : 'REVERTED'}
+          : null,
+    };
+  }
+
+  Future<void> replaceTransaction(Json item, String replacementHash) async {
+    await assertContext();
+    final hash = replacementHash.trim().toLowerCase();
+    if (!RegExp(r'^0x[0-9a-f]{64}$').hasMatch(hash) ||
+        hash == item['tx_hash'] ||
+        item['status'] != 'SUBMITTED') {
+      throw const FormatException('Cần hash mới của giao dịch đang pending.');
+    }
+    final key = _pendingKey, generation = _generation;
+    final result = item['action'] == 'APPROVE'
+        ? await _replaceApproval(item, hash)
+        : await _post('/api/v1/transactions/${item['tx_hash']}/replacement', {
+            'tx_hash': hash,
+          });
+    if (item['action'] == 'APPROVE') {
+      await assertContext();
+      if (!_sameSession(generation, key))
+        throw StateError('Phiên ví đã đổi; hãy đối chiếu lại.');
+    }
+    item['status'] = result['original']['status'];
+    item['replacement_tx_hash'] = hash;
+    item.remove('last_error');
+    _persistForOrigin(key, item);
+    Json? replacement;
+    if (result['replacement'] != null) {
+      replacement = {
+        'tx_hash': hash,
+        'action': item['action'],
+        'refs': item['refs'],
+        'status': result['replacement']['status'],
+        'sender_nonce': item['sender_nonce'],
+      };
+      _persistForOrigin(key, replacement);
+    }
+    if (!_sameSession(generation, key)) return;
+    if (replacement != null) {
+      pending.removeWhere((value) => value['tx_hash'] == hash);
+      pending.insert(0, replacement);
+    }
+    notice =
+        'Đã đối chiếu giao dịch thay thế $hash. Có thể kiểm tra lại thao tác.';
+    _emit();
+    await _refreshAfterSend(item);
   }
 
   Future<BigInt> _tokenRead(String data) async {

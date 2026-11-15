@@ -660,7 +660,8 @@ def test_schema_and_no_secret_in_validation(harness):
     client, _, _, rpc = harness
     schema = client.get("/openapi.json").json()
     operations = [op for path in schema["paths"].values() for op in path.values()]
-    assert len(operations) == 24
+    assert len(operations) == 25
+    assert "/api/v1/transactions/{tx_hash}/replacement" in schema["paths"]
     assert "HTTPBearer" in schema["components"]["securitySchemes"]
     assert (
         schema["components"]["schemas"]["PlanTerms"]["properties"]["price_per_period"][

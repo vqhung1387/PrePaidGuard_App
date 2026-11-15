@@ -40,9 +40,9 @@ Các gói dùng kỳ 30 ngày trong demo. Mức giá do PrepaidGuard đặt cho 
 ## Cấu trúc
 
 - lib/app: điểm ghép ứng dụng, router, theme và providers.
-- lib/core/api: Dio client và xử lý phản hồi API.
-- lib/core/wallet: kết nối ví, ký typed data và gửi giao dịch.
-- lib/core/config: cấu hình API/network và địa chỉ contract.
+- lib/real: http client, controller, ví EIP-1193, signing/QR và workspace dữ liệu thật.
+- lib/features: màn hình và dữ liệu demo, training, catalog, subscriptions, merchant.
+- shared ngoài app: ABI và deployment; client đối chiếu API config và các pin khi build.
 - lib/features: chức năng plans, subscriptions, check_in, refunds, merchant.
 - lib/shared/widgets: widget tái sử dụng.
 - test: unit/widget tests khi có logic cần kiểm chứng.
@@ -94,3 +94,5 @@ Tài liệu: [MetaMask RPC](https://docs.metamask.io/metamask-connect/evm/refere
 Tx hash được giữ ngay trong bộ nhớ theo ví/deployment trước khi ghi cache. Lỗi đọc/ghi cache không được coi là giao dịch chưa gửi; app vẫn đối chiếu API và hiển thị hash/cảnh báo. Khi cùng thao tác còn pending, app chặn gửi lặp trước cả bước approve. Bộ nhớ khôi phục được qua logout/login trong cùng controller; nếu vừa mất cache vừa mất API rồi reload/đóng app, cần đối chiếu lịch sử ví/explorer bằng hash đã giữ trước khi gửi lại.
 
 QR dùng timestamp block trong eligibility LIVE để tạo và kiểm deadline900giây, không dùng đồng hồ thiết bị hoặc synced_at của server làm căn cứ tài chính. Timestamp sai định dạng/ngoài miền0..253402300799 và nguồn PROJECTION bị từ chối; contract vẫn xác thực nonce, kỳ, chữ ký và deadline lần cuối.
+
+Xem [bàn giao 15/11](../../docs/ban-giao-sua-loi-2026-11-15.md): catalog20 mục/cursor, đối chiếu hash cancel/speed-up đã xác nhận, migration0003 và phần còn cần nghiệm thu.

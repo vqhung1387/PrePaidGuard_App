@@ -2,9 +2,9 @@
 
 MVP UniHack cho quản lý ký quỹ dịch vụ trả trước trên Avalanche.
 
-## Stack dự kiến
+## Stack hiện tại
 
-- Client: Flutter / Dart, Riverpod, Dio.
+- Client: Flutter / Dart, http; ví trình duyệt EIP-1193 trên Web.
 - Backend: Python / FastAPI / Pydantic; quản lý môi trường bằng uv.
 - Database: PostgreSQL, SQLAlchemy, Alembic.
 - Blockchain: Solidity, OpenZeppelin, Hardhat; Avalanche Fuji.
@@ -20,6 +20,8 @@ MVP UniHack cho quản lý ký quỹ dịch vụ trả trước trên Avalanche.
 | docs | Luật nghiệp vụ, kiến trúc, phân công và demo |
 
 ## Trạng thái
+
+Bản tích hợp sửa lỗi 15/11/2026 và việc còn lại được ghi tại [bàn giao mới nhất](docs/ban-giao-sua-loi-2026-11-15.md). Bản Web dùng ví/API thật đã có kiểm thử local; các màn hình catalog/lịch tập demo vẫn dùng dữ liệu mô phỏng.
 
 Backend đã có FastAPI, migration PostgreSQL và bộ kiểm thử. Xem [hướng dẫn backend](backend/README.md) và [handoff tích hợp](docs/backend-handoff.md). Nghiệm thu demo cần bản Flutter và deployment Fuji của nhóm.
 

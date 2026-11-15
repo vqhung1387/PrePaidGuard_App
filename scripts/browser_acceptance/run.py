@@ -48,12 +48,13 @@ def main():
     parser.add_argument("--app-url", type=local_url, default="http://127.0.0.1:18080")
     parser.add_argument("--api-url", type=local_url, default="http://127.0.0.1:18000")
     parser.add_argument("--rpc-url", type=local_url, default="http://127.0.0.1:8545")
-    parser.add_argument("--browser", required=True)
+    parser.add_argument("--browser", help="Browser executable; omit to use Playwright Chromium")
     parser.add_argument("--output-dir", type=Path, default=Path("validation-results/browser"))
     parser.add_argument("--merchant-clock-skew", type=int, default=0, help="Test browser clock offset in seconds")
     parser.add_argument("--subscriber-clock-skew", type=int, default=0, help="Test browser clock offset in seconds")
     parser.add_argument("--inject-cache-failure", action="store_true",
         help="Fail subscriber pending writes AFTER broadcast plus simulate tracking API outage")
+    parser.add_argument("--test-replacement", action="store_true", help="Cancel a pending subscription and recover through the UI")
     args = parser.parse_args()
     if int(rpc(args.rpc_url, "eth_chainId", []), 16) != 31337:
         raise SystemExit("Acceptance requires local chain31337; no remote chain is used")
@@ -111,7 +112,8 @@ def main():
         target.click(timeout=30000)
 
     def fill_field(page, label, value):
-        field = page.get_by_role("textbox", name=label, exact=True)
+        # The connection screen has one textbox; prefix semantics can change its accessible name.
+        field = page.get_by_role("textbox").first if label == "API URL" else page.get_by_role("textbox", name=label, exact=True)
         field.wait_for(state="visible")
         for _ in range(3):
             field.click()
@@ -163,6 +165,12 @@ def main():
               }
               if (method === 'eth_signTypedData_v4' && typeof params[1] === 'string')
                 params = [params[0], JSON.parse(params[1])];
+              if (method === 'eth_sendTransaction' &&
+                  window.__testPauseNextVaultSend && String(params[0].to).toLowerCase() === VAULT) {
+                window.__testPauseNextVaultSend = false;
+                await fetch(rpcUrl, {method:'POST', headers:{'Content-Type':'application/json'},
+                  body:JSON.stringify({jsonrpc:'2.0', id:1, method:'evm_setAutomine', params:[false]})});
+              }
               const response = await fetch(rpcUrl, {method:'POST',
                 headers:{'Content-Type':'application/json'},
                 body:JSON.stringify({jsonrpc:'2.0', id:1, method, params})});
@@ -274,7 +282,7 @@ def main():
                     raise RuntimeError("Cache failure retry created duplicate subscriptions")
                 customer.evaluate("window.__testFailPendingCache = false")
                 customer_context.unroute("**/api/v1/transactions", tracking_outage)
-                click(customer, "Refresh trạng thái")
+                click(customer, "Làm mới trạng thái")
                 # Observe actual tracking completion; a chain event alone is insufficient.
                 until(lambda: any(tx["action"] == "SUBSCRIBE" and tx["status"] == "CONFIRMED"
                     for tx in customer.evaluate("""Object.keys(localStorage)
@@ -286,7 +294,7 @@ def main():
             record("browser approve and subscribe confirmed", subscription_id=sub_id)
             rpc(args.rpc_url, "evm_increaseTime", [7])
             rpc(args.rpc_url, "evm_mine", [])
-            click(customer, "Refresh trạng thái")
+            click(customer, "Làm mới trạng thái")
             click(customer, "Tạo QR check-in")
             qr = customer.get_by_text(re.compile(r'^\{"version":1,')).first
             qr.wait_for(state="visible")
@@ -320,8 +328,8 @@ def main():
             record("old QR replay rejected without extra payment")
             rpc(args.rpc_url, "evm_increaseTime", [70])
             rpc(args.rpc_url, "evm_mine", [])
-            click(customer, "Refresh trạng thái")
-            click(customer, "Refund")
+            click(customer, "Làm mới trạng thái")
+            click(customer, "Yêu cầu hoàn gốc")
             click(customer, "Tiếp tục ký ví")
             final = until(lambda: (value if (value := detail())["status"] == "REFUNDED" else None))
             expected = ("50000000", "50000000", "0")
@@ -331,6 +339,39 @@ def main():
                 raise RuntimeError("Final principal accounting mismatch")
             record("browser refund confirmed and principal conserved",
                 principal_released=actual[0], principal_refunded=actual[1], remaining_principal=actual[2])
+            if args.test_replacement:
+                customer.evaluate("window.__testFailPendingCache = false; window.__testPauseNextVaultSend = true")
+                previous = len(customer.evaluate("window.__testTransactions"))
+                try:
+                    click(customer, "Đăng ký")
+                    click(customer, "Tiếp tục ký ví")
+                    until(lambda: len(customer.evaluate("window.__testTransactions")) > previous and
+                        rpc(args.rpc_url, "eth_getTransactionByHash", [customer.evaluate("window.__testTransactions.at(-1)")])["to"].lower() == config["vault_address"].lower())
+                    original_hash = customer.evaluate("window.__testTransactions.at(-1)")
+                    def tracked_original():
+                        try:
+                            return api("/api/v1/transactions/" + original_hash, tokens["customer"])["sender_nonce"] is not None
+                        except urllib.error.HTTPError:
+                            return False
+                    until(tracked_original)
+                    original_tx = rpc(args.rpc_url, "eth_getTransactionByHash", [original_hash])
+                    cancellation = rpc(args.rpc_url, "eth_sendTransaction", [{
+                        "from": accounts[2], "to": accounts[2], "value": "0x0", "gas": "0x5208",
+                        "nonce": original_tx["nonce"],
+                        "gasPrice": hex(2 * int(original_tx.get("maxFeePerGas", original_tx["gasPrice"]), 16) + 10**9)}])
+                    rpc(args.rpc_url, "evm_mine", [])
+                finally:
+                    rpc(args.rpc_url, "evm_setAutomine", [True])
+                click(customer, "Đối chiếu giao dịch tăng phí hoặc hủy trong ví")
+                form(customer, {"Hash giao dịch mới": cancellation})
+                until(lambda: api("/api/v1/transactions/" + original_hash, tokens["customer"])["status"] == "CANCELLED")
+                record("browser reconciles confirmed cancellation without rebroadcasting")
+                before_retry = len(api("/api/v1/me/subscriptions?limit=100", tokens["customer"])["items"])
+                customer.evaluate("window.__testFailPendingCache = false")
+                click(customer, "Đăng ký")
+                click(customer, "Tiếp tục ký ví")
+                until(lambda: len(api("/api/v1/me/subscriptions?limit=100", tokens["customer"])["items"]) == before_retry + 1)
+                record("browser retries after cancellation and creates exactly one subscription")
             customer.screenshot(path=str(args.output_dir / "subscriber-final.png"), full_page=True)
             merchant.screenshot(path=str(args.output_dir / "merchant-final.png"), full_page=True)
             record("two independent browser contexts exercised",
