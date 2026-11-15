@@ -5,6 +5,8 @@
 
 ## 1. Owner và cách phối hợp
 
+**Cập nhật giao việc:** dùng [phân vai và các điểm cần thống nhất](phan-vai-va-diem-can-thong-nhat.md) để tách một đầu mối cho từng task còn lại. A/B/C dưới đây là nhãn role, chưa tự gán tên người. Các kế hoạch cũ không thay thế quyết định scope/merge/deploy mà nhóm còn cần chốt.
+
 | Thành viên | Phạm vi chính | Review chéo |
 | --- | --- | --- |
 | A — Flutter | app, Dart DTO, ví, camera/QR, giao diện subscriber và merchant | B kiểm API integration, C kiểm signing/amount |
