@@ -95,3 +95,18 @@ Khi deploy lại, Vault và deployment_id đổi. Cập nhật BE và Flutter c�
 - Sau đổi contract, chạy export, commit ABI cùng code rồi chạy lại bài tích hợp backend. D05 còn cần kiểm cùng vector ở Dart/thiết bị.
 - npm audit tại lúc dựng bản nguồn có cảnh báo gián tiếp ở zod, glob, minimatch của toolchain build/test. Chi tiết trong README contract. Rà soát bản vá khi nâng dependency.
 - Chưa có Fuji manifest/tx evidence, review độc lập, URL API HTTPS hoặc nghiệm thu hai thiết bị. Các mục này là việc còn mở, không đánh dấu DONE từ kết quả local.
+
+## 8. Cập nhật nhánh Solidity ngày 15/11/2026
+
+Đã đồng bộ bản sửa contract từ `origin/codex/integration-fixes@a9096b2` vào working tree nhánh `solidity`:
+
+- Thêm MAX_TIMESTAMP=253402300799, giới hạn chung với datetime API. Kiểm cả lịch release và mốc refund tại createPlan, subscribe và mỗi lần đặt kỳ tiếp.
+- Khi hoàn tất kỳ cuối, chuyển Completed và đặt nextReleaseAt=0; không tính lịch cho kỳ không tồn tại.
+- Bổ sung bốn regression Mocha về timestamp/ranh giới/kỳ cuối và fuzz refund tại đúng timestamp tối đa; giữ fuzz bảo toàn tiền hiện có.
+- Export lại shared/abi/PrepaidVault.json; thêm contracts/.nvmrc chọn Node24. Tên hàm/event nghiệp vụ và cấu trúc CheckIn không đổi.
+
+Kiểm tra trên Node v24.22.3: typecheck PASS, build PASS, contract tests **20 passing (18 Mocha + 2 Solidity fuzz, 256 mẫu mỗi fuzz)**, export PASS. Bản sửa source/test/ABI khớp các file tương ứng trên nhánh tích hợp. Lượt này không chạy backend integration, Flutter hoặc deploy Fuji.
+
+Giữ nguyên createPlan permissionless và yield MOCK trả toàn bộ yield đã tích lũy ở mỗi settlement. Hai vấn đề QA này cần quyết định nghiệp vụ trước khi đổi contract. Các vấn đề sync backend/UI không thuộc phạm vi cập nhật này.
+
+Vault không upgradeable: source/ABI mới không làm đổi bytecode contract đã deploy. Môi trường muốn dùng bản sửa phải deploy Vault mới và cập nhật manifest/deployment_id cho backend/frontend; không ghi đè địa chỉ cũ rồi coi contract đã được nâng cấp.
