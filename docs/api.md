@@ -153,6 +153,10 @@ POST lặp cùng tx/action/reference bởi cùng user trả cùng record (202). 
 GET chỉ chủ tracking record. POST `/api/v1/transactions/{tx_hash}/replacement` nhận `{ "tx_hash": "hash_mới" }` và chỉ chủ tracking gốc được gọi. Backend phải đã lưu nonce gốc; hash mới phải cùng sender/nonce, có receipt canonical và đủ confirmations. Trả `{original: TransactionResponse, replacement: TransactionResponse | null}`. Gốc trở thành CANCELLED (self-transfer 0 thành công) hoặc REPLACED; chỉ tracking hash mới nếu calldata khớp cùng action/resource. Sai ví/nonce trả TX_MISMATCH; chưa mined/đủ xác nhận trả REPLACEMENT_NOT_CONFIRMED; nonce gốc chưa từng được lưu và RPC đã mất tx trả ORIGINAL_TX_UNAVAILABLE. Không xóa pending theo timeout. Migration 0003 thêm sender_nonce và replacement_tx_hash; `/openapi.json` là DTO chuẩn cho các trường mới.
 RPC lỗi không đổi SUBMITTED sang REVERTED.
 
+Nếu nonce gốc chưa được lưu, request replacement có thể kèm `original_signed_transaction` (raw transaction đã ký dạng hex, tối đa16KiB). Server kiểm keccak(raw) đúng hash gốc, chữ ký đúng ví của phiên SIWE, chain đúng deployment; từ đó lấy nonce và tiếp tục kiểm receipt thay thế. Dữ liệu raw không được lưu DB hoặc broadcast. Hash/nonce do client khai tự do không được coi là bằng chứng. Legacy không có EIP-155 chain ID bị từ chối.
+
+POST `/api/v1/transactions/original-proof` (Bearer) nhận `{tx_hash, original_signed_transaction}` và trả `{tx_hash, sender_nonce}`. Endpoint này chỉ giải mã/kiểm chứng, không mutate tracking hoặc mở guard. Client dùng cho APPROVE legacy trước khi kiểm receipt/canonical block của hash thay thế. Sai hash/signer/chain trả409 INVALID_ORIGINAL_TRANSACTION; sai dạng/quá dài trả422. Nếu không còn cả nonce lẫn raw gốc, vẫn không thể tự mở pending an toàn.
+
 Worker/scanner MVP chạy bằng command quản lý backend, không endpoint public. Quét từ deployment block đến block đã xác nhận, upsert logs, chỉ commit cursor sau commit projection. Có thể chạy khi startup/demo và lặp có giới hạn theo cấu hình; không dùng vòng lặp vô hạn trong HTTP request.
 Cần kiểm block hash, quét lại vùng overlap và rebuild projection bị ảnh hưởng nếu node trả chain thay đổi.
 

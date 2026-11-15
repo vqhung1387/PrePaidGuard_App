@@ -5,17 +5,21 @@ from pathlib import Path
 import pytest
 from eth_account import Account
 from eth_account.messages import encode_defunct
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 from web3 import Web3
 
 from app.blockchain.vault import Vault
 from app.core.config import Settings
+from app.models.entities import TransactionRecord
 
 
 @pytest.mark.skipif(
     not os.environ.get("CONTRACT_TEST_RPC"), reason="Requires isolated local EVM"
 )
 @pytest.mark.parametrize("cancel", [True, False])
-def test_confirmed_cancel_and_speedup(harness, tmp_path, cancel):
+@pytest.mark.parametrize("legacy", [True, False])
+def test_confirmed_cancel_and_speedup(harness, tmp_path, cancel, legacy):
     client, app, _, _ = harness
     rpc = os.environ["CONTRACT_TEST_RPC"]
     w3 = Web3(Web3.HTTPProvider(rpc))
@@ -53,10 +57,13 @@ def test_confirmed_cancel_and_speedup(harness, tmp_path, cancel):
     ]:
         assert w3.eth.wait_for_transaction_receipt(tx).status == 1
 
+    signed_bytes = {}
+
     def send_signed(tx):
-        return w3.eth.send_raw_transaction(
-            customer.sign_transaction(tx).raw_transaction
-        )
+        signed = customer.sign_transaction(tx)
+        tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
+        signed_bytes[Web3.to_hex(tx_hash)] = Web3.to_hex(signed.raw_transaction)
+        return tx_hash
 
     approval = token.functions.approve(vault.address, 100).build_transaction(
         {
@@ -159,10 +166,25 @@ def test_confirmed_cancel_and_speedup(harness, tmp_path, cancel):
     assert w3.eth.wait_for_transaction_receipt(replacement).status == 1
     assert w3.eth.get_transaction_count(customer.address) == 2
     assert vault.functions.subscriptionCount().call() == (0 if cancel else 1)
+    if legacy:
+        with Session(app.state.engine) as db, db.begin():
+            record = db.scalar(
+                select(TransactionRecord).where(
+                    TransactionRecord.tx_hash == Web3.to_hex(original)
+                )
+            )
+            record.sender_nonce = None
     response = client.post(
         "/api/v1/transactions/" + Web3.to_hex(original) + "/replacement",
         headers=headers,
-        json={"tx_hash": Web3.to_hex(replacement)},
+        json={
+            "tx_hash": Web3.to_hex(replacement),
+            **(
+                {"original_signed_transaction": signed_bytes[Web3.to_hex(original)]}
+                if legacy
+                else {}
+            ),
+        },
     )
     assert response.status_code == 200, response.json()
     assert response.json()["original"]["status"] == (

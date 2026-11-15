@@ -12,12 +12,18 @@ class RecoveryApi extends f.FakeApi {
   bool expired = false;
   bool speedup = false;
   bool reorg = false;
+  Json? proofBody, replacementBody;
   @override
   Future<dynamic> request(String method, String path, {Json? body}) async {
+    if (path == '/api/v1/transactions/original-proof') {
+      proofBody = body;
+      return {'tx_hash': f.hash, 'sender_nonce': '1'};
+    }
     if (expired && (path == '/api/v1/transactions' || path == '/api/v1/me')) {
       throw ApiFailure(401, 'TOKEN_EXPIRED', 'Expired');
     }
     if (path.endsWith('/replacement')) {
+      replacementBody = body;
       return {
         'original': {'status': speedup ? 'REPLACED' : 'CANCELLED'},
         'replacement': speedup ? {'status': 'CONFIRMED'} : null,
@@ -59,6 +65,7 @@ class CatalogApi extends f.FakeApi {
 
 class ApprovalWallet extends f.FakeWallet {
   String fault = '';
+  bool missingOriginal = false;
   @override
   Future<dynamic> request(
     String method, [
@@ -71,6 +78,7 @@ class ApprovalWallet extends f.FakeWallet {
           : '0x3b9aca00';
     }
     if (method == 'eth_getTransactionByHash') {
+      if (params.first == f.hash && missingOriginal) return null;
       if (params.first == f.hash)
         return {'hash': f.hash, 'from': account, 'nonce': '0x1'};
       return {
@@ -103,6 +111,63 @@ class ApprovalWallet extends f.FakeWallet {
 }
 
 void main() {
+  test(
+    'legacy approval accepts verified signed proof without persisting the signed bytes',
+    () async {
+      final api = RecoveryApi(),
+          wallet = ApprovalWallet()..missingOriginal = true;
+      final store = MemoryPendingStore();
+      final c = await f.signedIn(api: api, wallet: wallet, store: store);
+      addTearDown(c.dispose);
+      await c.subscribe(f.plan());
+      expect(c.pending.single['sender_nonce'], isNull);
+      await c.replaceTransaction(
+        c.pending.single,
+        replacementHash,
+        originalSignedTransaction: '0xabcdef',
+      );
+      expect(api.proofBody!['tx_hash'], f.hash);
+      expect(api.proofBody!['original_signed_transaction'], '0xabcdef');
+      expect(c.pending.single['status'], 'CANCELLED');
+      expect(store.values.values.single, isNot(contains('0xabcdef')));
+    },
+  );
+
+  test(
+    'legacy vault replacement forwards signed proof without retaining it',
+    () async {
+      final api = RecoveryApi()..transactionStatus = 'SUBMITTED';
+      final store = MemoryPendingStore();
+      final c = await f.signedIn(api: api, store: store);
+      addTearDown(c.dispose);
+      await c.subscribe(f.plan());
+      c.pending.single.remove('sender_nonce');
+      await c.replaceTransaction(
+        c.pending.single,
+        replacementHash,
+        originalSignedTransaction: '0xabcdef',
+      );
+      expect(api.replacementBody!['original_signed_transaction'], '0xabcdef');
+      expect(store.values.values.single, isNot(contains('0xabcdef')));
+    },
+  );
+
+  test('malformed original proof never reaches the API', () async {
+    final api = RecoveryApi()..transactionStatus = 'SUBMITTED';
+    final c = await f.signedIn(api: api);
+    addTearDown(c.dispose);
+    await c.subscribe(f.plan());
+    await expectLater(
+      c.replaceTransaction(
+        c.pending.single,
+        replacementHash,
+        originalSignedTransaction: 'words that are not a raw transaction',
+      ),
+      throwsFormatException,
+    );
+    expect(api.replacementBody, isNull);
+    expect(c.pending.single['status'], 'SUBMITTED');
+  });
   test(
     'cancelled transaction is revalidated before retry after a reorg',
     () async {

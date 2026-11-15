@@ -1,4 +1,5 @@
 import json
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -387,6 +388,16 @@ class Vault:
         if plan["token"].lower() != self.deployment.token.address:
             raise config_error()
         return plan
+
+    def plans(self, ids: list[int], block: Block) -> list[dict]:
+        # RPC calls only: SQLAlchemy sessions stay on the request thread.
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            pending = [pool.submit(self.plan, id_, block) for id_ in ids]
+            try:
+                return [future.result() for future in pending]
+            finally:
+                for future in pending:
+                    future.cancel()
 
     def subscription(self, id_: int, block: Block) -> dict:
         sub = self._read_struct(

@@ -12,8 +12,10 @@ from app.core.db import lock
 from app.core.errors import ApiError, not_found, rpc_error
 from app.models.entities import EventRecord, TransactionRecord, User
 from app.schemas.api import (
+    OriginalProofRequest,
+    OriginalProofResponse,
+    ReplacementRequest,
     ReplacementResponse,
-    TransactionHash,
     TransactionResponse,
     TransactionSubmit,
 )
@@ -24,6 +26,7 @@ from app.services.sync import (
     reconcile_plan_draft,
     sync_through,
 )
+from app.services.transaction_proof import original_nonce
 
 router = APIRouter(tags=["transaction tracking"])
 
@@ -313,10 +316,21 @@ def submit(
     return _response(db, vault, record)
 
 
+@router.post("/transactions/original-proof", response_model=OriginalProofResponse)
+def verify_original(body: OriginalProofRequest, principal: Current, settings: Config):
+    nonce = original_nonce(
+        body.original_signed_transaction,
+        body.tx_hash,
+        principal.user.wallet_address,
+        settings.chain_id,
+    )
+    return {"tx_hash": body.tx_hash, "sender_nonce": nonce}
+
+
 @router.post("/transactions/{tx_hash}/replacement", response_model=ReplacementResponse)
 def replace_transaction(
     tx_hash: Hash32,
-    body: TransactionHash,
+    body: ReplacementRequest,
     db: Db,
     principal: Current,
     vault: Chain,
@@ -333,6 +347,16 @@ def replace_transaction(
     if record is None:
         raise not_found()
     _track(db, vault, settings, record, principal.user)
+    if body.original_signed_transaction is not None:
+        nonce = original_nonce(
+            body.original_signed_transaction,
+            tx_hash,
+            principal.user.wallet_address,
+            vault.deployment.chain_id,
+        )
+        if record.sender_nonce is not None and record.sender_nonce != nonce:
+            raise mismatch()
+        record.sender_nonce = nonce
     if (
         record.status not in {"SUBMITTED", "REPLACED", "CANCELLED"}
         or body.tx_hash == tx_hash

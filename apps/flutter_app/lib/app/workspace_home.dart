@@ -56,12 +56,14 @@ class WorkspaceHome extends StatefulWidget {
     required this.email,
     required this.fromInvite,
     required this.onSignOut,
+    required this.onReal,
   });
 
   final DemoWorkspace workspace;
   final String email;
   final bool fromInvite;
   final VoidCallback onSignOut;
+  final VoidCallback onReal;
 
   @override
   State<WorkspaceHome> createState() => _WorkspaceHomeState();
@@ -207,6 +209,11 @@ class _WorkspaceHomeState extends State<WorkspaceHome> {
         toolbarHeight: 68,
         title: const BrandMark(),
         actions: [
+          IconButton(
+            tooltip: 'Mở tài khoản ví và dữ liệu thật',
+            icon: const Icon(Icons.account_balance_wallet_outlined),
+            onPressed: widget.onReal,
+          ),
           PopupMenuButton<_Mode>(
             tooltip: 'Chuyển chế độ',
             initialValue: _mode,

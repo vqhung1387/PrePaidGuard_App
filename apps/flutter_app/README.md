@@ -96,3 +96,7 @@ Tx hash được giữ ngay trong bộ nhớ theo ví/deployment trước khi gh
 QR dùng timestamp block trong eligibility LIVE để tạo và kiểm deadline900giây, không dùng đồng hồ thiết bị hoặc synced_at của server làm căn cứ tài chính. Timestamp sai định dạng/ngoài miền0..253402300799 và nguồn PROJECTION bị từ chối; contract vẫn xác thực nonce, kỳ, chữ ký và deadline lần cuối.
 
 Xem [bàn giao 15/11](../../docs/ban-giao-sua-loi-2026-11-15.md): catalog20 mục/cursor, đối chiếu hash cancel/speed-up đã xác nhận, migration0003 và phần còn cần nghiệm thu.
+
+Build có `--dart-define=API_BASE_URL=...` mở thẳng workspace dữ liệu thật; bản demo không cấu hình API vẫn mở đăng nhập mô phỏng và có nút ví để chuyển sang luồng thật. Chi tiết tài khoản hiển thị gốc trả trước/giải ngân/refund, eligibility, yield MOCK/DISABLED và lịch sử từ API, không lấy từ DemoWorkspace. Training/booking/giờ đông demo vẫn mô phỏng.
+
+Pending legacy thiếu nonce có thêm ô raw giao dịch gốc đã ký khi đối chiếu hash thay thế. Chỉ nhập signed transaction đã có (không seed/private key); raw được gửi cho API đang kết nối để kiểm chứng và không lưu trong cache. Không còn raw/nonce thì giữ guard và đối chiếu nguồn gốc, không tự xóa pending.

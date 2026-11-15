@@ -101,13 +101,13 @@ def list_plans(
         cursor,
     )
     items = []
-    for event in events:
-        try:
-            plan = vault.plan(event.plan_id, block)
-        except ApiError as error:
-            if error.status == 404:
-                raise rpc_error() from None
-            raise
+    try:
+        plans = vault.plans([event.plan_id for event in events], block)
+    except ApiError as error:
+        if error.status == 404:
+            raise rpc_error() from None
+        raise
+    for event, plan in zip(events, plans, strict=True):
         # A reorg can reuse a plan ID while the index still describes the old plan.
         if (
             plan["merchant"].lower() != event.merchant_address

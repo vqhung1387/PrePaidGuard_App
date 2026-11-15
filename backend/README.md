@@ -4,6 +4,10 @@ Migration mới nhất: **0003**. Chạy `alembic upgrade head` trước khi dù
 
 API cho SIWE, merchant, plan draft, subscription, receipt tracking và đồng bộ event. PostgreSQL giữ metadata và bản đọc từ chain. Ví người dùng ký giao dịch trực tiếp tới Vault.
 
+Catalog đọc RPC tối đa4 plan đồng thời trong mỗi request, cùng một block đã xác nhận, giữ thứ tự và kiểm canonical trước trả kết quả; không cache số dư và không trả một phần khi RPC lỗi. Đã đo riêng kịch bản100 gói/RPC200ms:20,42s trước sửa →5,44s sau sửa. Đo8 lượt eth_getBalance Fuji thực tế: tuần tự0,875s,4luồng1,250s; đây chỉ là mẫu transport, không phải benchmark Vault Fuji. Không khẳng định song song luôn nhanh hơn, cần đo lại deployment thật trước khi mở rộng tải.
+
+Phục hồi legacy hỗ trợ raw signed transaction (EIP-155/EIP-2930/EIP-1559 đã có test) thay vì tin nonce tự khai. Không bao giờ cần seed/private key; không lưu/phát lại raw. Decoder dùng eth-account đang khóa trong uv.lock; khi nâng package phải chạy lại vector các loại transaction.
+
 ## Chạy local
 
 Cần Python 3.12, [uv](https://docs.astral.sh/uv/) và PostgreSQL 16. Tạo database `prepaidguard` rồi chạy từ thư mục `backend/`:

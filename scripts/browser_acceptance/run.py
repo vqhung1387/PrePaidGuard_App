@@ -339,6 +339,12 @@ def main():
                 raise RuntimeError("Final principal accounting mismatch")
             record("browser refund confirmed and principal conserved",
                 principal_released=actual[0], principal_refunded=actual[1], remaining_principal=actual[2])
+            click(customer, "Chi tiết / lịch sử")
+            customer.get_by_text("Đã hoàn gốc: 50 mUSDC", exact=True).wait_for(state="visible")
+            customer.get_by_text("Đã giải ngân: 50 mUSDC", exact=True).wait_for(state="visible")
+            customer.get_by_text("Gốc còn lại: 0 mUSDC", exact=True).wait_for(state="visible")
+            click(customer, "Đóng")
+            record("real account detail displays on-chain principal and labelled yield")
             if args.test_replacement:
                 customer.evaluate("window.__testFailPendingCache = false; window.__testPauseNextVaultSend = true")
                 previous = len(customer.evaluate("window.__testTransactions"))

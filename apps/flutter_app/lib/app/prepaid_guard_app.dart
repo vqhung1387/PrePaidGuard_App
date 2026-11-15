@@ -19,7 +19,9 @@ class _PrepaidGuardAppState extends State<PrepaidGuardApp> {
   final _accounts = DemoAccounts();
   final _workspace = DemoWorkspace();
   final _fromInvite = isDemoInvite(Uri.base);
-  bool _real = Uri.base.queryParameters['real'] == '1';
+  bool _real =
+      Uri.base.queryParameters['real'] == '1' ||
+      const String.fromEnvironment('API_BASE_URL').isNotEmpty;
   String? _email;
 
   @override
@@ -36,6 +38,7 @@ class _PrepaidGuardAppState extends State<PrepaidGuardApp> {
             email: email,
             fromInvite: _fromInvite,
             onSignOut: () => setState(() => _email = null),
+            onReal: () => setState(() => _real = true),
           );
     return MaterialApp(
       title: 'PrepaidGuard',

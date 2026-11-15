@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -144,7 +144,11 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
                       child: TextField(
                         controller: entry.value,
                         decoration: InputDecoration(labelText: entry.key),
-                        maxLines: entry.key == 'QR payload' ? 6 : 1,
+                        maxLines:
+                            entry.key == 'QR payload' ||
+                                entry.key.startsWith('Raw giao dịch')
+                            ? 6
+                            : 1,
                       ),
                     ),
                 ],
@@ -312,6 +316,10 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
       'eligibility': await c.eligibility(id),
       'events': await c.events(id),
     };
+    final detail = data['subscription'] as Json;
+    final eligibility = data['eligibility'] as Json;
+    final events = data['events'] as List<Json>;
+    final yieldSummary = detail['yield_summary'] as Json;
     if (!mounted) return;
     await _withModal(
       () => showDialog<void>(
@@ -321,8 +329,68 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
           content: SizedBox(
             width: 700,
             child: SingleChildScrollView(
-              child: SelectableText(
-                const JsonEncoder.withIndent('  ').convert(data),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Đã trả trước: ${_money(detail['initial_principal'])} mUSDC',
+                  ),
+                  Text(
+                    'Đã giải ngân: ${_money(detail['principal_released'])} mUSDC',
+                  ),
+                  Text(
+                    'Đã hoàn gốc: ${_money(detail['principal_refunded'])} mUSDC',
+                  ),
+                  Text(
+                    'Gốc còn lại: ${_money(detail['remaining_principal'])} mUSDC',
+                  ),
+                  Text(
+                    'Đã giải ngân ${detail['completed_periods']}/${detail['total_periods']} kỳ',
+                  ),
+                  const Divider(),
+                  Text(
+                    'Có thể check-in: ${eligibility['can_check_in'] == true ? 'Có' : 'Chưa'}',
+                  ),
+                  Text(
+                    'Có thể hoàn gốc: ${eligibility['can_refund'] == true ? 'Có' : 'Chưa'}',
+                  ),
+                  Text('Kỳ tiếp: ${detail['next_release_at'] ?? '—'}'),
+                  Text('Mốc hoàn gốc: ${detail['refund_available_at'] ?? '—'}'),
+                  const Divider(),
+                  Text(
+                    'Yield: ${yieldSummary['mode']} · ${yieldSummary['mode'] == 'MOCK' ? 'Token được cấp thử nghiệm, không phải lãi DeFi thật' : 'Không tạo lãi'}',
+                  ),
+                  Text(
+                    'Ước tính chưa nhận: ${yieldSummary['estimated_unclaimed'] == null ? 'Chưa có dữ liệu' : '${_money(yieldSummary['estimated_unclaimed'])} mUSDC'}',
+                  ),
+                  Text(
+                    'Yield đã trả cho khách: ${_money(yieldSummary['paid_subscriber'])} mUSDC',
+                  ),
+                  Text(
+                    'Yield đã trả cho cơ sở: ${_money(yieldSummary['paid_merchant'])} mUSDC',
+                  ),
+                  Text(
+                    'Yield đã trả nền tảng: ${_money(yieldSummary['paid_platform'])} mUSDC',
+                  ),
+                  const Divider(),
+                  Text('Lịch sử giao dịch (${events.length} mục gần nhất)'),
+                  for (final event in events)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        '${event['event_name']} · ${event['block_timestamp']}',
+                      ),
+                      subtitle: SelectableText(event['explorer_url'] as String),
+                      trailing: IconButton(
+                        tooltip: 'Sao chép liên kết giao dịch',
+                        onPressed: () => Clipboard.setData(
+                          ClipboardData(text: event['explorer_url'] as String),
+                        ),
+                        icon: const Icon(Icons.copy),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -731,13 +799,20 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
                                   : () async {
                                       final fields = await _form(
                                         'Đối chiếu giao dịch thay thế đã xác nhận',
-                                        {'Hash giao dịch mới': ''},
+                                        {
+                                          'Hash giao dịch mới': '',
+                                          if (item['sender_nonce'] == null)
+                                            'Raw giao dịch gốc đã ký (không nhập seed/private key)':
+                                                '',
+                                        },
                                       );
                                       if (fields != null)
                                         await _run(
                                           () => c.replaceTransaction(
                                             item,
                                             fields['Hash giao dịch mới']!,
+                                            originalSignedTransaction:
+                                                fields['Raw giao dịch gốc đã ký (không nhập seed/private key)'],
                                           ),
                                         );
                                     },

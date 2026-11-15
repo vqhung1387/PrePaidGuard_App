@@ -283,6 +283,26 @@ class TransactionHash(Input):
     tx_hash: Hash32
 
 
+SignedTransaction = Annotated[
+    str, StringConstraints(pattern=r"^0x(?:[0-9a-fA-F]{2})+$", max_length=32770)
+]
+
+
+class OriginalProofRequest(TransactionHash):
+    original_signed_transaction: SignedTransaction = Field(repr=False)
+
+
+class OriginalProofResponse(Output):
+    tx_hash: Hash32
+    sender_nonce: UintOut
+
+
+class ReplacementRequest(TransactionHash):
+    original_signed_transaction: SignedTransaction | None = Field(
+        default=None, repr=False
+    )
+
+
 class CreatePlanTransaction(TransactionHash):
     action: Literal["CREATE_PLAN"]
     plan_draft_id: UUID

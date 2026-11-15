@@ -580,7 +580,11 @@ class LiveController extends ChangeNotifier {
     };
   }
 
-  Future<void> replaceTransaction(Json item, String replacementHash) async {
+  Future<void> replaceTransaction(
+    Json item,
+    String replacementHash, {
+    String? originalSignedTransaction,
+  }) async {
     await assertContext();
     final hash = replacementHash.trim().toLowerCase();
     if (!RegExp(r'^0x[0-9a-f]{64}$').hasMatch(hash) ||
@@ -589,10 +593,35 @@ class LiveController extends ChangeNotifier {
       throw const FormatException('Cần hash mới của giao dịch đang pending.');
     }
     final key = _pendingKey, generation = _generation;
+    final raw = originalSignedTransaction?.trim();
+    if (raw != null &&
+        raw.isNotEmpty &&
+        (raw.length > 32770 ||
+            !RegExp(r'^0x(?:[0-9a-fA-F]{2})+$').hasMatch(raw))) {
+      throw const FormatException(
+        'Chỉ nhập raw transaction đã ký dạng 0x; không nhập seed/private key.',
+      );
+    }
+    if (item['action'] == 'APPROVE' &&
+        item['sender_nonce'] == null &&
+        raw != null &&
+        raw.isNotEmpty) {
+      final proof = await _post('/api/v1/transactions/original-proof', {
+        'tx_hash': item['tx_hash'],
+        'original_signed_transaction': raw,
+      });
+      item['sender_nonce'] = uint(proof['sender_nonce']).toString();
+      _persistForOrigin(key, item);
+      await assertContext();
+      if (!_sameSession(generation, key))
+        throw StateError('Phiên ví đã đổi; hãy đối chiếu lại.');
+    }
     final result = item['action'] == 'APPROVE'
         ? await _replaceApproval(item, hash)
         : await _post('/api/v1/transactions/${item['tx_hash']}/replacement', {
             'tx_hash': hash,
+            if (raw != null && raw.isNotEmpty)
+              'original_signed_transaction': raw,
           });
     if (item['action'] == 'APPROVE') {
       await assertContext();
