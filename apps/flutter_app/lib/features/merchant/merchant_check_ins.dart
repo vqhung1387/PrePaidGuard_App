@@ -4,8 +4,9 @@ import '../../app/prepaid_guard_theme.dart';
 import '../../shared/widgets/brand_mark.dart';
 import '../plans/demo_plan.dart';
 import '../subscriptions/demo_membership.dart';
+import 'merchant_records.dart';
 
-class MerchantCheckIns extends StatelessWidget {
+class MerchantCheckIns extends StatefulWidget {
   const MerchantCheckIns({
     super.key,
     required this.pending,
@@ -13,18 +14,39 @@ class MerchantCheckIns extends StatelessWidget {
   });
 
   final List<DemoMembership> pending;
-  final ValueChanged<DemoMembership> onConfirm;
+  final void Function(DemoMembership, int) onConfirm;
+
+  @override
+  State<MerchantCheckIns> createState() => _MerchantCheckInsState();
+}
+
+class _MerchantCheckInsState extends State<MerchantCheckIns> {
+  String _query = '';
 
   Future<void> _review(BuildContext context, DemoMembership membership) async {
+    final period = membership.nextPeriod;
     final approved = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Xác nhận check-in kỳ đầu'),
-        content: Text(
-          '${membership.plan.title}\n'
-          'Gốc sẽ giải ngân: ${formatTokenAmount(membership.plan.pricePerPeriod)} USDC demo.\n\n'
-          'Thao tác chỉ cập nhật dữ liệu trong phiên.',
+        title: Text('Xác nhận check-in kỳ $period'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(membership.plan.title),
+            Text(membership.memberEmail),
+            const SizedBox(height: 12),
+            Text(
+              'Giải ngân kỳ này: ${formatTokenAmount(membership.plan.pricePerPeriod)} USDC',
+            ),
+            Text(
+              'Gốc còn lại sau duyệt: ${formatTokenAmount(membership.remaining - membership.plan.pricePerPeriod)} USDC',
+            ),
+            const SizedBox(height: 12),
+            const Text('Số tiền mô phỏng trong phiên demo.'),
+          ],
         ),
+        scrollable: true,
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -37,12 +59,21 @@ class MerchantCheckIns extends StatelessWidget {
         ],
       ),
     );
-    if (context.mounted && approved == true) onConfirm(membership);
+    if (context.mounted && approved == true)
+      widget.onConfirm(membership, period);
   }
 
   @override
   Widget build(BuildContext context) {
     final type = Theme.of(context).textTheme;
+    final pending = widget.pending;
+    final matches = pending
+        .where(
+          (membership) =>
+              membership.plan.title.toLowerCase().contains(_query) ||
+              membership.memberEmail.toLowerCase().contains(_query),
+        )
+        .toList();
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -60,20 +91,45 @@ class MerchantCheckIns extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             if (pending.isEmpty)
-              const Text(
-                'Chưa có yêu cầu đang chờ cho gói của cơ sở này.',
-                style: TextStyle(color: mutedText),
+              const ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.inbox_outlined, color: mutedText),
+                title: Text('Chưa có yêu cầu đang chờ'),
+                subtitle: Text(
+                  'Từ chế độ Hội viên, đăng ký gói của cơ sở và gửi check-in kỳ đầu để thử quy trình duyệt.',
+                ),
               ),
-            for (final membership in pending) ...[
+            if (pending.isNotEmpty) ...[
+              TextField(
+                onChanged: (value) =>
+                    setState(() => _query = value.trim().toLowerCase()),
+                decoration: const InputDecoration(
+                  labelText: 'Tìm theo email hoặc tên gói',
+                  prefixIcon: Icon(Icons.search),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                matches.isEmpty
+                    ? 'Không tìm thấy yêu cầu phù hợp.'
+                    : 'Hiển thị ${matches.length}/${pending.length} yêu cầu',
+                style: const TextStyle(color: mutedText),
+              ),
+            ],
+            for (final membership in matches) ...[
               const Divider(),
               Text(membership.plan.title, style: type.titleMedium),
               Text(
                 membership.memberEmail,
                 style: const TextStyle(color: mutedText),
               ),
+              Text(
+                'Gửi lúc ${formatMerchantTime(context, membership.requestedAt!)}',
+                style: const TextStyle(color: mutedText),
+              ),
               const SizedBox(height: 6),
               Text(
-                'Kỳ 1 · ${formatTokenAmount(membership.plan.pricePerPeriod)} USDC dự kiến giải ngân',
+                'Kỳ ${membership.nextPeriod} · ${formatTokenAmount(membership.plan.pricePerPeriod)} USDC dự kiến giải ngân',
                 style: const TextStyle(color: accent),
               ),
               const SizedBox(height: 8),

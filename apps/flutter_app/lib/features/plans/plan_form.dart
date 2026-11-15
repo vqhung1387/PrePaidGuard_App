@@ -20,6 +20,7 @@ class _PlanFormState extends State<PlanForm> {
   final _price = TextEditingController();
   final _periods = TextEditingController(text: '3');
   final _duration = TextEditingController(text: '30');
+  ServiceCategory _category = ServiceCategory.gym;
 
   @override
   void dispose() {
@@ -41,6 +42,7 @@ class _PlanFormState extends State<PlanForm> {
         pricePerPeriod: parseTokenAmount(_price.text)!,
         periods: parseWholeNumber(_periods.text, max: 120)!,
         daysPerPeriod: parseWholeNumber(_duration.text, max: 3650)!,
+        category: _category,
       ),
     );
   }
@@ -110,6 +112,22 @@ class _PlanFormState extends State<PlanForm> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 20),
+            DropdownButtonFormField<ServiceCategory>(
+              initialValue: _category,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Loại dịch vụ'),
+              items: [
+                for (final category in ServiceCategory.values)
+                  DropdownMenuItem(
+                    value: category,
+                    child: Text(category.label),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value != null) setState(() => _category = value);
+              },
+            ),
+            const SizedBox(height: 16),
             TextFormField(
               controller: _title,
               maxLength: 120,

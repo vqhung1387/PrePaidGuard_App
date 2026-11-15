@@ -32,6 +32,16 @@ int? parseWholeNumber(String text, {required int max}) {
   return number != null && number >= 1 && number <= max ? number : null;
 }
 
+enum ServiceCategory {
+  gym('Gym'),
+  yoga('Yoga'),
+  course('Khóa học'),
+  other('Dịch vụ khác');
+
+  const ServiceCategory(this.label);
+  final String label;
+}
+
 class DemoPlan {
   const DemoPlan({
     required this.title,
@@ -41,6 +51,8 @@ class DemoPlan {
     required this.daysPerPeriod,
     this.monthlyListPrice,
     this.bonusDaysAfterCheckIn = 0,
+    this.category = ServiceCategory.gym,
+    this.provider,
   });
 
   final String title;
@@ -50,6 +62,11 @@ class DemoPlan {
   final int daysPerPeriod;
   final BigInt? monthlyListPrice;
   final int bonusDaysAfterCheckIn;
+  final ServiceCategory category;
+  final String? provider;
+
+  String get serviceLabel =>
+      provider == null ? category.label : '${category.label} · $provider';
 
   BigInt get total => pricePerPeriod * BigInt.from(periods);
   int get accessDays => periods * daysPerPeriod;

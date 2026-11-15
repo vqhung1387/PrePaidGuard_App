@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prepaid_guard/app/prepaid_guard_theme.dart';
 import 'package:prepaid_guard/app/demo_workspace.dart';
 import 'package:prepaid_guard/app/prepaid_guard_app.dart';
 import 'package:prepaid_guard/features/auth/demo_accounts.dart';
@@ -18,7 +19,14 @@ void main() {
     'Monthly offers calculate exact prices and savings from the one-month rate',
     () {
       final workspace = DemoWorkspace();
-      final offers = workspace.plans;
+      final offers = workspace.plans
+          .where((plan) => plan.monthlyListPrice != null)
+          .toList();
+      expect(workspace.plans.map((plan) => plan.category).toSet(), {
+        ServiceCategory.gym,
+        ServiceCategory.yoga,
+        ServiceCategory.course,
+      });
       expect(offers.map((plan) => plan.periods), [1, 3, 6, 12, 24]);
       expect(offers.map((plan) => plan.discountPercent), [0, 10, 20, 25, 35]);
       expect(offers.map((plan) => formatTokenAmount(plan.total)), [
@@ -53,13 +61,24 @@ void main() {
         expect(membership.requestCheckIn(), isTrue);
         expect(membership.accessDays, plan.periods * 30);
         expect(membership.earnedBonusDays, 0);
-        expect(workspace.confirmCheckIn(customer, membership), isFalse);
         expect(
-          workspace.confirmCheckIn(DemoAccounts.exampleEmail, membership),
+          workspace.confirmCheckIn(customer, membership, period: 1),
+          isFalse,
+        );
+        expect(
+          workspace.confirmCheckIn(
+            DemoAccounts.exampleEmail,
+            membership,
+            period: 1,
+          ),
           isTrue,
         );
         expect(
-          workspace.confirmCheckIn(DemoAccounts.exampleEmail, membership),
+          workspace.confirmCheckIn(
+            DemoAccounts.exampleEmail,
+            membership,
+            period: 1,
+          ),
           isFalse,
         );
         expect(membership.earnedBonusDays, expectedBonus);
@@ -86,23 +105,58 @@ void main() {
     workspace.subscribe(customer, plan);
     final membership = workspace.memberships(customer)[plan]!;
     expect(
-      workspace.confirmCheckIn(DemoAccounts.exampleEmail, membership),
+      workspace.confirmCheckIn(
+        DemoAccounts.exampleEmail,
+        membership,
+        period: 1,
+      ),
       isFalse,
     );
     expect(membership.requestCheckIn(), isTrue);
     expect(membership.requestCheckIn(), isFalse);
     expect(membership.remaining, plan.total);
     expect(workspace.pendingCheckIns(customer), isEmpty);
-    expect(workspace.confirmCheckIn(customer, membership), isFalse);
+    expect(workspace.confirmCheckIn(customer, membership, period: 1), isFalse);
     expect(
-      workspace.confirmCheckIn(DemoAccounts.exampleEmail, membership),
+      workspace.confirmCheckIn(
+        DemoAccounts.exampleEmail,
+        membership,
+        period: 1,
+      ),
       isTrue,
     );
     expect(
-      workspace.confirmCheckIn(DemoAccounts.exampleEmail, membership),
+      workspace.confirmCheckIn(
+        DemoAccounts.exampleEmail,
+        membership,
+        period: 1,
+      ),
       isFalse,
     );
     expect(membership.remaining + membership.released, plan.total);
+    for (var period = 2; period <= plan.periods; period++) {
+      expect(membership.requestCheckIn(), isTrue);
+      expect(
+        workspace.confirmCheckIn(
+          DemoAccounts.exampleEmail,
+          membership,
+          period: period - 1,
+        ),
+        isFalse,
+      );
+      expect(
+        workspace.confirmCheckIn(
+          DemoAccounts.exampleEmail,
+          membership,
+          period: period,
+        ),
+        isTrue,
+      );
+    }
+    expect(membership.releases.map((release) => release.period), [1, 2, 3]);
+    expect(membership.remaining, BigInt.zero);
+    expect(membership.released, plan.total);
+    expect(membership.requestCheckIn(), isFalse);
   });
 
   test('Invitation links identify only the built-in demo plan', () {
@@ -139,6 +193,9 @@ void main() {
     expect(find.text('Gói tập của bạn'), findsOneWidget);
     await _switchMode(tester, 'Chế độ Cơ sở');
     expect(find.text('Check-in của cơ sở'), findsOneWidget);
+    await tester.tap(find.text('Quản lý gói'));
+    await tester.pumpAndSettle();
+    expect(find.text('Gói của cơ sở (9)'), findsOneWidget);
     expect(find.text('Bạn tập'), findsNothing);
     await tester.tap(find.text('Tạo gói'));
     await tester.pumpAndSettle();
@@ -184,21 +241,54 @@ void main() {
     expect(find.text('Đang chờ cơ sở xác nhận'), findsOneWidget);
     expect(find.text('37,037034 USDC'), findsOneWidget);
     await _switchMode(tester, 'Chế độ Cơ sở');
+    expect(find.text('12,345678 USDC'), findsOneWidget);
     expect(
       find.text('Kỳ 1 · 12,345678 USDC dự kiến giải ngân'),
       findsOneWidget,
     );
+    final queueSearch = find.widgetWithText(
+      TextField,
+      'Tìm theo email hoặc tên gói',
+    );
+    await tester.enterText(queueSearch, 'no-match@example.com');
+    await tester.pumpAndSettle();
+    expect(find.text('Không tìm thấy yêu cầu phù hợp.'), findsOneWidget);
+    expect(find.text('Duyệt check-in'), findsNothing);
+    await tester.enterText(queueSearch, 'GYM 3');
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Duyệt check-in'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Xác nhận kỳ demo'));
     await tester.pumpAndSettle();
     expect(find.text('Duyệt check-in'), findsNothing);
+    expect(find.text('12,345678 USDC'), findsOneWidget);
+    await tester.tap(find.text('Lịch sử'));
+    await tester.pumpAndSettle();
+    expect(find.text('12,345678 USDC đã giải ngân'), findsOneWidget);
+    await tester.tap(find.text('Quản lý gói'));
+    await tester.pumpAndSettle();
+    final managedPlan = find.ancestor(
+      of: find.text('Gym 3 tháng'),
+      matching: find.byType(Card),
+    );
+    expect(
+      find.descendant(of: managedPlan, matching: find.text('1 lượt đăng ký')),
+      findsOneWidget,
+    );
     await _switchMode(tester, 'Chế độ Hội viên');
     expect(find.text('Gói tập của bạn'), findsOneWidget);
     expect(find.text('24,691356 USDC'), findsOneWidget);
     expect(find.text('Đã giải ngân 1/3 kỳ'), findsOneWidget);
     expect(find.text('Cơ sở xác nhận kỳ đầu'), findsOneWidget);
     expect(find.text('Check-in kỳ đầu (demo)'), findsNothing);
+    expect(find.text('Check-in kỳ 2 (demo)'), findsOneWidget);
+    await tester.tap(find.text('Xem từng kỳ giải ngân'));
+    await tester.pumpAndSettle();
+    expect(find.text('Kỳ 2 · 12,345678 USDC'), findsOneWidget);
+    expect(find.text('1/3 kỳ đã giải ngân · USDC mô phỏng'), findsOneWidget);
+    expect(find.text('Chờ hoàn thành các kỳ trước'), findsOneWidget);
+    await tester.tap(find.widgetWithText(TextButton, 'Đóng'));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Bạn tập'));
     await tester.pumpAndSettle();
@@ -220,6 +310,99 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Gói dịch vụ'));
     await tester.pumpAndSettle();
+
+    final comparePlans = find.text('So sánh các gói');
+    await tester.ensureVisible(comparePlans);
+    await tester.pumpAndSettle();
+    final courseFilter = find.widgetWithText(ChoiceChip, 'Khóa học');
+    await tester.ensureVisible(courseFilter);
+    await tester.pumpAndSettle();
+    await tester.tap(courseFilter);
+    await tester.pumpAndSettle();
+    expect(find.text('Tiếng Anh giao tiếp'), findsOneWidget);
+    expect(find.text('Excel thực hành'), findsOneWidget);
+    expect(find.text('Thiết kế UI với Figma'), findsOneWidget);
+    final sortPlans = find.byTooltip('Sắp xếp gói');
+    await tester.ensureVisible(sortPlans);
+    await tester.pumpAndSettle();
+    await tester.tap(sortPlans);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Trả trước thấp nhất'));
+    await tester.pumpAndSettle();
+    final excelPosition = tester.getTopLeft(find.text('Excel thực hành'));
+    final englishPosition = tester.getTopLeft(find.text('Tiếng Anh giao tiếp'));
+    expect(excelPosition.dy, lessThanOrEqualTo(englishPosition.dy));
+    if (excelPosition.dy == englishPosition.dy) {
+      expect(excelPosition.dx, lessThan(englishPosition.dx));
+    }
+    await tester.tap(sortPlans);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mặc định'));
+    await tester.pumpAndSettle();
+    final serviceSearch = find.byKey(const ValueKey('service-search'));
+    await tester.ensureVisible(serviceSearch);
+    await tester.pumpAndSettle();
+    await tester.enterText(serviceSearch, 'thiet ke');
+    await tester.pumpAndSettle();
+    expect(find.text('1 gói phù hợp'), findsOneWidget);
+    expect(find.text('Thiết kế UI với Figma'), findsOneWidget);
+    expect(find.text('Excel thực hành'), findsNothing);
+    await tester.enterText(serviceSearch, 'datalab');
+    await tester.pumpAndSettle();
+    expect(find.text('Excel thực hành'), findsOneWidget);
+    await tester.enterText(serviceSearch, 'no match');
+    await tester.pumpAndSettle();
+    expect(find.text('Không tìm thấy gói phù hợp'), findsOneWidget);
+    await tester.tap(find.byTooltip('Xóa tìm kiếm'));
+    await tester.pumpAndSettle();
+    expect(find.text('3 gói phù hợp'), findsOneWidget);
+    expect(find.text('Gói 3 tháng'), findsNothing);
+    await tester.ensureVisible(comparePlans);
+    await tester.pumpAndSettle();
+    await tester.tap(comparePlans);
+    await tester.pumpAndSettle();
+    expect(
+      find.widgetWithText(AlertDialog, 'So sánh gói dịch vụ'),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(DataTable),
+        matching: find.text('Excel thực hành'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(DataTable),
+        matching: find.text('32 USDC'),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Đóng so sánh'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Mọi dịch vụ'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(comparePlans);
+    await tester.pumpAndSettle();
+    await tester.tap(comparePlans);
+    await tester.pumpAndSettle();
+    expect(find.byType(DataTable), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(DataTable),
+        matching: find.text('249,6 USDC'),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Đóng so sánh'));
+    await tester.pumpAndSettle();
+    final longTermFilter = find.widgetWithText(ChoiceChip, '12–24 tháng');
+    await tester.ensureVisible(longTermFilter);
+    await tester.pumpAndSettle();
+    await tester.tap(longTermFilter);
+    await tester.pumpAndSettle();
+    expect(find.text('Gói 3 tháng'), findsNothing);
 
     final twoYearOffer = find.ancestor(
       of: find.text('Gói 24 tháng'),
@@ -308,12 +491,74 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Gói tập của bạn'), findsOneWidget);
 
-    await tester.tap(find.text('Khám phá gói tập'));
+    final checkInShortcut = find.text('Xác nhận sử dụng');
+    await tester.ensureVisible(checkInShortcut);
+    await tester.pumpAndSettle();
+    await tester.tap(checkInShortcut);
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Bạn cần đăng ký một gói dịch vụ trước khi gửi check-in.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Tổng quan'));
+    await tester.pumpAndSettle();
+    final payoutShortcut = find.text('Giải ngân theo kỳ');
+    await tester.ensureVisible(payoutShortcut);
+    await tester.pumpAndSettle();
+    await tester.tap(payoutShortcut);
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(AlertDialog, 'Xem gói dịch vụ'), findsOneWidget);
+    await tester.tap(find.text('Đóng'));
+    await tester.pumpAndSettle();
+    final plansShortcut = find.text('Đăng ký dịch vụ');
+    await tester.ensureVisible(plansShortcut);
+    await tester.pumpAndSettle();
+    await tester.tap(plansShortcut);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('So sánh các gói'));
+    await tester.pumpAndSettle();
+    expect(find.text('Trả trước 16 USDC'), findsOneWidget);
+    expect(find.byType(DataTable), findsNothing);
+    final firstComparedPlan = find.ancestor(
+      of: find.text('Trả trước 16 USDC'),
+      matching: find.byType(Card),
+    );
+    final chooseComparedPlan = find.descendant(
+      of: firstComparedPlan,
+      matching: find.text('Chọn gói'),
+    );
+    await tester.ensureVisible(chooseComparedPlan);
+    await tester.pumpAndSettle();
+    await tester.tap(chooseComparedPlan);
+    await tester.pumpAndSettle();
+    expect(find.text('Tổng tiền gốc mô phỏng: 16 USDC'), findsOneWidget);
+    await tester.tap(find.text('Quay lại'));
     await tester.pumpAndSettle();
     final threeMonthOffer = find.ancestor(
       of: find.text('Gói 3 tháng'),
       matching: find.byType(Card),
     );
+    final sixMonthOffer = find.ancestor(
+      of: find.text('Gói 6 tháng'),
+      matching: find.byType(Card),
+    );
+    Color outline(Finder card) =>
+        (tester.widget<Card>(card).shape! as RoundedRectangleBorder).side.color;
+    expect(outline(sixMonthOffer), panelOutline);
+    final sixMonthTitle = find.text('Gói 6 tháng');
+    await tester.ensureVisible(sixMonthTitle);
+    await tester.pumpAndSettle();
+    await tester.tap(sixMonthTitle);
+    await tester.pumpAndSettle();
+    expect(outline(sixMonthOffer), accent);
+    expect(find.byType(AlertDialog), findsNothing);
+    final threeMonthTitle = find.text('Gói 3 tháng');
+    await tester.ensureVisible(threeMonthTitle);
+    await tester.pumpAndSettle();
+    await tester.tap(threeMonthTitle);
+    await tester.pumpAndSettle();
+    expect(outline(threeMonthOffer), accent);
+    expect(outline(sixMonthOffer), panelOutline);
     final subscribe = find.descendant(
       of: threeMonthOffer,
       matching: find.text('Đăng ký demo'),
@@ -334,7 +579,10 @@ void main() {
       tester.getTopLeft(checkIn).dy,
       lessThan(tester.getTopLeft(balance).dy),
     );
-    await tester.tap(find.text('Đăng ký gói tập'));
+    final browseAgain = find.text('Đăng ký gói tập');
+    await tester.ensureVisible(browseAgain);
+    await tester.pumpAndSettle();
+    await tester.tap(browseAgain);
     await tester.pumpAndSettle();
     final enrolled = find.descendant(
       of: threeMonthOffer,

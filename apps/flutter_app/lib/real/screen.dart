@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../app/prepaid_guard_theme.dart';
 import '../features/plans/demo_plan.dart';
+import '../shared/widgets/brand_mark.dart';
 import 'api.dart';
 import 'controller.dart';
 import 'wallet.dart';
@@ -129,40 +131,40 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
       () => showDialog<Map<String, String>>(
         context: context,
         builder: (context) => AlertDialog(
-        title: Text(title),
-        content: SizedBox(
-          width: 560,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final entry in controllers.entries)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: TextField(
-                      controller: entry.value,
-                      decoration: InputDecoration(labelText: entry.key),
-                      maxLines: entry.key == 'QR payload' ? 6 : 1,
+          title: Text(title),
+          content: SizedBox(
+            width: 560,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final entry in controllers.entries)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: TextField(
+                        controller: entry.value,
+                        decoration: InputDecoration(labelText: entry.key),
+                        maxLines: entry.key == 'QR payload' ? 6 : 1,
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Hủy'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, {
+                for (final entry in controllers.entries)
+                  entry.key: entry.value.text.trim(),
+              }),
+              child: const Text('Xác nhận'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, {
-              for (final entry in controllers.entries)
-                entry.key: entry.value.text.trim(),
-            }),
-            child: const Text('Xác nhận'),
-          ),
-        ],
-      ),
       ),
     );
     // Controllers are disposed after the dialog route completes its transition.
@@ -342,6 +344,12 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
       formatTokenAmount(BigInt.parse(value.toString()));
   Widget _subscription(Json sub, {required bool merchant}) {
     final active = sub['status'] == 'ACTIVE';
+    final status = switch (sub['status']) {
+      'ACTIVE' => 'Đang sử dụng',
+      'COMPLETED' => 'Đã hoàn tất',
+      'REFUNDED' => 'Đã hoàn gốc',
+      _ => sub['status'].toString(),
+    };
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -349,14 +357,17 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Subscription #${sub['subscription_id']} · ${sub['status']}',
+              'Đăng ký #${sub['subscription_id']} · $status',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             Text(
-              'Gốc còn lại: ${_money(sub['remaining_principal'])} mUSDC · ${sub['completed_periods']}/${sub['total_periods']} kỳ',
+              'Tiền gốc còn lại trong Vault: ${_money(sub['remaining_principal'])} mUSDC',
             ),
             Text(
-              'Kỳ tiếp: ${sub['next_release_at'] ?? '—'}\nRefund từ: ${sub['refund_available_at'] ?? '—'}',
+              'Đã giải ngân ${sub['completed_periods']}/${sub['total_periods']} kỳ',
+            ),
+            Text(
+              'Kỳ tiếp theo: ${sub['next_release_at'] ?? '—'}\nCó thể yêu cầu hoàn gốc từ: ${sub['refund_available_at'] ?? '—'}',
             ),
             Text(
               'Nguồn: ${sub['sync']['source']} · block ${sub['sync']['block_number']}',
@@ -389,7 +400,7 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
                               );
                             }
                           },
-                    child: const Text('Refund'),
+                    child: const Text('Yêu cầu hoàn gốc'),
                   ),
               ],
             ),
@@ -407,7 +418,7 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
         busy = (c?.busy ?? false) || _connecting;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('PrePaidGuard — API / ví thật'),
+        title: const BrandMark(),
         actions: [
           TextButton(
             onPressed: busy
@@ -433,106 +444,207 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                const Text(
-                  'TESTNET · Dữ liệu thật từ API và blockchain. Ví trình duyệt EIP-1193 ký; app không giữ private key.',
+                Text(
+                  'Kết nối API và ví',
+                  style: Theme.of(context).textTheme.headlineLarge,
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _apiUrl,
-                  enabled: !busy && !logged,
-                  decoration: const InputDecoration(
-                    labelText: 'API URL',
-                    hintText: 'http://localhost:8000',
-                  ),
+                const SizedBox(height: 6),
+                Text(
+                  connected
+                      ? 'Xem gói đã công bố trên mạng thử nghiệm đang kết nối.'
+                      : 'Kết nối API để tải danh sách gói và kiểm tra mạng của Vault.',
+                  style: const TextStyle(color: mutedText),
                 ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 8,
-                  children: [
-                    FilledButton(
-                      onPressed: busy ? null : _connect,
-                      child: const Text('Kết nối API'),
+                const SizedBox(height: 20),
+                const Card(
+                  child: ListTile(
+                    leading: Icon(
+                      Icons.account_balance_outlined,
+                      color: accent,
                     ),
-                    if (connected && !logged)
-                      FilledButton(
-                        onPressed: busy ? null : () => _run(() => c!.login()),
-                        child: const Text('Kết nối ví / Đăng nhập'),
-                      ),
-                    if (connected)
-                      OutlinedButton(
-                        onPressed: busy ? null : () => _run(() => c!.refresh()),
-                        child: const Text('Refresh trạng thái'),
-                      ),
-                    if (logged)
-                      TextButton(
-                        onPressed: busy ? null : () => _run(() => c!.logout()),
-                        child: const Text('Đăng xuất ví'),
-                      ),
-                  ],
-                ),
-                if (busy)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: LinearProgressIndicator(),
+                    title: Text('Tiền trả trước đi qua Vault'),
+                    subtitle: Text(
+                      'Khách ký đăng ký để khóa mUSDC thử nghiệm. Cơ sở nhận tiền từng kỳ đủ điều kiện sau khi xác nhận QR ký số của khách. Phần gốc chưa dùng có thể hoàn theo mốc thời gian của gói.',
+                    ),
                   ),
-                if (c?.notice.isNotEmpty ?? false) Text(c!.notice),
-                if (connected)
+                ),
+                const SizedBox(height: 14),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          connected ? 'Đã kết nối API' : 'Thiết lập kết nối',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: _apiUrl,
+                          enabled: !busy && !logged,
+                          decoration: const InputDecoration(
+                            labelText: 'API URL',
+                            hintText: 'http://localhost:8000',
+                            prefixIcon: Icon(Icons.dns_outlined),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 8,
+                          children: [
+                            if (connected && !logged)
+                              FilledButton.icon(
+                                onPressed: busy
+                                    ? null
+                                    : () => _run(() => c!.login()),
+                                icon: const Icon(
+                                  Icons.account_balance_wallet_outlined,
+                                ),
+                                label: const Text('Kết nối ví / Đăng nhập'),
+                              ),
+                            if (!connected)
+                              FilledButton(
+                                onPressed: busy ? null : _connect,
+                                child: const Text('Kết nối API'),
+                              )
+                            else if (!logged)
+                              OutlinedButton(
+                                onPressed: busy ? null : _connect,
+                                child: const Text('Kết nối lại API'),
+                              ),
+                            if (connected)
+                              OutlinedButton(
+                                onPressed: busy
+                                    ? null
+                                    : () => _run(() => c!.refresh()),
+                                child: const Text('Làm mới trạng thái'),
+                              ),
+                            if (logged)
+                              TextButton(
+                                onPressed: busy
+                                    ? null
+                                    : () => _run(() => c!.logout()),
+                                child: const Text('Đăng xuất ví'),
+                              ),
+                          ],
+                        ),
+                        if (busy) ...[
+                          const SizedBox(height: 14),
+                          const LinearProgressIndicator(),
+                        ],
+                        if (connected) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            'Chain ID: ${c!.config!['chain_id']} · Ví: ${logged ? 'Đã đăng nhập' : 'Chưa đăng nhập'}',
+                            style: const TextStyle(color: accent),
+                          ),
+                          ExpansionTile(
+                            tilePadding: EdgeInsets.zero,
+                            title: const Text('Thông tin mạng và Vault'),
+                            expandedCrossAxisAlignment:
+                                CrossAxisAlignment.stretch,
+                            children: [
+                              SelectableText(
+                                'Deployment: ${c.config!['deployment_id']}\nVault: ${c.config!['vault_address']}\nYield: ${c.config!['yield_mode']}${logged ? '\nVí: ${c.account}' : ''}',
+                              ),
+                            ],
+                          ),
+                        ],
+                        const Text(
+                          'Giao dịch được ký qua ví trình duyệt tương thích EIP-1193.',
+                          style: TextStyle(color: mutedText),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (c?.notice.isNotEmpty ?? false)
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: SelectableText(
-                      'Chain: ${c!.config!['chain_id']} · Deployment: ${c.config!['deployment_id']}\nVault: ${c.config!['vault_address']}\nYield: ${c.config!['yield_mode']} · Ví: ${c.account ?? 'chưa đăng nhập'}',
-                    ),
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(c!.notice),
                   ),
                 if (connected) ...[
-                  _heading('Gói đã publish'),
-                  if (c!.plans.isEmpty) const Text('Chưa có gói đã đồng bộ.'),
+                  _heading('Gói đã công bố'),
+                  if (c!.plans.isEmpty)
+                    const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(18),
+                        child: Text(
+                          'API chưa trả về gói đã công bố trên mạng này.',
+                        ),
+                      ),
+                    ),
                   for (final plan in c.plans)
-                    Card(
-                      child: ListTile(
-                        title: Text(
-                          '${plan['title']} · Plan #${plan['plan_id']}',
-                        ),
-                        subtitle: Text(
-                          '${plan['total_periods']} kỳ · Tổng ${_money(plan['total_price'])} mUSDC\nKỳ ${plan['period_duration_seconds']} giây · ân hạn ${plan['grace_period_seconds']} giây',
-                        ),
-                        trailing: Wrap(
-                          children: [
-                            IconButton(
-                              tooltip: 'QR đăng ký',
-                              onPressed: busy
-                                  ? null
-                                  : () => _qr(
-                                      'QR đăng ký gói',
-                                      Uri.base
-                                          .replace(
-                                            queryParameters: {
-                                              'real': '1',
-                                              'plan_id': plan['plan_id'],
-                                              'chain_id': c.config!['chain_id']
-                                                  .toString(),
-                                              'vault':
-                                                  c.config!['vault_address'],
-                                            },
-                                          )
-                                          .toString(),
-                                    ),
-                              icon: const Icon(Icons.qr_code),
-                            ),
-                            FilledButton(
-                              onPressed: busy || !logged
-                                  ? null
-                                  : () async {
-                                      if (await _confirm(
-                                        'Đăng ký gói',
-                                        'Khóa ${_money(plan['total_price'])} mUSDC. Có thể cần ký approve rồi subscribe. Kỳ đầu sau ${plan['period_duration_seconds']} giây; không tự giải ngân.',
-                                      )) {
-                                        await _run(() => c.subscribe(plan));
-                                      }
-                                    },
-                              child: const Text('Đăng ký'),
-                            ),
-                          ],
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(18),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${plan['title']}',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Trả trước ${_money(plan['total_price'])} mUSDC',
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(color: accent),
+                              ),
+                              Text(
+                                'Gói #${plan['plan_id']} · ${plan['total_periods']} kỳ · ${plan['period_duration_seconds']} giây/kỳ · Ân hạn ${plan['grace_period_seconds']} giây',
+                                style: const TextStyle(color: mutedText),
+                              ),
+                              const SizedBox(height: 12),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: [
+                                  IconButton(
+                                    tooltip: 'QR đăng ký',
+                                    onPressed: busy
+                                        ? null
+                                        : () => _qr(
+                                            'QR đăng ký gói',
+                                            Uri.base
+                                                .replace(
+                                                  queryParameters: {
+                                                    'real': '1',
+                                                    'plan_id': plan['plan_id'],
+                                                    'chain_id': c
+                                                        .config!['chain_id']
+                                                        .toString(),
+                                                    'vault': c
+                                                        .config!['vault_address'],
+                                                  },
+                                                )
+                                                .toString(),
+                                          ),
+                                    icon: const Icon(Icons.qr_code),
+                                  ),
+                                  FilledButton(
+                                    onPressed: busy || !logged
+                                        ? null
+                                        : () async {
+                                            if (await _confirm(
+                                              'Đăng ký gói',
+                                              'Khóa ${_money(plan['total_price'])} mUSDC. Có thể cần ký approve rồi subscribe. Kỳ đầu sau ${plan['period_duration_seconds']} giây; không tự giải ngân.',
+                                            )) {
+                                              await _run(
+                                                () => c.subscribe(plan),
+                                              );
+                                            }
+                                          },
+                                    child: const Text('Đăng ký'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),

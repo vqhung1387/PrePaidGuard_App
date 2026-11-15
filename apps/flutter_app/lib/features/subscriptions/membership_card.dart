@@ -5,6 +5,7 @@ import '../../shared/widgets/brand_mark.dart';
 import '../plans/demo_plan.dart';
 import 'demo_membership.dart';
 import 'membership_activity.dart';
+import 'membership_payout.dart';
 
 class MembershipCard extends StatelessWidget {
   const MembershipCard({
@@ -84,6 +85,15 @@ class _MembershipSummary extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(progress, style: const TextStyle(color: mutedText)),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: () =>
+                showMembershipPayout(context, membership: membership),
+            icon: const Icon(Icons.receipt_long_outlined, size: 18),
+            label: const Text('Xem từng kỳ giải ngân'),
+          ),
+        ),
       ],
     );
     final action = _buildAction(context);
@@ -110,6 +120,11 @@ class _MembershipSummary extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(plan.title, style: type.titleLarge),
+                      if (plan.provider != null)
+                        Text(
+                          plan.serviceLabel,
+                          style: const TextStyle(color: mutedText),
+                        ),
                       Text(
                         '${formatTokenAmount(plan.pricePerPeriod)} USDC mỗi kỳ',
                         style: const TextStyle(color: mutedText),
@@ -151,20 +166,18 @@ class _MembershipSummary extends StatelessWidget {
     final type = Theme.of(context).textTheme;
     final (title, detail, statusColor) = switch (membership.status) {
       DemoCheckInStatus.ready => (
-        'Sẵn sàng check-in kỳ 1',
+        'Sẵn sàng check-in kỳ ${membership.nextPeriod}',
         '${formatTokenAmount(membership.plan.pricePerPeriod)} USDC sẽ giải ngân khi cơ sở xác nhận.',
         accent,
       ),
       DemoCheckInStatus.awaitingMerchant => (
         'Đang chờ cơ sở xác nhận',
-        'Yêu cầu đã gửi. Số dư vẫn giữ nguyên.',
+        'Đã gửi yêu cầu kỳ ${membership.nextPeriod}. Tiền gốc giảm sau khi cơ sở duyệt.',
         const Color(0xfff8cb7d),
       ),
       DemoCheckInStatus.confirmed => (
-        'Kỳ 1 đã xác nhận',
-        membership.plan.periods == 1
-            ? 'Gói đã hoàn tất trong bản mô phỏng.'
-            : 'Đã cập nhật số dư. Bản mô phỏng kết thúc sau kỳ đầu.',
+        'Gói đã hoàn tất',
+        'Cơ sở đã xác nhận đủ ${membership.plan.periods} kỳ trong bản demo.',
         const Color(0xff81e4b2),
       ),
     };
@@ -193,7 +206,11 @@ class _MembershipSummary extends StatelessWidget {
             child: FilledButton.icon(
               onPressed: onRequestCheckIn,
               icon: const Icon(Icons.how_to_reg_outlined),
-              label: const Text('Check-in kỳ đầu (demo)'),
+              label: Text(
+                membership.nextPeriod == 1
+                    ? 'Check-in kỳ đầu (demo)'
+                    : 'Check-in kỳ ${membership.nextPeriod} (demo)',
+              ),
             ),
           ),
         ],
