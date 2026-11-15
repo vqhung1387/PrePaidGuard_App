@@ -75,7 +75,11 @@ Luồng:
 
 Hash transaction được lưu theo ví và deployment trước khi gọi tracking API. Sau reload, đăng nhập lại cùng ví rồi refresh để khôi phục pending; không gửi giao dịch lặp chỉ vì API/RPC timeout. Khi đổi ví/network trong lúc chờ chữ ký, hash trả về vẫn được lưu dưới ví bắt đầu giao dịch; không dùng JWT của ví mới để theo dõi thay. Người dùng vẫn cần kiểm tra lịch sử ví nếu provider lỗi trước khi trả hash.
 
-Bản hiện tại ưu tiên Flutter Web. Native wallet/deep-link session, camera scanner, pagination UI vượt 100 mục và HTTPS/Fuji hai thiết bị cần nghiệm thu riêng; không được coi là đã pass từ unit tests. Registration QR ràng buộc plan ID + chain + Vault và mở plan tương ứng sau khi kết nối API.
+Bản hiện tại ưu tiên Flutter Web và nhận check-in bằng cách dán payload QR. Native wallet, quét camera và luồng HTTPS/Fuji trên hai thiết bị cần nghiệm thu riêng. Registration QR ràng buộc plan ID + chain + Vault và mở plan tương ứng sau khi kết nối API.
+
+Danh sách đăng ký có bộ lọc trạng thái riêng cho khách và cơ sở. **Tải thêm đăng ký của tôi**, **Tải thêm đăng ký tại cơ sở**, **Tải thêm bản nháp** và **Tải thêm lịch sử** xuất hiện khi API còn cursor. Dùng các nhãn nút này trong script nghiệm thu. Nút **Chi tiết / lịch sử** vẫn mở chi tiết đăng ký.
+
+Thẻ đăng ký và lịch sử phân biệt lợi tức mô phỏng `MOCK` với `DISABLED`. Mức ước tính chưa nhận và các khoản đã trả lấy từ `yield_summary` của API.
 
 Kiểm tra:
 

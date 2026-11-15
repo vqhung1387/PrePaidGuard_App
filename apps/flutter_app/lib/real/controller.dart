@@ -1,9 +1,22 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
+
 import 'api.dart';
 import 'ethereum.dart';
 import 'wallet.dart';
+
+enum SubscriptionFilter {
+  all('Tất cả'),
+  active('Đang sử dụng', 'ACTIVE'),
+  completed('Đã hoàn tất', 'COMPLETED'),
+  refunded('Đã hoàn gốc', 'REFUNDED');
+
+  const SubscriptionFilter(this.label, [this.apiValue]);
+  final String label;
+  final String? apiValue;
+}
 
 class LiveController extends ChangeNotifier {
   LiveController({
@@ -44,6 +57,9 @@ class LiveController extends ChangeNotifier {
       merchantIssues = [];
   List<Json> pending = [];
   String? plansCursor;
+  String? membershipsCursor, merchantMembershipsCursor, draftsCursor;
+  SubscriptionFilter membershipFilter = SubscriptionFilter.all;
+  SubscriptionFilter merchantMembershipFilter = SubscriptionFilter.all;
   final Map<String, List<Json>> _memoryPending = {};
 
   bool get loggedIn => account != null && api.token != null;
@@ -65,6 +81,8 @@ class LiveController extends ChangeNotifier {
     pending = [];
     issues = [];
     merchantIssues = [];
+    membershipsCursor = merchantMembershipsCursor = draftsCursor = null;
+    membershipFilter = merchantMembershipFilter = SubscriptionFilter.all;
     notice = message;
     _emit();
   }
@@ -251,30 +269,54 @@ class LiveController extends ChangeNotifier {
 
   Future<void> refresh() async {
     if (config == null) return;
-    final planPage = await _get('/api/v1/plans?limit=20');
+    final generation = _generation;
+    final planPage = await _refreshWindow(
+      (cursor) => _page('/api/v1/plans', limit: 20, cursor: cursor),
+      idField: 'plan_id',
+      loadedCount: plans.length,
+    );
     plans = _items(planPage);
     plansCursor = planPage['next_cursor'] as String?;
-    if (!loggedIn) {
+    if (!loggedIn || generation != _generation) {
       _emit();
       return;
     }
+    final key = _pendingKey;
     await assertContext();
-    user = await _get('/api/v1/me');
-    final page = await _get('/api/v1/me/subscriptions?limit=100');
-    memberships = _items(page);
-    issues = _itemsOrEmpty(page['issues']);
-    if (isMerchant) {
-      drafts = _items(await _get('/api/v1/plan-drafts?limit=100'));
-      final merchantPage = await _get(
-        '/api/v1/merchant/subscriptions?limit=100',
+    final profile = await _get('/api/v1/me');
+    if (!_sameSession(generation, key)) return;
+    final memberPage = await _refreshWindow(
+      (cursor) => _sameSession(generation, key)
+          ? _membershipPage(false, membershipFilter, cursor: cursor)
+          : null,
+      idField: 'subscription_id',
+      loadedCount: memberships.length,
+    );
+    if (!_sameSession(generation, key)) return;
+    Json? draftPage, merchantPage;
+    if (profile['is_merchant'] == true) {
+      draftPage = await _refreshWindow(
+        (cursor) => _sameSession(generation, key)
+            ? _page('/api/v1/plan-drafts', limit: 100, cursor: cursor)
+            : null,
+        idField: 'id',
+        loadedCount: drafts.length,
       );
-      merchantMemberships = _items(merchantPage);
-      merchantIssues = _itemsOrEmpty(merchantPage['issues']);
-    } else {
-      drafts = [];
-      merchantMemberships = [];
-      merchantIssues = [];
+      if (!_sameSession(generation, key)) return;
+      merchantPage = await _refreshWindow(
+        (cursor) => _sameSession(generation, key)
+            ? _membershipPage(true, merchantMembershipFilter, cursor: cursor)
+            : null,
+        idField: 'subscription_id',
+        loadedCount: merchantMemberships.length,
+      );
+      if (!_sameSession(generation, key)) return;
     }
+    user = profile;
+    _setMembershipPage(false, memberPage);
+    _setMembershipPage(true, merchantPage);
+    drafts = draftPage == null ? [] : _items(draftPage);
+    draftsCursor = draftPage?['next_cursor'] as String?;
     _mergeStoredPending();
     await refreshPending();
     _emit();
@@ -283,6 +325,118 @@ class LiveController extends ChangeNotifier {
   List<Json> _itemsOrEmpty(dynamic value) => value is List
       ? value.map((v) => Map<String, dynamic>.from(v as Map)).toList()
       : [];
+
+  Future<Json> _refreshWindow(
+    Future<Json>? Function(String? cursor) fetch, {
+    required String idField,
+    required int loadedCount,
+  }) async {
+    final items = <Json>[];
+    final ids = <Object?>{};
+    final visited = <String>{};
+    Json firstPage = const {};
+    String? cursor;
+    do {
+      final request = fetch(cursor);
+      if (request == null) break;
+      final page = await request;
+      if (cursor == null) firstPage = page;
+      items.addAll(_items(page).where((item) => ids.add(item[idField])));
+      cursor = page['next_cursor'] as String?;
+    } while (items.length < loadedCount &&
+        cursor != null &&
+        visited.add(cursor));
+    return {...firstPage, 'items': items, 'next_cursor': cursor};
+  }
+
+  Future<Json> _page(
+    String path, {
+    required int limit,
+    String? cursor,
+    String? status,
+  }) {
+    final query = Uri(
+      queryParameters: {
+        'limit': '$limit',
+        if (status != null) 'status': status,
+        if (cursor != null) 'cursor': cursor,
+      },
+    ).query;
+    return _get('$path?$query');
+  }
+
+  Future<Json> _membershipPage(
+    bool merchant,
+    SubscriptionFilter filter, {
+    String? cursor,
+  }) => _page(
+    merchant ? '/api/v1/merchant/subscriptions' : '/api/v1/me/subscriptions',
+    limit: 100,
+    cursor: cursor,
+    status: filter.apiValue,
+  );
+
+  void _setMembershipPage(bool merchant, Json? page, {bool append = false}) {
+    final items = page == null ? <Json>[] : _items(page);
+    final cursor = page?['next_cursor'] as String?;
+    final warnings = _itemsOrEmpty(page?['issues']);
+    final existing = merchant ? merchantMemberships : memberships;
+    if (append) {
+      final seen = existing.map((item) => item['subscription_id']).toSet();
+      existing.addAll(items.where((item) => seen.add(item['subscription_id'])));
+    }
+    if (merchant) {
+      if (!append) merchantMemberships = items;
+      merchantMembershipsCursor = cursor;
+      merchantIssues = warnings;
+    } else {
+      if (!append) memberships = items;
+      membershipsCursor = cursor;
+      issues = warnings;
+    }
+  }
+
+  Future<void> filterMemberships(
+    bool merchant,
+    SubscriptionFilter filter,
+  ) async {
+    await assertContext();
+    final generation = _generation, key = _pendingKey;
+    final page = await _membershipPage(merchant, filter);
+    if (!_sameSession(generation, key)) return;
+    if (merchant) {
+      merchantMembershipFilter = filter;
+    } else {
+      membershipFilter = filter;
+    }
+    _setMembershipPage(merchant, page);
+    _emit();
+  }
+
+  Future<void> loadMoreMemberships({required bool merchant}) async {
+    final cursor = merchant ? merchantMembershipsCursor : membershipsCursor;
+    if (cursor == null) return;
+    await assertContext();
+    final generation = _generation, key = _pendingKey;
+    final filter = merchant ? merchantMembershipFilter : membershipFilter;
+    final page = await _membershipPage(merchant, filter, cursor: cursor);
+    if (!_sameSession(generation, key)) return;
+    _setMembershipPage(merchant, page, append: true);
+    _emit();
+  }
+
+  Future<void> loadMoreDrafts() async {
+    final cursor = draftsCursor;
+    if (cursor == null) return;
+    await assertContext();
+    final generation = _generation, key = _pendingKey;
+    final page = await _page('/api/v1/plan-drafts', limit: 100, cursor: cursor);
+    if (!_sameSession(generation, key)) return;
+    final seen = drafts.map((draft) => draft['id']).toSet();
+    drafts.addAll(_items(page).where((draft) => seen.add(draft['id'])));
+    draftsCursor = page['next_cursor'] as String?;
+    _emit();
+  }
 
   Future<void> loadMorePlans() async {
     final cursor = plansCursor;
@@ -698,8 +852,20 @@ class LiveController extends ChangeNotifier {
   Future<Json> eligibility(String id) =>
       _get('/api/v1/subscriptions/$id/eligibility');
   Future<Json> detail(String id) => _get('/api/v1/subscriptions/$id');
-  Future<List<Json>> events(String id) async =>
-      _items(await _get('/api/v1/subscriptions/$id/events?limit=100'));
+  Future<(List<Json>, String?)> events(String id, {String? cursor}) async {
+    await assertContext();
+    final generation = _generation, key = _pendingKey;
+    final page = await _page(
+      '/api/v1/subscriptions/$id/events',
+      limit: 100,
+      cursor: cursor,
+    );
+    if (!_sameSession(generation, key)) {
+      throw StateError('Phiên ví đã thay đổi. Mở lại chi tiết đăng ký.');
+    }
+    return (_items(page), page['next_cursor'] as String?);
+  }
+
   int _chainTime(Json sub, Json eligible) {
     if (sub['chain_id'] != config!['chain_id'] ||
         address(sub['vault_address']) != address(config!['vault_address'])) {

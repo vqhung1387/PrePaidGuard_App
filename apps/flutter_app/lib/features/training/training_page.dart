@@ -95,6 +95,13 @@ class _TrainingPageState extends State<TrainingPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: Text(
+            'Cơ sở, lịch tập và lượt đặt là dữ liệu mô phỏng trong phiên.',
+            style: TextStyle(color: mutedText),
+          ),
+        ),
         if (view != TrainingView.bookings) ...[
           _TrainingBanner(gym: gym),
           const SizedBox(height: 16),

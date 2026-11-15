@@ -33,17 +33,27 @@ class DetailApi extends f.FakeApi {
   @override
   Future<dynamic> request(String method, String path, {Json? body}) async {
     if (path == '/api/v1/subscriptions/1') return membership(mode);
-    if (path.contains('/events?'))
+    if (path.contains('/events?')) {
+      final next = Uri.parse(path).queryParameters['cursor'] == 'history-next';
       return {
         'items': [
           {
+            'id': 'refund',
             'event_name': 'REFUNDED',
             'block_timestamp': '2026-11-15T00:00:00Z',
             'explorer_url': 'https://example.test/tx/confirmed',
           },
+          if (next)
+            {
+              'id': 'released',
+              'event_name': 'PERIOD_RELEASED',
+              'block_timestamp': '2026-11-14T00:00:00Z',
+              'explorer_url': 'https://example.test/tx/released',
+            },
         ],
-        'next_cursor': null,
+        'next_cursor': next ? null : 'history-next',
       };
+    }
     return super.request(method, path, body: body);
   }
 }
@@ -74,18 +84,34 @@ void main() {
         expect(find.text('Đã giải ngân: 50 mUSDC'), findsOneWidget);
         expect(find.text('Đã hoàn gốc: 50 mUSDC'), findsOneWidget);
         expect(find.text('Gốc còn lại: 0 mUSDC'), findsOneWidget);
-        expect(find.text('Yield đã trả cho khách: 0,2 mUSDC'), findsOneWidget);
-        expect(
-          find.text('Ước tính chưa nhận: Chưa có dữ liệu'),
-          findsOneWidget,
+        Finder inDialog(String text) => find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text(text),
         );
+        if (mode == 'MOCK') {
+          expect(
+            inDialog('Lợi tức mô phỏng (MOCK) · Token thử nghiệm'),
+            findsOneWidget,
+          );
+          expect(inDialog('Đã trả cho khách: 0,2 mUSDC'), findsOneWidget);
+          expect(
+            inDialog('Ước tính chưa nhận: Chưa có dữ liệu'),
+            findsOneWidget,
+          );
+        } else {
+          expect(inDialog('Lợi tức · Đã tắt (DISABLED)'), findsOneWidget);
+          expect(inDialog('Đã trả cho khách: 0,2 mUSDC'), findsNothing);
+        }
         expect(find.text('https://example.test/tx/confirmed'), findsOneWidget);
-        expect(
-          find.textContaining(
-            mode == 'MOCK' ? 'không phải lãi DeFi thật' : 'Không tạo lãi',
-          ),
-          findsOneWidget,
-        );
+        final loadMore = inDialog('Tải thêm lịch sử');
+        await tester.ensureVisible(loadMore);
+        await tester.pumpAndSettle();
+        await tester.tap(loadMore);
+        await tester.pumpAndSettle();
+        expect(inDialog('Lịch sử giao dịch · 2 mục'), findsOneWidget);
+        expect(find.text('https://example.test/tx/confirmed'), findsOneWidget);
+        expect(find.text('https://example.test/tx/released'), findsOneWidget);
+        expect(loadMore, findsNothing);
         expect(tester.takeException(), isNull);
         await tester.tap(find.widgetWithText(TextButton, 'Đóng'));
         await tester.pumpAndSettle();

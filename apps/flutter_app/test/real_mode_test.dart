@@ -113,9 +113,11 @@ class FakeApi implements ApiPort {
   String owner = customer;
   int checkIns = 0;
   final calls = <String>[];
+  final pages = <String, Json>{};
   @override
   Future<dynamic> request(String method, String path, {Json? body}) async {
     calls.add('$method $path');
+    if (method == 'GET' && pages.containsKey(path)) return pages[path]!;
     if (path == '/api/v1/config') return configuration();
     if (path == '/api/v1/auth/challenge')
       return {'challenge_id': 'challenge', 'message': 'server SIWE message'};
@@ -216,6 +218,81 @@ class FailingStore extends MemoryPendingStore {
 }
 
 void main() {
+  test(
+    'Private reads reach item 101 and keep status filters with encoded cursors',
+    () async {
+      final api = FakeApi()..merchantProfile = true;
+      const cursor = 'token+with/=';
+      final encoded = Uri.encodeQueryComponent(cursor);
+      final first = [
+        for (var index = 1; index <= 100; index++)
+          {'subscription_id': '$index'},
+      ];
+      for (final path in [
+        '/api/v1/me/subscriptions',
+        '/api/v1/merchant/subscriptions',
+      ]) {
+        api.pages['$path?limit=100&status=ACTIVE'] = {
+          'items': first,
+          'next_cursor': cursor,
+        };
+        api.pages['$path?limit=100&status=ACTIVE&cursor=$encoded'] = {
+          'items': [
+            {'subscription_id': '100'},
+            {'subscription_id': '101'},
+          ],
+          'next_cursor': null,
+        };
+      }
+      api.pages['/api/v1/plan-drafts?limit=100'] = {
+        'items': [
+          for (var id = 1; id <= 100; id++) {'id': '$id'},
+        ],
+        'next_cursor': cursor,
+      };
+      api.pages['/api/v1/plan-drafts?limit=100&cursor=$encoded'] = {
+        'items': [
+          {'id': '100'},
+          {'id': '101'},
+        ],
+        'next_cursor': null,
+      };
+      api.pages['/api/v1/subscriptions/1/events?limit=100&cursor=$encoded'] = {
+        'items': [
+          {'id': '101'},
+        ],
+        'next_cursor': null,
+      };
+      final controller = await signedIn(api: api);
+      addTearDown(controller.dispose);
+      for (final merchant in [false, true]) {
+        await controller.filterMemberships(merchant, SubscriptionFilter.active);
+        await controller.loadMoreMemberships(merchant: merchant);
+        final records = merchant
+            ? controller.merchantMemberships
+            : controller.memberships;
+        expect(records.map((item) => item['subscription_id']), [
+          for (var id = 1; id <= 101; id++) '$id',
+        ]);
+      }
+      await controller.loadMoreDrafts();
+      expect(controller.drafts.length, 101);
+      expect(controller.drafts.last['id'], '101');
+      await controller.refresh();
+      expect(controller.memberships.length, 101);
+      expect(controller.merchantMemberships.length, 101);
+      expect(controller.drafts.last['id'], '101');
+      expect(controller.membershipFilter, SubscriptionFilter.active);
+      expect(controller.merchantMembershipFilter, SubscriptionFilter.active);
+      final (events, next) = await controller.events('1', cursor: cursor);
+      expect(events.single['id'], '101');
+      expect(next, isNull);
+      await controller.logout();
+      expect(controller.draftsCursor, isNull);
+      expect(controller.memberships, isEmpty);
+      expect(controller.membershipFilter, SubscriptionFilter.all);
+    },
+  );
   test(
     'cache failure retains submitted hash and blocks repeat after relogin',
     () async {

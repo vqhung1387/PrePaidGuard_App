@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+
 import '../app/prepaid_guard_theme.dart';
 import '../features/plans/demo_plan.dart';
 import '../shared/widgets/brand_mark.dart';
 import 'api.dart';
 import 'controller.dart';
+import 'subscription_details.dart';
 import 'wallet.dart';
 
 class RealWorkspaceScreen extends StatefulWidget {
@@ -43,7 +45,16 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
           c.loggedIn &&
           !c.busy &&
           c.pending.any((item) => item['status'] == 'SUBMITTED')) {
-        _run(() => c.refresh());
+        final submitted = c.pending
+            .where((item) => item['status'] == 'SUBMITTED')
+            .toList();
+        _run(() async {
+          await c.refreshPending();
+          if (c.loggedIn &&
+              submitted.any((item) => item['status'] != 'SUBMITTED')) {
+            await c.refresh();
+          }
+        });
       }
     });
   }
@@ -308,108 +319,81 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
     await _run(() => _controller!.confirmQr(fields['QR payload']!));
   }
 
-  Future<void> _showDetail(Json sub) async => _run(() async {
-    final id = sub['subscription_id'];
+  Future<void> _showDetail(Json sub) async {
+    final id = sub['subscription_id'] as String;
     final c = _controller!;
-    final data = {
-      'subscription': await c.detail(id),
-      'eligibility': await c.eligibility(id),
-      'events': await c.events(id),
-    };
-    final detail = data['subscription'] as Json;
-    final eligibility = data['eligibility'] as Json;
-    final events = data['events'] as List<Json>;
-    final yieldSummary = detail['yield_summary'] as Json;
-    if (!mounted) return;
+    SubscriptionDetails? dialog;
+    await _run(() async {
+      final detail = await c.detail(id);
+      final eligibility = await c.eligibility(id);
+      final firstPage = await c.events(id);
+      dialog = SubscriptionDetails(
+        controller: c,
+        detail: detail,
+        eligibility: eligibility,
+        firstPage: firstPage,
+      );
+    });
+    final view = dialog;
+    if (view == null || !mounted || !c.loggedIn || _controller != c) return;
     await _withModal(
-      () => showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text('Gói #$id — dữ liệu API/chain'),
-          content: SizedBox(
-            width: 700,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Đã trả trước: ${_money(detail['initial_principal'])} mUSDC',
-                  ),
-                  Text(
-                    'Đã giải ngân: ${_money(detail['principal_released'])} mUSDC',
-                  ),
-                  Text(
-                    'Đã hoàn gốc: ${_money(detail['principal_refunded'])} mUSDC',
-                  ),
-                  Text(
-                    'Gốc còn lại: ${_money(detail['remaining_principal'])} mUSDC',
-                  ),
-                  Text(
-                    'Đã giải ngân ${detail['completed_periods']}/${detail['total_periods']} kỳ',
-                  ),
-                  const Divider(),
-                  Text(
-                    'Có thể check-in: ${eligibility['can_check_in'] == true ? 'Có' : 'Chưa'}',
-                  ),
-                  Text(
-                    'Có thể hoàn gốc: ${eligibility['can_refund'] == true ? 'Có' : 'Chưa'}',
-                  ),
-                  Text('Kỳ tiếp: ${detail['next_release_at'] ?? '—'}'),
-                  Text('Mốc hoàn gốc: ${detail['refund_available_at'] ?? '—'}'),
-                  const Divider(),
-                  Text(
-                    'Yield: ${yieldSummary['mode']} · ${yieldSummary['mode'] == 'MOCK' ? 'Token được cấp thử nghiệm, không phải lãi DeFi thật' : 'Không tạo lãi'}',
-                  ),
-                  Text(
-                    'Ước tính chưa nhận: ${yieldSummary['estimated_unclaimed'] == null ? 'Chưa có dữ liệu' : '${_money(yieldSummary['estimated_unclaimed'])} mUSDC'}',
-                  ),
-                  Text(
-                    'Yield đã trả cho khách: ${_money(yieldSummary['paid_subscriber'])} mUSDC',
-                  ),
-                  Text(
-                    'Yield đã trả cho cơ sở: ${_money(yieldSummary['paid_merchant'])} mUSDC',
-                  ),
-                  Text(
-                    'Yield đã trả nền tảng: ${_money(yieldSummary['paid_platform'])} mUSDC',
-                  ),
-                  const Divider(),
-                  Text('Lịch sử giao dịch (${events.length} mục gần nhất)'),
-                  for (final event in events)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        '${event['event_name']} · ${event['block_timestamp']}',
-                      ),
-                      subtitle: SelectableText(event['explorer_url'] as String),
-                      trailing: IconButton(
-                        tooltip: 'Sao chép liên kết giao dịch',
-                        onPressed: () => Clipboard.setData(
-                          ClipboardData(text: event['explorer_url'] as String),
-                        ),
-                        icon: const Icon(Icons.copy),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Đóng'),
-            ),
-          ],
-        ),
-      ),
+      () => showDialog<void>(context: context, builder: (_) => view),
     );
-  });
+  }
+
   Widget _heading(String value) => Padding(
     padding: const EdgeInsets.only(top: 24, bottom: 10),
     child: Text(value, style: Theme.of(context).textTheme.titleLarge),
   );
   String _money(dynamic value) =>
       formatTokenAmount(BigInt.parse(value.toString()));
+
+  Widget _membershipFilters(
+    LiveController controller, {
+    required bool merchant,
+  }) {
+    final selected = merchant
+        ? controller.merchantMembershipFilter
+        : controller.membershipFilter;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      children: [
+        for (final filter in SubscriptionFilter.values)
+          ChoiceChip(
+            label: Text(filter.label),
+            selected: selected == filter,
+            onSelected: controller.busy || selected == filter
+                ? null
+                : (_) => _run(
+                    () => controller.filterMemberships(merchant, filter),
+                  ),
+          ),
+      ],
+    );
+  }
+
+  Widget _loadMore({
+    required String label,
+    required bool busy,
+    required Future<void> Function() load,
+  }) {
+    return OutlinedButton.icon(
+      onPressed: busy ? null : () => _run(load),
+      icon: const Icon(Icons.expand_more),
+      label: Text(label),
+    );
+  }
+
+  String _transactionStatus(Object? value) => switch (value) {
+    'SUBMITTED' => 'Đang chờ xác nhận',
+    'CONFIRMED' => 'Đã xác nhận',
+    'REVERTED' => 'Giao dịch thất bại trên chuỗi',
+    'REPLACED' => 'Đã được thay thế',
+    'CANCELLED' => 'Đã hủy bằng giao dịch thay thế',
+    _ => value.toString(),
+  };
+
   Widget _subscription(Json sub, {required bool merchant}) {
     final active = sub['status'] == 'ACTIVE';
     final status = switch (sub['status']) {
@@ -439,6 +423,11 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
             ),
             Text(
               'Nguồn: ${sub['sync']['source']} · block ${sub['sync']['block_number']}',
+            ),
+            const SizedBox(height: 8),
+            SubscriptionYield(
+              summary: sub['yield_summary'] as Json? ?? const {},
+              merchant: merchant,
             ),
             Wrap(
               spacing: 8,
@@ -726,15 +715,26 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
                   ),
                 if (logged) ...[
                   _heading('Gói của tôi'),
-                  for (final issue in c!.issues)
+                  _membershipFilters(c!, merchant: false),
+                  for (final issue in c.issues)
                     Text(
                       'Cảnh báo gói #${issue['subscription_id']}: ${issue['code']} — ${issue['message']}',
                       style: const TextStyle(color: Colors.orange),
                     ),
                   if (c.memberships.isEmpty)
-                    const Text('Chưa có subscription đã đồng bộ.'),
+                    Text(
+                      c.membershipFilter == SubscriptionFilter.all
+                          ? 'Chưa có subscription đã đồng bộ.'
+                          : 'Không có đăng ký khớp trạng thái đã chọn.',
+                    ),
                   for (final sub in c.memberships)
                     _subscription(sub, merchant: false),
+                  if (c.membershipsCursor != null)
+                    _loadMore(
+                      label: 'Tải thêm đăng ký của tôi',
+                      busy: busy,
+                      load: () => c.loadMoreMemberships(merchant: false),
+                    ),
                   _heading('Cơ sở'),
                   if (!c.isMerchant)
                     FilledButton(
@@ -771,6 +771,14 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
                           child: const Text('Publish draft'),
                         ),
                       ),
+                    if (c.draftsCursor != null)
+                      _loadMore(
+                        label: 'Tải thêm bản nháp',
+                        busy: busy,
+                        load: c.loadMoreDrafts,
+                      ),
+                    _heading('Đăng ký tại cơ sở'),
+                    _membershipFilters(c, merchant: true),
                     for (final issue in c.merchantIssues)
                       Text(
                         'Cảnh báo gói #${issue['subscription_id']}: ${issue['code']} — ${issue['message']}',
@@ -778,6 +786,14 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
                       ),
                     for (final sub in c.merchantMemberships)
                       _subscription(sub, merchant: true),
+                    if (c.merchantMemberships.isEmpty)
+                      const Text('Không có đăng ký tại cơ sở khớp bộ lọc.'),
+                    if (c.merchantMembershipsCursor != null)
+                      _loadMore(
+                        label: 'Tải thêm đăng ký tại cơ sở',
+                        busy: busy,
+                        load: () => c.loadMoreMemberships(merchant: true),
+                      ),
                   ],
                   _heading('Giao dịch của phiên / khôi phục'),
                   const Text(
@@ -785,9 +801,22 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
                   ),
                   for (final item in c.pending)
                     ListTile(
-                      title: Text('${item['action']} · ${item['status']}'),
+                      title: Text(
+                        '${item['action']} · ${_transactionStatus(item['status'])} (${item['status']})',
+                      ),
                       subtitle: SelectableText(
-                        '${item['tx_hash']}${item['replacement_tx_hash'] != null ? '\nHash thay thế: ${item['replacement_tx_hash']}' : ''}${item['last_error'] != null ? '\n${item['last_error']}' : ''}${item['storage_warning'] != null ? '\n${item['storage_warning']}' : ''}',
+                        [
+                          'Hash gốc: ${item['tx_hash']}',
+                          if (item['replacement_tx_hash'] != null)
+                            'Hash thay thế: ${item['replacement_tx_hash']}',
+                          if (item['status'] == 'SUBMITTED' &&
+                              item['sender_nonce'] == null)
+                            'Chưa có nonce gốc. Nếu API chưa có bằng chứng, cần raw giao dịch gốc đã ký để đối chiếu. Thao tác vẫn bị chặn gửi lặp.',
+                          if (item['last_error'] != null)
+                            '${item['last_error']}',
+                          if (item['storage_warning'] != null)
+                            '${item['storage_warning']}',
+                        ].join('\n'),
                       ),
                       trailing: item['status'] != 'SUBMITTED'
                           ? null
