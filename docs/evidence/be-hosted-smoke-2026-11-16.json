@@ -1,0 +1,81 @@
+{
+  "status": "PASS",
+  "base_url": "https://prepaidguard-api.onrender.com",
+  "scope": "HTTPS, hosted DB, SIWE and session; Fuji Vault unavailable",
+  "checks": [
+    {
+      "check": "HTTPS health",
+      "http_status": 200,
+      "request_id": "8d8b2411-4f66-4d05-89a9-63333bbe0d94",
+      "error_code": null
+    },
+    {
+      "check": "missing Fuji deployment stays unavailable",
+      "http_status": 503,
+      "request_id": "51c82b89-1f45-441a-8b0b-511e3ba89ffb",
+      "error_code": "CONFIG_MISMATCH"
+    },
+    {
+      "check": "config rejects missing manifest",
+      "http_status": 503,
+      "request_id": "ec9883bc-8f4c-4abb-a75a-01cf22f71d6f",
+      "error_code": "CONFIG_MISMATCH"
+    },
+    {
+      "check": "unauthenticated account rejects access",
+      "http_status": 401,
+      "request_id": "4185aeb6-985e-48e5-856e-2160c43b1542",
+      "error_code": "UNAUTHORIZED"
+    },
+    {
+      "check": "OpenAPI published",
+      "http_status": 200,
+      "request_id": "d95e6175-a52f-4b7c-b615-d69125973fd2",
+      "error_code": null
+    },
+    {
+      "check": "SIWE challenge writes to migrated hosted DB",
+      "http_status": 201,
+      "request_id": "11e9a51e-825b-4ad7-8923-052181d94d57",
+      "error_code": null
+    },
+    {
+      "check": "SIWE signed test wallet verification",
+      "http_status": 200,
+      "request_id": "18ba56f0-fa13-4a5e-a4cc-c93abecaa9a8",
+      "error_code": null
+    },
+    {
+      "check": "authenticated account reads hosted DB",
+      "http_status": 200,
+      "request_id": "c519ed50-8a8e-41c5-8814-7a7f86af0f9c",
+      "error_code": null
+    },
+    {
+      "check": "SIWE replay rejected",
+      "http_status": 401,
+      "request_id": "48c9d7a4-ad4c-44bf-9dbd-ac5c4bd157a5",
+      "error_code": "CHALLENGE_USED"
+    },
+    {
+      "check": "logout revokes hosted DB session",
+      "http_status": 204,
+      "request_id": "b7a7a36a-6238-45bd-8055-31f53e1b2cdb",
+      "error_code": null
+    },
+    {
+      "check": "revoked token rejected",
+      "http_status": 401,
+      "request_id": "4fe511e5-e2ed-4462-a368-e5efed9e1880",
+      "error_code": "UNAUTHORIZED"
+    },
+    {
+      "check": "wrong chain rejected",
+      "http_status": 400,
+      "request_id": "dcab847e-e14a-4444-8627-445f627e82b7",
+      "error_code": "UNSUPPORTED_CHAIN"
+    }
+  ],
+  "deployed_commit": "f67e7109566368ea284e3be2dc5fc845d5b8638b",
+  "verified_at_utc": "2026-11-16T06:37:19.1318627Z"
+}
