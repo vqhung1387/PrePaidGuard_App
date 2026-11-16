@@ -106,20 +106,31 @@ contract ConservationTest {
     ) private view {
         uint256 remaining;
         uint256 customerBalances;
+        uint256 allocatedYield;
         uint256 price = vault.getPlan(1).pricePerPeriod;
         for (uint256 i; i < 3; i++) {
             PrepaidVault.Subscription memory position = vault.getSubscription(i + 1);
             remaining += position.remainingPrincipal;
             customerBalances += token.balanceOf(customers[i]);
             assert(position.remainingPrincipal + price * position.completedPeriods <= position.initialPrincipal);
+            if (position.status != PrepaidVault.Status.Refunded) {
+                assert(position.remainingPrincipal + price * position.completedPeriods == position.initialPrincipal);
+            }
+            assert(position.nonce == position.completedPeriods + (position.status == PrepaidVault.Status.Refunded ? 1 : 0));
             if (position.status != PrepaidVault.Status.Active) assert(position.remainingPrincipal == 0);
-            if (address(adapter) != address(0)) assert(adapter.principalOf(i + 1) == position.remainingPrincipal);
+            if (address(adapter) != address(0)) {
+                assert(adapter.principalOf(i + 1) == position.remainingPrincipal);
+                allocatedYield += adapter.yieldOf(i + 1);
+            }
         }
         assert(vault.totalPrincipal() == remaining);
         uint256 custody = token.balanceOf(address(vault)) + token.balanceOf(address(adapter));
         assert(custody >= remaining);
         assert(custody + customerBalances + token.balanceOf(address(this)) + token.balanceOf(address(0xFEE)) == total);
-        if (address(adapter) != address(0)) assert(custody == adapter.totalPrincipal() + adapter.totalYield());
+        if (address(adapter) != address(0)) {
+            assert(allocatedYield == adapter.totalYield());
+            assert(custody == adapter.totalPrincipal() + adapter.totalYield());
+        }
         else assert(custody == remaining);
     }
 }
