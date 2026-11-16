@@ -1,3 +1,5 @@
+# Full-stack template for a new installation. The live API's reviewed adoption
+# configuration is deploy/render-api-health.yaml; do not adopt the DB by accident.
 services:
   - type: web
     name: prepaidguard-api
