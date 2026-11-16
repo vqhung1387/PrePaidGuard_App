@@ -469,15 +469,18 @@ class Vault:
         return fn.fn_name, args
 
     def decode_log(self, raw) -> Log | None:
-        if raw["address"].lower() != self.deployment.vault_address or not raw["topics"]:
-            return None
-        known = self.events.get(hex_value(raw["topics"][0]))
-        if known is None:
-            return None
-        if raw.get("removed"):
-            raise rpc_error()
-        kind, event = known
         try:
+            if (
+                raw["address"].lower() != self.deployment.vault_address
+                or not raw["topics"]
+            ):
+                return None
+            known = self.events.get(hex_value(raw["topics"][0]))
+            if known is None:
+                return None
+            if raw.get("removed"):
+                raise rpc_error()
+            kind, event = known
             decoded = event.process_log(raw)
             return Log(
                 kind,
@@ -487,7 +490,14 @@ class Vault:
                 decoded["blockNumber"],
                 hex_value(decoded["blockHash"]),
             )
-        except (Web3Exception, DecodingError, ValueError, TypeError, KeyError):
+        except (
+            Web3Exception,
+            DecodingError,
+            ValueError,
+            TypeError,
+            KeyError,
+            AttributeError,
+        ):
             raise rpc_error() from None
 
     def logs(self, first: int, last: int) -> list[Log]:
@@ -500,11 +510,20 @@ class Vault:
                     "topics": [list(self.events)],
                 }
             )
-        except (Web3Exception, RequestException, OSError, ValueError):
+            logs = []
+            for raw in raw_logs:
+                entry = self.decode_log(raw)
+                # Every result must satisfy the exact address/topic/range filter.
+                if entry is None or not first <= entry.block_number <= last:
+                    raise rpc_error()
+                logs.append(entry)
+            return sorted(logs, key=lambda entry: (entry.block_number, entry.index))
+        except (
+            Web3Exception,
+            RequestException,
+            OSError,
+            ValueError,
+            TypeError,
+            KeyError,
+        ):
             raise rpc_error() from None
-        logs = [
-            entry for raw in raw_logs if (entry := self.decode_log(raw)) is not None
-        ]
-        if any(not first <= entry.block_number <= last for entry in logs):
-            raise rpc_error()
-        return sorted(logs, key=lambda entry: (entry.block_number, entry.index))

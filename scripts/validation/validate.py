@@ -210,7 +210,7 @@ class Runner:
                 self.results[-1]['detail'] += '; temporary schema ' + schema
             checks.append(cleanup)
         env['DATABASE_URL'] = self.db
-        checks.append(self.run(p, 'backend tests', [self.uv, 'run', '--locked', 'pytest', '-q', '--ignore=tests/test_live_contract.py'], cwd, env, True))
+        checks.append(self.run(p, 'backend tests', [self.uv, 'run', '--locked', 'pytest', '-q', '--ignore=tests/test_live_contract.py', '--ignore=tests/test_live_replacements.py'], cwd, env, True))
         return all(checks)
 
     def integration(self, build_ok):
@@ -243,7 +243,7 @@ class Runner:
                 return self.record(p, 'live contract and API tests', 'blocked', 'RPC unavailable or chain ID is not 31337')
             env = self.env.copy()
             env.update(TEST_DATABASE_URL=self.db, DATABASE_URL=self.db, CONTRACT_TEST_RPC=rpc)
-            return self.run(p, 'live contract and API tests', [self.uv, 'run', '--locked', 'pytest', '-q', 'tests/test_live_contract.py'], cwd, env, True)
+            return self.run(p, 'live contract and API tests', [self.uv, 'run', '--locked', 'pytest', '-q', 'tests/test_live_contract.py', 'tests/test_live_replacements.py'], cwd, env, True)
         except OSError:
             return self.record(p, 'live contract and API tests', 'blocked', 'managed node could not start')
         finally:

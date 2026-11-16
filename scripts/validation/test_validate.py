@@ -164,6 +164,31 @@ class ValidationTests(unittest.TestCase):
         self.assertIn('--dart-define=CHAIN_ID=31337', build_cmd)
         self.assertIn('--dart-define=API_BASE_URL=http://127.0.0.1:18000', build_cmd)
 
+    def test_live_evm_tests_run_only_in_integration_without_skips(self):
+        class Args:
+            repo_root = Path('.')
+            database_url_env = 'VALIDATION_TEST_DATABASE'
+            rpc_url = 'http://127.0.0.1:18571'
+            node_executable = sys.executable
+            start_local_evm = False
+            timeout = 3
+            retries = 0
+        with patch.dict(os.environ, {'VALIDATION_TEST_DATABASE': 'postgresql://u:p@localhost/test'}):
+            runner = v.Runner(Args())
+        calls = []
+        def fake_run(phase, name, cmd, cwd, env=None, forbid_skips=False):
+            calls.append((name, cmd, forbid_skips))
+            return runner.record(phase, name, 'pass')
+        with patch.object(runner, 'run', side_effect=fake_run), patch.object(v, 'chain_id', return_value=31337):
+            self.assertTrue(runner.backend())
+            self.assertTrue(runner.integration(True))
+        backend = next(call for call in calls if call[0] == 'backend tests')
+        integration = next(call for call in calls if call[0] == 'live contract and API tests')
+        for filename in ('tests/test_live_contract.py', 'tests/test_live_replacements.py'):
+            self.assertIn('--ignore=' + filename, backend[1])
+            self.assertIn(filename, integration[1])
+        self.assertTrue(backend[2] and integration[2])
+
 
 if __name__ == '__main__':
     unittest.main()

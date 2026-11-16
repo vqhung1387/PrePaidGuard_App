@@ -285,6 +285,7 @@ def reset_projection(db: Session, vault: Vault) -> None:
             block_hash=None,
             failure_code=None,
             checked_at=None,
+            replacement_tx_hash=None,
         )
     )
 

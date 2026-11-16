@@ -6,6 +6,7 @@
 ## 1. Convention
 
 - Base: <API_BASE_URL>/api/v1; HTTPS cho môi trường demo; JSON UTF-8, snake_case.
+- Text metadata không được chứa ký tự NUL (`\u0000`): trả422 `VALIDATION_ERROR` trước khi ghi DB. Tiếng Việt, emoji và mô tả nhiều dòng vẫn được hỗ trợ.
 - Auth: Authorization: Bearer <access_token>. JWT gắn wallet/chain/session, TTL 1 giờ; hết hạn ký lại, không refresh token trong MVP.
 - Public: không cần token. User: ví đã xác thực. Merchant: user có Merchant profile; vẫn kiểm tra owner từng tài nguyên.
 - Thành công trả trực tiếp DTO, list trả Page<T>; lỗi dùng ErrorResponse.

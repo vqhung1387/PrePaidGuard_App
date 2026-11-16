@@ -24,12 +24,18 @@ from app.schemas.types import (
 )
 
 Name = Annotated[
-    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)
+    str,
+    StringConstraints(
+        strip_whitespace=True, min_length=1, max_length=120, pattern=r"^[^\x00]*$"
+    ),
 ]
-Description = Annotated[str, StringConstraints(max_length=2000)]
-Location = Annotated[str, StringConstraints(max_length=300)]
+Description = Annotated[str, StringConstraints(max_length=2000, pattern=r"^[^\x00]*$")]
+Location = Annotated[str, StringConstraints(max_length=300, pattern=r"^[^\x00]*$")]
 DisplayName = Annotated[
-    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)
+    str,
+    StringConstraints(
+        strip_whitespace=True, min_length=1, max_length=80, pattern=r"^[^\x00]*$"
+    ),
 ]
 Duration = Annotated[int, Field(strict=True, gt=0, le=MAX_TIMESTAMP)]
 Periods = Annotated[int, Field(strict=True, ge=1, le=120)]
