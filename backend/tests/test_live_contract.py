@@ -110,6 +110,11 @@ def test_real_vault_receipts_and_api(tmp_path, monkeypatch, yield_mode):
                 "public_rpc_url": rpc,
                 "explorer_url": rpc,
                 "vault_address": contract.address,
+                "vault_code_hash": Web3.to_hex(
+                    Web3.keccak(w3.eth.get_code(contract.address))
+                ),
+                "adapter_address": adapter.address if adapter else "0x" + "00" * 20,
+                "treasury_address": treasury,
                 "token": {"address": token.address},
                 "abi_version": "prepaidguard-1",
                 "deployment_block": receipt.blockNumber,

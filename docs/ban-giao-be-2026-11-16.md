@@ -47,4 +47,13 @@ DB Render được tạo ngày 16/11/2026, dashboard ghi hết hạn 16/12/2026.
 - **UI:** cung cấp origin web HTTPS cuối cùng để BE cấu hình AUTH_DOMAIN/AUTH_URI/CORS; pin chain/Vault/deployment theo config; nghiệm thu Core/MetaMask thực và hai thiết bị. Camera/native và các màn demo vẫn do UI phụ trách.
 - **Người giữ tài khoản:** xác nhận các bước cấp quyền tài khoản/đăng nhập hoặc mở khóa ví khi dịch vụ yêu cầu; không gửi seed/private key qua chat.
 
-Không có kết luận đã hoàn thành Fuji/HTTPS/extension từ kết quả test local. Theo dõi trạng thái triển khai tiếp trong lần bàn giao sau hoặc phần cập nhật cuối tài liệu này.
+Không có kết luận đã hoàn thành Fuji/HTTPS/extension từ kết quả test local.
+
+## Cập nhật nghiệm thu và triển khai
+
+- Commit sửa BE `f67e710` đã push lên `fix/be-nghiem-thu-1116`. Cả 5 CI của đúng SHA đều success: [backend](https://github.com/vqhung1387/PrePaidGuard_App/actions/runs/43795116651), [frontend](https://github.com/vqhung1387/PrePaidGuard_App/actions/runs/43795116630), [Solidity](https://github.com/vqhung1387/PrePaidGuard_App/actions/runs/43795116638), [contract tích hợp](https://github.com/vqhung1387/PrePaidGuard_App/actions/runs/43795116673), [browser](https://github.com/vqhung1387/PrePaidGuard_App/actions/runs/43795116745).
+- Lượt bổ sung kiểm toàn bộ manifest: live fixture giờ chứa `vault_code_hash`, `adapter_address`, `treasury_address` lấy từ EVM thật. Thêm 6 ca kiểm adapter/mode và tương thích manifest cũ. Chạy toàn bộ BE với PostgreSQL/Hardhat thật: **84 passed, 0 skipped**; lint và format đạt. Hai cảnh báo deprecation của thư viện còn tồn tại, chưa nâng dependency chỉ để bỏ cảnh báo.
+- Render: DB `prepaidguard-db` đã Available, PostgreSQL 16/Singapore/Free; external traffic đã bị chặn. Form `prepaidguard-api` dùng public repo, nhánh `fix/be-nghiem-thu-1116`, Dockerfile `backend/Dockerfile`, build context repo root và Free. Đã điền kết nối DB nội bộ, JWT secret riêng, chain 43113, ABI/manifest Fuji path và sync 20 giây, rồi bấm Deploy. Chưa nhận được service URL hoặc trạng thái Live trước khi công cụ trình duyệt mất kết nối; không coi thao tác bấm Deploy là triển khai thành công.
+- Health check Render tạm đặt `/health` để dựng process/OpenAPI trước khi có manifest. **Đây chỉ là staging chưa sẵn sàng giao dịch.** Sau khi Solidity bàn giao Fuji manifest và UI bàn giao origin HTTPS, BE cấu hình AUTH_DOMAIN/AUTH_URI/CORS, kiểm `/ready` 200 rồi đổi health check Render sang `/ready`. Không để cấu hình liveness tạm này trở thành tiêu chí nghiệm thu.
+- Chưa có private key/DB URL/JWT nào được đưa vào source, commit hoặc tài liệu. Không copy địa chỉ placeholder thành manifest Fuji để làm readiness xanh.
+- Browser hiện không truy cập được trong chat. Đã tìm được tích hợp Render để người giữ tài khoản kết nối; chưa xác nhận kết nối. Chưa lấy được gas Fuji hoặc deploy contract, không có transaction hash Fuji để ghi nhận.

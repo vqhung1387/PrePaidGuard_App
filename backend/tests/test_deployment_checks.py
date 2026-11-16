@@ -2,10 +2,38 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from eth_utils import function_signature_to_4byte_selector
+from pydantic import ValidationError
 from sqlalchemy import text
 from web3 import Web3
 
+from app.core.config import Deployment
 from tests.fake_rpc import TOKEN
+
+
+@pytest.mark.parametrize(
+    ("mode", "adapter", "valid"),
+    [
+        ("MOCK", None, True),
+        ("DISABLED", None, True),
+        ("MOCK", "0x" + "55" * 20, True),
+        ("DISABLED", "0x" + "00" * 20, True),
+        ("MOCK", "0x" + "00" * 20, False),
+        ("DISABLED", "0x" + "55" * 20, False),
+    ],
+)
+def test_manifest_adapter_matches_mode_and_keeps_legacy_compatible(
+    harness, mode, adapter, valid
+):
+    _, _, vault, _ = harness
+    manifest = vault.deployment.model_dump()
+    manifest.update(yield_mode=mode, adapter_address=adapter)
+    if valid:
+        assert Deployment.model_validate(manifest).yield_mode == mode
+    else:
+        with pytest.raises(
+            ValidationError, match="adapter address must match yield mode"
+        ):
+            Deployment.model_validate(manifest)
 
 
 def test_migration_head_matches_models(harness):
