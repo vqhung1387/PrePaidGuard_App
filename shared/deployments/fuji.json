@@ -1,0 +1,118 @@
+{
+  "deployment_id": "43113-0xc2b19df4e38ce6fa921120f2b16c8c3a9c6a2364",
+  "chain_id": 43113,
+  "chain_name": "Avalanche Fuji",
+  "public_rpc_url": "https://api.avax-test.network/ext/bc/C/rpc",
+  "explorer_url": "https://testnet.snowtrace.io",
+  "vault_address": "0xc2b19Df4e38CE6FA921120f2B16C8c3a9c6a2364",
+  "token": {
+    "address": "0x2267Ff59D31b98E9771AF5d80E3d554d7f5eD998",
+    "symbol": "mUSDC",
+    "decimals": 6
+  },
+  "adapter_address": "0x0000000000000000000000000000000000000000",
+  "treasury_address": "0x9B14012e9a4dccE26b4581086bC44Dc1BF5bE1f4",
+  "deployer_address": "0x9B14012e9a4dccE26b4581086bC44Dc1BF5bE1f4",
+  "abi_version": "prepaidguard-1",
+  "deployment_block": 61165951,
+  "deployment_tx_hash": "0x0ae31c1ea847e44e7c2f15f7ca38e67e79b219db18a9f7ed005fd121306b43e9",
+  "yield_mode": "DISABLED",
+  "confirmations": 2,
+  "subscription_status_codes": {
+    "active": 1,
+    "completed": 2,
+    "refunded": 3
+  },
+  "compiler": "0.8.28",
+  "vault_code_hash": "0x03271f9a0b1222ca8c5e6422934cdf549a2ed4d08abc2da0c7cf5efc1e1e10ef",
+  "evidence": {
+    "steps": {
+      "token": {
+        "hash": "0xe98b20101051d66063e2a119f0053d72a3a0ca5e221ab7425d350a5e0fe2837e",
+        "status": "confirmed",
+        "blockNumber": 61165946,
+        "blockHash": "0x0951b760c36463c4c6c14545ac48e35846652a9d86113bb0c8a9532d3bebbbe2",
+        "contractAddress": "0x2267Ff59D31b98E9771AF5d80E3d554d7f5eD998",
+        "gasUsed": "604084",
+        "gasPrice": "160"
+      },
+      "vault": {
+        "hash": "0x0ae31c1ea847e44e7c2f15f7ca38e67e79b219db18a9f7ed005fd121306b43e9",
+        "status": "confirmed",
+        "blockNumber": 61165951,
+        "blockHash": "0x4400e212302ec96faf46d3cdf976a4155051af75e11f9ed14f246a8eedab8c8e",
+        "contractAddress": "0xc2b19Df4e38CE6FA921120f2B16C8c3a9c6a2364",
+        "gasUsed": "2260816",
+        "gasPrice": "160"
+      }
+    },
+    "source_commit": "97e7dc9655b7f8e9a45d8c3b3067832d9df87109",
+    "source_dirty": false,
+    "compiler_settings": {
+      "version": "0.8.28",
+      "longVersion": "0.8.28+commit.7893614a",
+      "settings": {
+        "evmVersion": "cancun",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "outputSelection": {
+          "*": {
+            "": [
+              "ast"
+            ],
+            "*": [
+              "abi",
+              "evm.bytecode.linkReferences",
+              "evm.bytecode.object",
+              "evm.bytecode.opcodes",
+              "evm.bytecode.sourceMap",
+              "evm.deployedBytecode.immutableReferences",
+              "evm.deployedBytecode.linkReferences",
+              "evm.deployedBytecode.object",
+              "evm.deployedBytecode.opcodes",
+              "evm.deployedBytecode.sourceMap",
+              "evm.methodIdentifiers"
+            ]
+          }
+        },
+        "remappings": [
+          "project/:@openzeppelin/contracts/=npm/@openzeppelin/contracts@5.6.1/"
+        ]
+      }
+    },
+    "build_info": {
+      "PrepaidVault": {
+        "id": "solc-0_8_28-d3116df386eee11c78a6d19a5df1c4491bdcb840",
+        "hash": "0x303b2728bd57b25a6be56ee67c1398e0b8d487402761e6f9f8cecaa8c65826da"
+      },
+      "MockUSDC": {
+        "id": "solc-0_8_28-d3116df386eee11c78a6d19a5df1c4491bdcb840",
+        "hash": "0x303b2728bd57b25a6be56ee67c1398e0b8d487402761e6f9f8cecaa8c65826da"
+      },
+      "MockYieldAdapter": {
+        "id": "solc-0_8_28-d3116df386eee11c78a6d19a5df1c4491bdcb840",
+        "hash": "0x303b2728bd57b25a6be56ee67c1398e0b8d487402761e6f9f8cecaa8c65826da"
+      }
+    },
+    "constructor_args": {
+      "token": [
+        "0x9B14012e9a4dccE26b4581086bC44Dc1BF5bE1f4"
+      ],
+      "adapter": null,
+      "vault": [
+        "0x2267Ff59D31b98E9771AF5d80E3d554d7f5eD998",
+        "0x9B14012e9a4dccE26b4581086bC44Dc1BF5bE1f4",
+        "0x0000000000000000000000000000000000000000"
+      ]
+    },
+    "abi_keccak256": {
+      "PrepaidVault": "0xebf56afccb9838a954f3dc25a38a6c0c9483065ffd4543e8c93cabb8fae1cad1",
+      "MockUSDC": "0x81336b541e4444dcad1bf251b89e1afbc191deeba5629c3debd84a5debf01ee4",
+      "MockYieldAdapter": "0xbd9ecd91fd6a6a0f5e8116f2b39fb8d33ac84c8237c1de18424731276ec33d2c"
+    },
+    "local_artifact_verification": "LOCAL_ARTIFACT_MATCH",
+    "source_verification": "NOT_VERIFIED"
+  }
+}
