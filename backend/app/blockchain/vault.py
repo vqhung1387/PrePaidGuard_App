@@ -325,9 +325,40 @@ class Vault:
     def check_contract(self, block: Block) -> None:
         try:
             token_address = Web3.to_checksum_address(self.deployment.token.address)
-            if not self.web3.eth.get_code(self.address, block.number):
+            code = self.web3.eth.get_code(self.address, block.number)
+            if not code or (
+                self.deployment.vault_code_hash is not None
+                and hex_value(Web3.keccak(code)) != self.deployment.vault_code_hash
+            ):
                 raise config_error()
             if not self.web3.eth.get_code(token_address, block.number):
+                raise config_error()
+            addresses = {}
+            names = ["paymentToken", "adapter"]
+            if self.deployment.treasury_address is not None:
+                names.append("treasury")
+            for name in names:
+                raw = self.web3.eth.call(
+                    {
+                        "to": self.address,
+                        "data": function_signature_to_4byte_selector(f"{name}()"),
+                    },
+                    block.number,
+                )
+                addresses[name] = self.web3.codec.decode(["address"], raw)[0].lower()
+            if (
+                addresses["paymentToken"] != self.deployment.token.address
+                or (addresses["adapter"] == ZERO)
+                != (self.deployment.yield_mode == "DISABLED")
+                or (
+                    self.deployment.adapter_address is not None
+                    and addresses["adapter"] != self.deployment.adapter_address
+                )
+                or (
+                    self.deployment.treasury_address is not None
+                    and addresses["treasury"] != self.deployment.treasury_address
+                )
+            ):
                 raise config_error()
             raw = self.web3.eth.call(
                 {"to": token_address, "data": "0x313ce567"}, block.number

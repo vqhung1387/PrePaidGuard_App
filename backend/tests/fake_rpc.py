@@ -1,4 +1,4 @@
-from eth_utils import event_abi_to_log_topic
+from eth_utils import event_abi_to_log_topic, function_signature_to_4byte_selector
 from requests.exceptions import ConnectionError
 from web3 import Web3
 
@@ -165,6 +165,21 @@ class FakeRpc:
             data = params[0]["data"]
             if data == "0x313ce567":
                 result = Web3.to_hex(self.codec.encode(["uint8"], [6]))
+            elif data == Web3.to_hex(
+                function_signature_to_4byte_selector("paymentToken()")
+            ):
+                result = Web3.to_hex(self.codec.encode(["address"], [TOKEN]))
+            elif data == Web3.to_hex(function_signature_to_4byte_selector("adapter()")):
+                adapter = (
+                    "0x"
+                    + ("00" if self.vault.deployment.yield_mode == "DISABLED" else "55")
+                    * 20
+                )
+                result = Web3.to_hex(self.codec.encode(["address"], [adapter]))
+            elif data == Web3.to_hex(
+                function_signature_to_4byte_selector("treasury()")
+            ):
+                result = Web3.to_hex(self.codec.encode(["address"], ["0x" + "66" * 20]))
             else:
                 name, args = self.vault.calldata(data)
                 if name == "estimateYield":

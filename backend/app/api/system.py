@@ -1,10 +1,12 @@
 from typing import Annotated
 
+from alembic.script import ScriptDirectory
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import text
 
 from app.api.dependencies import Config, Db
 from app.blockchain.vault import Vault
+from app.core.config import BACKEND_DIR
 from app.core.errors import database_error
 from app.schemas.api import ConfigResponse, Health
 
@@ -29,9 +31,8 @@ def health():
 
 @router.get("/ready", response_model=Health)
 def ready(db: Db, request: Request):
-    if not db.execute(
-        text("select version_num from alembic_version")
-    ).scalar_one_or_none():
+    revisions = set(db.scalars(text("select version_num from alembic_version")))
+    if revisions != set(ScriptDirectory(str(BACKEND_DIR / "migrations")).get_heads()):
         raise database_error()
     vault = get_vault(request)
     vault.check_contract(vault.checked_head())

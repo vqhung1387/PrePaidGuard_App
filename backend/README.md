@@ -2,6 +2,8 @@
 
 Migration mới nhất: **0003**. Chạy `alembic upgrade head` trước khi dùng frontend phục hồi giao dịch; không xóa DB đang có. Endpoint replacement và phần cần nghiệm thu được ghi trong [bàn giao 15/11](../docs/ban-giao-sua-loi-2026-11-15.md). Health check phục vụ traffic dùng `/ready`; `/health` chỉ kiểm process còn sống.
 
+`/ready` chỉ đạt khi DB đúng toàn bộ migration head của source đang chạy. Vault phải có code, `paymentToken()` khớp token của manifest, `adapter()` khớp mode yield và token có đúng decimals. Khi manifest xuất thêm `vault_code_hash`, `adapter_address`, `treasury_address`, backend đối chiếu cả fingerprint và các địa chỉ này tại cùng block, rồi kiểm canonical. Manifest cũ chưa có các trường bổ sung vẫn được đọc; kiểm readiness không thay thế source/explorer verification của Solidity.
+
 API cho SIWE, merchant, plan draft, subscription, receipt tracking và đồng bộ event. PostgreSQL giữ metadata và bản đọc từ chain. Ví người dùng ký giao dịch trực tiếp tới Vault.
 
 Catalog đọc RPC tối đa4 plan đồng thời trong mỗi request, cùng một block đã xác nhận, giữ thứ tự và kiểm canonical trước trả kết quả; không cache số dư và không trả một phần khi RPC lỗi. Đã đo riêng kịch bản100 gói/RPC200ms:20,42s trước sửa →5,44s sau sửa. Đo8 lượt eth_getBalance Fuji thực tế: tuần tự0,875s,4luồng1,250s; đây chỉ là mẫu transport, không phải benchmark Vault Fuji. Không khẳng định song song luôn nhanh hơn, cần đo lại deployment thật trước khi mở rộng tải.

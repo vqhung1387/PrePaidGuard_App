@@ -5,7 +5,7 @@ from urllib.parse import urlsplit
 from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.schemas.types import Address, ChainId
+from app.schemas.types import Address, ChainId, Hash32
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 
@@ -35,6 +35,9 @@ class Deployment(BaseModel):
     public_rpc_url: str
     explorer_url: str
     vault_address: Address
+    vault_code_hash: Hash32 | None = None
+    adapter_address: Address | None = None
+    treasury_address: Address | None = None
     token: TokenConfig
     abi_version: str = Field(min_length=1)
     deployment_block: int = Field(ge=0)
@@ -44,6 +47,10 @@ class Deployment(BaseModel):
 
     @model_validator(mode="after")
     def public_urls(self):
+        if self.adapter_address is not None and (
+            (int(self.adapter_address, 16) == 0) != (self.yield_mode == "DISABLED")
+        ):
+            raise ValueError("adapter address must match yield mode")
         if self.vault_address == self.token.address or any(
             int(address, 16) == 0
             for address in (self.vault_address, self.token.address)
