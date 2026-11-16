@@ -1,0 +1,45 @@
+{
+  "chain_id": 43113,
+  "deployment_id": "43113-0xc2b19df4e38ce6fa921120f2b16c8c3a9c6a2364",
+  "gas_target_wei": "20000000000000000",
+  "user_wallet": "0x1deAa57b166B77d8e8Af39D84f5AcfD823A9DaFE",
+  "steps": [
+    {
+      "label": "merchant_gas",
+      "status": "confirmed",
+      "hash": "0xa25301544cca163914e0c057cab081984e75704b5122ea45f7a13848499ab628",
+      "block": 61166205,
+      "block_hash": "0xb62a2c7fb41e78e4db9208d1edcd8fb73ed777eaab2a73bdbced3ba7316c7a8e",
+      "gas_used": "21000",
+      "gas_price": "160"
+    },
+    {
+      "label": "subscriber_gas",
+      "status": "confirmed",
+      "hash": "0xd73e9aff08b25f79695bbc0e298d50a5f7f61fd58b3b29b45bab07268adc6464",
+      "block": 61166210,
+      "block_hash": "0xea18a4bd251693f9629de61cc14108d53e6218e49866e7c3ca6fe951ec8326cf",
+      "gas_used": "21000",
+      "gas_price": "160"
+    },
+    {
+      "label": "subscriber_token",
+      "status": "confirmed",
+      "hash": "0xb8baab6200ed4dd4b508c57e25fdc6bfacb68a46e8c4c40c1a26641a86b5ce76",
+      "block": 61166215,
+      "block_hash": "0x2dc4de8d9e5ed8205f82568ea217ba78145f719bca5225ffd0a7359ffbaee63c",
+      "gas_used": "70654",
+      "gas_price": "160"
+    },
+    {
+      "label": "user_token",
+      "status": "confirmed",
+      "hash": "0x840e6568bef059600038e69596d3424bed2b6a2b2c5a01ed1855bf5d9eb5800c",
+      "block": 61166219,
+      "block_hash": "0xa1d9c9b2874ed98283d16a08965e305123ea17ee7c3dc2d473a2a35552572a94",
+      "gas_used": "53554",
+      "gas_price": "160"
+    }
+  ],
+  "status": "complete"
+}

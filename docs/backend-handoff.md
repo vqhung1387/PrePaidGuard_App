@@ -1,5 +1,7 @@
 # Tích hợp backend PrePaidGuard
 
+**Bản mới nhất 16/11/2026:** [Fuji/API HTTPS và bằng chứng nghiệm thu](fuji-deployment-2026-11-16.md). Vault đã deploy/verify/seed; API `/ready`200 và publish/subscribe/release/refund/scanner/replay đã PASS trên Fuji thật. Các ghi chú thiếu gas/host dưới đây là lịch sử. UI còn giao origin web để BE cấu hình AUTH/CORS, nghiệm thu extension và hai thiết bị; admin Render còn đổi healthCheckPath từ `/health` sang `/ready`.
+
 ## D01 — Thể lệ đối chiếu ngày 11/11/2026
 
 - [FAQ Team1 Vietnam](https://team1vn.xyz/#faq-submit) hướng dẫn nộp từ mục Submit Project trên profile và đóng lúc **23:59 ngày 21/11/2026, giờ Việt Nam**. Hồ sơ gồm repo, link slide Canva/Google Slides, video demo 2–3 phút và tài liệu bổ sung. Kiểm tra quyền xem trước khi nộp. Nếu repo private, FAQ yêu cầu cấp quyền cho tài khoản BTC nêu trong trang.

@@ -1,5 +1,7 @@
 # Bàn giao BE — 16/11/2026
 
+**Cập nhật mới nhất: Fuji đã deploy, API `/ready`200 và luồng tiền thật trên testnet PASS.** Xem [bản deployment cuối](fuji-deployment-2026-11-16.md) và các JSON bằng chứng. Các ghi chú “chưa deploy/chưa có gas” ở phần lịch sử dưới đây là trạng thái trước khi người dùng nạp gas và đã được thay thế bởi bản deployment cuối. HealthCheckPath Render và origin web cuối cùng còn chờ cấu hình như phân vai trong bản mới.
+
 ## Source được rà soát
 
 - Frontend `70a9add`: phân trang subscription/draft/events, bộ lọc trạng thái, giữ cửa sổ dữ liệu khi refresh và chi tiết principal/yield.
