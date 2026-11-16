@@ -1,6 +1,6 @@
 # Tích hợp backend PrePaidGuard
 
-**Bản mới nhất 16/11/2026:** [Fuji/API HTTPS và bằng chứng nghiệm thu](fuji-deployment-2026-11-16.md). Vault đã deploy/verify/seed; API `/ready`200 và publish/subscribe/release/refund/scanner/replay đã PASS trên Fuji thật. Các ghi chú thiếu gas/host dưới đây là lịch sử. UI còn giao origin web để BE cấu hình AUTH/CORS, nghiệm thu extension và hai thiết bị; admin Render còn đổi healthCheckPath từ `/health` sang `/ready`.
+**Bản mới nhất 16/11/2026:** [Fuji/API HTTPS và bằng chứng nghiệm thu](fuji-deployment-2026-11-16.md), [web HTTPS đã phát hành](web-release-2026-11-16.md). Vault đã deploy/verify/seed; API `/ready`200 và publish/subscribe/release/refund/scanner/replay đã PASS trên Fuji thật. AUTH/SIWE/CORS đã pin URL web thật. Các ghi chú thiếu gas/host dưới đây là lịch sử. UI còn nghiệm thu extension và hai thiết bị; người giữ tài khoản Render còn đổi healthCheckPath từ `/health` sang `/ready`.
 
 ## D01 — Thể lệ đối chiếu ngày 11/11/2026
 

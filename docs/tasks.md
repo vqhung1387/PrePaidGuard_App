@@ -3,7 +3,7 @@
 > Kế hoạch 14 ngày tương đối, design draft 0.1 — 11/11/2026. Tiến độ BE/Solidity cập nhật ngày 12/11/2026 ở mục 10.
 > Điền tên thật thay A/B/C sau khi nhóm phân công. Ngày 1 là ngày nhóm bắt đầu thực hiện kế hoạch, không tự suy ra deadline cuộc thi.
 
-> Cập nhật 16/11/2026: [Fuji đã deploy, source exact match và API HTTPS nghiệm thu](fuji-deployment-2026-11-16.md). Các dòng tiến độ 12/11 ở mục10 là lịch sử; phần còn lại theo từng role được chốt trong bản mới, không ghi nghiệm thu hai thiết bị từ API test.
+> Cập nhật 16/11/2026: [Fuji đã deploy, source exact match và API HTTPS nghiệm thu](fuji-deployment-2026-11-16.md); [web HTTPS đã phát hành, AUTH/CORS đã nối](web-release-2026-11-16.md). Các dòng tiến độ 12/11 ở mục10 là lịch sử; phần còn lại theo từng role được chốt trong bản mới, không ghi nghiệm thu hai thiết bị từ API test.
 
 ## 1. Owner và cách phối hợp
 

@@ -6,7 +6,7 @@ Migration mới nhất: **0003**. Chạy `alembic upgrade head` trước khi dù
 
 API cho SIWE, merchant, plan draft, subscription, receipt tracking và đồng bộ event. PostgreSQL giữ metadata và bản đọc từ chain. Ví người dùng ký giao dịch trực tiếp tới Vault.
 
-API HTTPS: [OpenAPI](https://prepaidguard-api.onrender.com/docs). `/ready` đã trả200 với Vault Fuji thật, mode DISABLED. Đã nghiệm thu publish/subscribe/check-in/replay/scanner/refund và bảo toàn gốc qua API/DB Render. Xem [deployment và bằng chứng Fuji 16/11](../docs/fuji-deployment-2026-11-16.md) để lấy manifest, địa chỉ, hash, build flags cho UI và các phần chưa nghiệm thu trên thiết bị.
+API HTTPS: [OpenAPI](https://prepaidguard-api.onrender.com/docs), [web đã phát hành](https://prepaidguard-web.onrender.com). `/ready` đã trả200 với Vault Fuji thật, mode DISABLED. AUTH/SIWE/CORS đã pin origin web này. Đã nghiệm thu publish/subscribe/check-in/replay/scanner/refund và bảo toàn gốc qua API/DB Render; web HTTPS đã kiểm đăng nhập/logout với provider test. Xem [deployment Fuji](../docs/fuji-deployment-2026-11-16.md) và [bản release web](../docs/web-release-2026-11-16.md) để lấy bằng chứng, cấu hình và phần còn cần nghiệm thu trên thiết bị.
 
 Catalog đọc RPC tối đa4 plan đồng thời trong mỗi request, cùng một block đã xác nhận, giữ thứ tự và kiểm canonical trước trả kết quả; không cache số dư và không trả một phần khi RPC lỗi. Đã đo riêng kịch bản100 gói/RPC200ms:20,42s trước sửa →5,44s sau sửa. Đo8 lượt eth_getBalance Fuji thực tế: tuần tự0,875s,4luồng1,250s; đây chỉ là mẫu transport, không phải benchmark Vault Fuji. Không khẳng định song song luôn nhanh hơn, cần đo lại deployment thật trước khi mở rộng tải.
 

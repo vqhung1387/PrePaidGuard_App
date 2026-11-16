@@ -1,6 +1,6 @@
 # Bàn giao BE — 16/11/2026
 
-**Cập nhật mới nhất: Fuji đã deploy, API `/ready`200 và luồng tiền thật trên testnet PASS.** Xem [bản deployment cuối](fuji-deployment-2026-11-16.md) và các JSON bằng chứng. Các ghi chú “chưa deploy/chưa có gas” ở phần lịch sử dưới đây là trạng thái trước khi người dùng nạp gas và đã được thay thế bởi bản deployment cuối. HealthCheckPath Render và origin web cuối cùng còn chờ cấu hình như phân vai trong bản mới.
+**Cập nhật mới nhất:** [Fuji/API và bằng chứng](fuji-deployment-2026-11-16.md), [web HTTPS đã phát hành](web-release-2026-11-16.md). API `/ready`200, luồng tiền Fuji PASS; AUTH/SIWE/CORS đã pin `https://prepaidguard-web.onrender.com`. Bảng BE dưới đây là trạng thái hiện tại. Các ghi chép thiếu gas/deploy ở mục lịch sử cuối tài liệu không còn là việc đang chờ.
 
 ## Source được rà soát
 
@@ -28,30 +28,32 @@ Browser bao gồm SIWE hai ví, publish, approve/subscribe, lỗi cache và lỗ
 
 Evidence local nằm ngoài Git: `work/be-1116-browser`, `work/be-1116-flutter-tests.log`, `work/be-1116-web-build.log`. Flutter local 3.41.9 khác pin CI 3.47.9; không đưa thay đổi pubspec.lock do SDK local vào commit. CI trên SHA được push là kiểm chứng bổ sung bằng SDK đã pin.
 
-## Việc BE còn phụ thuộc môi trường
+## Trạng thái công việc BE hiện tại
 
 | Mã | Chủ việc duy nhất | Đã chuẩn bị / đầu vào còn thiếu | Điều kiện đóng |
 | --- | --- | --- | --- |
-| BE-01 | BE | API HTTPS đã Live, PostgreSQL 16/Singapore/Free hoạt động và chặn external connections. Còn thiếu manifest Fuji và origin web cuối cùng | Cấu hình AUTH/CORS theo origin UI; chỉ đóng khi `/ready` 200 với Vault Fuji thật |
-| BE-02 | BE | 12 kiểm tra HTTPS/auth/session trên API thật đạt; nghiệp vụ Vault Fuji chưa chạy | Bổ sung publish/tracking/scanner và quyền tài nguyên trên deployment Fuji |
-| BE-03 | BE | Giữ 4 RPC reads đồng thời/request; chưa có plan/receipt Fuji thật để đo | Latency/error getPlan/logs/receipt trên deployment thật; không lấy transport benchmark thay thế |
-| BE-04 | BE | Endpoint proof/replacement và các test đã có; chưa nhận case/hash pending hỏng cụ thể | Đối chiếu case thật nếu có; thiếu raw/nonce thì giữ guard, không chỉnh DB thủ công |
-| BE-05 | BE | Browser local 13 bước đạt; cả 5 CI của `f65e98e` xanh | Phần local/CI đã đạt; thêm nghiệm thu Fuji khi có môi trường |
+| BE-01 | BE | API/DB/Fuji Live, migration0003, `/ready`200, AUTH/CORS pin URL web thật | Còn healthCheckPath Render: người giữ tài khoản đổi `/health` thành `/ready`; endpoint đã hoạt động, không sửa liveness để che thiếu cấu hình |
+| BE-02 | BE | Đã đóng: publish/subscribe/release/refund/replay/scanner trên Fuji/API/DB thật PASS | Bằng chứng JSON và tx trong bản deployment, không cần chờ gas/manifest nữa |
+| BE-03 | BE | Đã đóng mẫu đo Fuji thật: getPlan/logs/tx+receipt và catalog, 20 mẫu không lỗi | Giữ concurrency4, không cache số dư; chưa nhận là load test100 plan/SLA |
+| BE-04 | BE | Đã có proof/replacement và test local với/không nonce; không có incident pending cụ thể cần sửa | Nếu xuất hiện case thật thì nhận hash/raw/nguồn nonce từ người giữ ví; không tự mở guard hoặc chỉnh DB |
+| BE-05 | BE | Local/CI và luồng tiền Fuji PASS; cả 5 CI của `ccd4f38` xanh | Bằng chứng web HTTPS ở bản release; nghiệm thu extension/hai thiết bị do UI thực hiện |
 | BE-06 | BE | Đã test trên 100 bản ghi, owner/filter/order/cursor; đạt | Đã đóng phần API; state/nút tải tiếp là UI |
-| BE-07 | BE | Chưa chọn scope booking/training/crowd ngoài core | Chỉ triển khai khi nhóm có đặc tả và nguồn dữ liệu; hiện vẫn là demo, không nhận DONE cho API chưa tồn tại |
-| BE-08 | BE | README và bản bàn giao này đã cập nhật | Bổ sung URL/tx/hash/CI thật sau triển khai, không ghi nghiệm thu chưa chạy |
+| BE-07 | BE | Ngoài scope core: chưa chọn booking/training/crowd | Không tự thêm API khi nhóm chưa có đặc tả/nguồn dữ liệu; các màn tương ứng vẫn mô phỏng |
+| BE-08 | BE | Đã đóng: có URL API/web, tx/hash, source verification, CI và bàn giao từng role | Cập nhật lại nếu đổi release hoặc origin; không ghi nghiệm thu chưa chạy |
 
 DB Render được tạo ngày 16/11/2026, dashboard ghi hết hạn 16/12/2026. Gói free phục vụ demo; cần sao lưu trước hạn. Không lưu database URL/JWT/private key trong tài liệu hoặc repo.
 
 ## Đầu vào từ các role khác
 
-- **Solidity:** manifest Fuji và ABI đúng deployment, receipt/bundle/source verification. Gas deployer hiện vẫn 0 AVAX Fuji ở lần kiểm ngày 16/11; chưa deploy. Mode đã chọn DISABLED. Việc hỗ trợ deploy theo yêu cầu người dùng không biến thay đổi contract/tooling thành task của UI.
-- **UI:** cung cấp origin web HTTPS cuối cùng để BE cấu hình AUTH_DOMAIN/AUTH_URI/CORS; pin chain/Vault/deployment theo config; nghiệm thu Core/MetaMask thực và hai thiết bị. Camera/native và các màn demo vẫn do UI phụ trách.
+- **Solidity:** review manifest Fuji/ABI, receipt và Sourcify exact match đã có. Mode DISABLED, không cần deploy lại. Thay đổi contract/tooling vẫn do Solidity phụ trách.
+- **UI:** web hiện đã phát hành và pin bundle Fuji; nghiệm thu Core/MetaMask thực, QR/cancel/speed-up trên hai thiết bị. Nếu đổi URL web thì cung cấp origin mới cho BE. Camera/native và các màn demo vẫn do UI phụ trách.
 - **Người giữ tài khoản:** xác nhận các bước cấp quyền tài khoản/đăng nhập hoặc mở khóa ví khi dịch vụ yêu cầu; không gửi seed/private key qua chat.
 
-Không có kết luận đã hoàn thành Fuji/HTTPS/extension từ kết quả test local.
+Fuji/HTTPS có bằng chứng nghiệm thu thật riêng; kết quả local hoặc injected provider không thay nghiệm thu extension.
 
-## Cập nhật nghiệm thu và triển khai
+## Lịch sử trước khi nạp gas và deploy Fuji — chỉ để tra cứu
+
+Phần này giữ kết quả staging ban đầu. Không dùng các trạng thái thiếu gas/manifest hoặc domain API ở đây làm trạng thái hiện tại; dùng bảng BE và hai bản deployment/release ở đầu tài liệu.
 
 - Commit sửa BE `f67e710` đã push lên `fix/be-nghiem-thu-1116`. Cả 5 CI của đúng SHA đều success: [backend](https://github.com/vqhung1387/PrePaidGuard_App/actions/runs/43795116651), [frontend](https://github.com/vqhung1387/PrePaidGuard_App/actions/runs/43795116630), [Solidity](https://github.com/vqhung1387/PrePaidGuard_App/actions/runs/43795116638), [contract tích hợp](https://github.com/vqhung1387/PrePaidGuard_App/actions/runs/43795116673), [browser](https://github.com/vqhung1387/PrePaidGuard_App/actions/runs/43795116745).
 - Lượt bổ sung kiểm toàn bộ manifest: live fixture giờ chứa `vault_code_hash`, `adapter_address`, `treasury_address` lấy từ EVM thật. Thêm 6 ca kiểm adapter/mode và tương thích manifest cũ. Chạy toàn bộ BE với PostgreSQL/Hardhat thật: **84 passed, 0 skipped**; lint và format đạt. Hai cảnh báo deprecation của thư viện còn tồn tại, chưa nâng dependency chỉ để bỏ cảnh báo.
