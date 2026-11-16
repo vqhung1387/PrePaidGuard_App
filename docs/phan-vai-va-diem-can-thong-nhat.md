@@ -4,6 +4,8 @@ Tài liệu này tách **đề xuất phân công**, **trạng thái code đã c
 
 A = UI/Flutter; B = BE/FastAPI; C = Solidity. Nhóm điền tên thật sau khi thống nhất. Người giữ ví thực hiện các bước cần mở khóa/ký; không gửi seed/private key cho người khác.
 
+**Hiện trạng kỹ thuật 16/11/2026:** [Fuji đã deploy](fuji-deployment-2026-11-16.md), [web/API HTTPS và health check đã nghiệm thu](web-release-2026-11-16.md). Những kết quả này cập nhật cột hiện trạng, không tự nhận nhóm đã thống nhất tất cả D1–D10 hoặc gán tên thành viên. Bản tích hợp hiện ở nhánh `fix/be-nghiem-thu-1116`, chưa merge main.
+
 ## 1. Mỗi đầu việc một đầu mối
 
 | Đầu mối | Sản phẩm phải bàn giao | Phạm vi sửa chính | Đầu vào nhận từ role khác |
@@ -48,9 +50,9 @@ Các lựa chọn dưới đây là đề xuất. **Trạng thái tất cả: ch
 | D3 | Yield chỉ MOCK/DISABLED hay bắt buộc DeFi thật theo thể lệ? | Code hiện MOCK/DISABLED; chưa BENQI. Cần kiểm thể lệ thay vì suy đoán | C, người đọc thể lệ | Phạm vi adapter, funding, UI và pitch; BE không tự chọn thêm giao thức |
 | D4 | Luật release/refund có giữ baseline B1–B6 không? | Refund theo mốc thời gian/không sử dụng; không tự chứng minh cơ sở vi phạm | C giải thích luật, A/B đối chiếu luồng | Contract, API, UI phải đổi cùng phiên bản nếu đổi chính sách |
 | D5 | Demo chính xác các chức năng nào? | Core ví/API/escrow có test; training/giờ đông/booking mở rộng vẫn mô phỏng | A trình bày màn hình; B/C nêu dữ liệu có thật | Có cần thêm backend mới hay chỉ ghi rõ dữ liệu demo; tránh B tự xây API cho mọi màn hình |
-| D6 | Chọn chain/Vault/token, ví treasury/deployer, ai cấp gas và giữ ví? | Fuji43113; ví deploy đã chuẩn bị nhưng lần kiểm gần nhất0AVAXtestnet | C | Deploy, manifest, source nhận tiền và người thao tác ví; chỉ chia sẻ địa chỉ công khai |
-| D7 | URL web/API, nơi host DB, ai giữ cấu hình và chi phí tối đa? | Có blueprint Render, chưa xác minh một deployment HTTPS thực tế trong lượt bàn giao | B đề xuất API/DB; A đề xuất web | CORS/AUTH/pin bundle, backup/migration và trách nhiệm host |
-| D8 | Nhánh tích hợp nào là nguồn chuẩn; ai merge; có freeze trước demo không? | Đề xuất dùng fix/tich-hop-va-phuc-hoi làm đầu vào review hiện tại; main chưa tự merge | B chuẩn bị diff và CI; A/C review phần mình | Tránh ba role cùng cherry-pick/ghi đè; chọn một người thao tác merge |
+| D6 | Chọn chain/Vault/token, ví treasury/deployer, ai cấp gas và giữ ví? | Đã cấp gas/deploy Fuji43113, mode DISABLED; manifest/receipt và hai ví demo đã có trong bản deployment | C | Nhóm tiếp tục chốt người giữ ví; chỉ chia sẻ địa chỉ công khai, không chờ cấp gas/deploy lại |
+| D7 | URL web/API, nơi host DB, ai giữ cấu hình và chi phí tối đa? | Web/API/DB Render đã Live; AUTH/CORS và health check /ready đã kiểm chứng, DB Free hết hạn16/12 | B đề xuất API/DB; A đề xuất web | Nhóm chốt người quản trị và chi phí tiếp theo; backup DB chưa cấu hình, không nhận đã sao lưu |
+| D8 | Nhánh tích hợp nào là nguồn chuẩn; ai merge; có freeze trước demo không? | Bản đang nghiệm thu: fix/be-nghiem-thu-1116; runtime web/API nguồn ccd4f38; main chưa tự merge | B chuẩn bị diff và CI; A/C review phần mình | Nhóm chọn người merge/freeze; không tự ghi đè nhánh frontend/solidity |
 | D9 | Ai giữ vai trò subscriber/merchant khi nghiệm thu; Core hay MetaMask; dùng hai thiết bị nào? | Test provider đã qua; extension và hai thiết bị vật lý chưa được thay thế bởi kết quả CI | A | Lịch nghiệm thu, account/profile và người xác nhận ký |
 | D10 | Ai điều phối bài nộp, hạn thật và bằng chứng cần có? | Tài liệu kế hoạch ngày tương đối không phải deadline chính thức | Người nhóm chỉ định | Không để “cả nhóm” đồng nghĩa không ai chịu trách nhiệm nộp |
 

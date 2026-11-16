@@ -13,7 +13,7 @@ Bảng task ID: [tasks.md](tasks.md). **Trạng thái triển khai mới nhất:
 | Recovery API | B — BE (B-RECOVERY) | Có nonce proof/cancel/speed-up | Test API/reorg; mất cả nonce/raw cần người giữ ví tìm bằng chứng |
 | Recovery UI | A — UI (A-RECOVERY) | Có luồng đối chiếu hash/raw | Nghiệm thu UX bằng extension thật |
 | Deploy contract | C — Solidity (C-FUJI) | Đã deploy/verify/seed Fuji, có receipt/manifest | Review bằng chứng; không deploy lại để sửa UI |
-| Host API/DB | B — BE (B-HOST) | HTTPS Live, migration0003, /ready200 và AUTH/CORS đúng origin web | Người giữ tài khoản đổi healthCheckPath Render sang /ready |
+| Host API/DB | B — BE (B-HOST) | HTTPS Live, migration0003, AUTH/CORS đúng web; Render healthCheckPath /ready đã áp dụng và kiểm chứng | Sao lưu DB trước16/12; chưa cấu hình backup, không còn chờ sửa health check |
 | Build/host app | A — UI (A-RELEASE) | Web HTTPS Live, pin đúng API/chain/Vault/deployment; [chi tiết](web-release-2026-11-16.md) | Nghiệm thu extension và hai thiết bị; review trước release mới |
 | Yield contract | C — Solidity (C-YIELD) | Fuji đang DISABLED; MOCK chỉ có ở kiểm thử local | Không trình bày lợi tức thật; thay scope cần nhóm chốt |
 | Yield UI | A — UI (A-YIELD) | Core đọc DTO hiện có | Giữ nhãn đúng theo mode từ API/contract |

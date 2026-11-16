@@ -1,0 +1,61 @@
+{
+  "status": "PASS",
+  "checked_at": "2026-11-16T17:00:40.3159272+07:00",
+  "service_id": "srv-dbt75f0ae00c739s69rg",
+  "blueprint_id": "exs-dbtd6vu1egvs73a9nla0",
+  "sync_id": "exe-dbtd7061egvs73a9nm40",
+  "deploy_id": "dep-dbtd7n67bikc73dpj64g",
+  "live_source_commit": "ccd4f38e9ee6fb8b29fa4eb2dd555c0b6ece928e",
+  "blueprint_source_commit": "3a118bc234c96ec377bb469c92dbe2fdff2942fd",
+  "auto_sync": false,
+  "health_check_before": "/health",
+  "health_check_after": "/ready",
+  "planned_actions": [
+    "CaptureService: prepaidguard-api",
+    "UpdateHealthCheckPath: /health -> /ready"
+  ],
+  "created_resources": [],
+  "changed_environment_keys": [],
+  "config_request_id": "b55429e2-e5e3-460d-aefe-73234acfa156",
+  "preflight": [
+    {
+      "sample": 1,
+      "http_status": 200,
+      "elapsed_ms": 2392.17,
+      "request_id": "a34dc8e4-91f8-4094-9998-7b3a4e15337d"
+    },
+    {
+      "sample": 2,
+      "http_status": 200,
+      "elapsed_ms": 1976.57,
+      "request_id": "0a72ef48-d4fb-4af7-b5b0-a66aa1c4e81c"
+    },
+    {
+      "sample": 3,
+      "http_status": 200,
+      "elapsed_ms": 2079.45,
+      "request_id": "9b05ddb9-360c-47e0-84bc-a15fe1bbc820"
+    }
+  ],
+  "after_sync": [
+    {
+      "sample": 1,
+      "http_status": 200,
+      "elapsed_ms": 2339.76,
+      "request_id": "65b7a81a-4ad2-4c73-8708-9f11962c6354"
+    },
+    {
+      "sample": 2,
+      "http_status": 200,
+      "elapsed_ms": 836.04,
+      "request_id": "f3151307-ea43-4590-8e96-a5c8b7a817c0"
+    },
+    {
+      "sample": 3,
+      "http_status": 200,
+      "elapsed_ms": 2069.36,
+      "request_id": "6d872b4c-2d25-4401-8f82-c6fa1568cb38"
+    }
+  ],
+  "drift_check": "no_changes"
+}

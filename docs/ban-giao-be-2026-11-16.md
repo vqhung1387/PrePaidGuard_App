@@ -32,7 +32,7 @@ Evidence local nằm ngoài Git: `work/be-1116-browser`, `work/be-1116-flutter-t
 
 | Mã | Chủ việc duy nhất | Đã chuẩn bị / đầu vào còn thiếu | Điều kiện đóng |
 | --- | --- | --- | --- |
-| BE-01 | BE | API/DB/Fuji Live, migration0003, `/ready`200, AUTH/CORS pin URL web thật | Còn healthCheckPath Render: người giữ tài khoản đổi `/health` thành `/ready`; endpoint đã hoạt động, không sửa liveness để che thiếu cấu hình |
+| BE-01 | BE | Đã đóng triển khai core: API/DB/Fuji Live, migration0003, AUTH/CORS đúng web, healthCheckPath Render `/ready`, endpoint200 | [Bằng chứng health check](evidence/render-health-2026-11-16.json); Blueprint chỉ quản lý API, autoSync OFF. Backup DB vẫn là việc vận hành riêng trước16/12 |
 | BE-02 | BE | Đã đóng: publish/subscribe/release/refund/replay/scanner trên Fuji/API/DB thật PASS | Bằng chứng JSON và tx trong bản deployment, không cần chờ gas/manifest nữa |
 | BE-03 | BE | Đã đóng mẫu đo Fuji thật: getPlan/logs/tx+receipt và catalog, 20 mẫu không lỗi | Giữ concurrency4, không cache số dư; chưa nhận là load test100 plan/SLA |
 | BE-04 | BE | Đã có proof/replacement và test local với/không nonce; không có incident pending cụ thể cần sửa | Nếu xuất hiện case thật thì nhận hash/raw/nguồn nonce từ người giữ ví; không tự mở guard hoặc chỉnh DB |

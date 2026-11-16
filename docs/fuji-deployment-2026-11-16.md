@@ -16,7 +16,7 @@
 | Web | https://prepaidguard-web.onrender.com |
 | OpenAPI | https://prepaidguard-api.onrender.com/docs |
 | Readiness | `/ready` trả 200, kiểm DB migration, chain, code/token/mode/fingerprint và canonical block |
-| Render API release | `dep-dbtcnv5ckfvc73efivvg`, source bundle `ccd4f38e9ee6fb8b29fa4eb2dd555c0b6ece928e`, Live |
+| Render API release | `dep-dbtd7n67bikc73dpj64g`, source bundle `ccd4f38e9ee6fb8b29fa4eb2dd555c0b6ece928e`, Live; healthCheckPath `/ready` |
 | Render Web release | `dep-dbtcnqrncjis739slgbg`, cùng source bundle `ccd4f38`, Live; Flutter 3.47.9, SDK commit `c197ca5199e9ee5661e865596c9c07294dfab51c` |
 
 AUTH_DOMAIN=`prepaidguard-web.onrender.com`, AUTH_URI=`https://prepaidguard-web.onrender.com`, CORS_ORIGINS chỉ gồm origin web này. Chi tiết phát hành và kiểm thử trình duyệt: [web HTTPS](web-release-2026-11-16.md). Đây là bản demo testnet của nhánh tích hợp, chưa merge main; không tự cập nhật mỗi lần push tài liệu.
@@ -66,7 +66,7 @@ Hai vị thế nghiệm thu đã REFUNDED; gói demo vẫn có trong catalog. C�
 
 ## Bàn giao từng role
 
-- **BE:** API đã migrate/ready với manifest thật; endpoint receipt, scanner, principal/refund/yield có bằng chứng Fuji. AUTH/SIWE/CORS đã cấu hình theo URL web thật ở trên. Render healthCheckPath hiện vẫn `/health`; người giữ tài khoản cần đổi thành `/ready` trong Settings để nền tảng dùng kiểm tra dependency. Tích hợp Render hiện không có công cụ sửa healthCheckPath, không thay nghĩa `/health` để che khác biệt.
+- **BE:** API đã migrate/ready với manifest thật; endpoint receipt, scanner, principal/refund/yield có bằng chứng Fuji. AUTH/SIWE/CORS đã cấu hình theo URL web thật. Render healthCheckPath đã đổi sang `/ready` qua Blueprint chỉ quản lý API, autoSync OFF; deployment Live, endpoint200 và kiểm tra drift `no_changes`. [Bằng chứng](evidence/render-health-2026-11-16.json). Không đổi nghĩa `/health`, DB hoặc secret.
 - **UI:** web đã build/host với `API_BASE_URL=https://prepaidguard-api.onrender.com`, `CHAIN_ID=43113`, `VAULT_ADDRESS=0xc2b19Df4e38CE6FA921120f2B16C8c3a9c6a2364`, `DEPLOYMENT_ID=43113-0xc2b19df4e38ce6fa921120f2b16c8c3a9c6a2364`. Nghiệm thu Core/MetaMask, EIP-712/QR, cancel/speed-up và hai thiết bị. Nếu đổi URL web thì giao origin mới cho BE trước khi phát hành.
 - **Solidity:** giữ bundle/receipt/source compiler đã freeze, review manifest và Sourcify report; không deploy lại Vault để đổi UI. Mode DISABLED đã được xác minh; yield thật chưa triển khai.
 - **Nhóm:** video/slide dùng URL/hash và số liệu trên; không lấy kiểm thử API thay bằng chứng UI hai thiết bị. DB Render Free hết hạn **16/12/2026**; cần backup trước hạn, dịch vụ Free có cold start. Backend mới chưa có API booking/training/crowd vì nhóm chưa chọn scope.
