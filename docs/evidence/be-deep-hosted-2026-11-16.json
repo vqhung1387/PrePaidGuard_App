@@ -1,0 +1,129 @@
+{
+  "status": "PASS",
+  "checked_at": "2026-11-16T10:34:16.386696+00:00",
+  "api_url": "https://prepaidguard-api.onrender.com",
+  "web_url": "https://prepaidguard-web.onrender.com",
+  "deployment_id": "43113-0xc2b19df4e38ce6fa921120f2b16c8c3a9c6a2364",
+  "api_source_commit": "5f2528ab528f85242629356397c9011fa56cb160",
+  "api_deploy_id": "dep-dbtdng3bc2fs73ds8log",
+  "web_source_commit": "ccd4f38e9ee6fb8b29fa4eb2dd555c0b6ece928e",
+  "scope": "Hosted HTTPS web/API, exact CORS, SIWE and browser rendering with injected test provider; no blockchain transactions or real extension acceptance",
+  "checks": [
+    {
+      "check": "dependency readiness",
+      "http_status": 200,
+      "request_id": "8af6a1de-8ecd-4efc-9e38-26fd492a007f"
+    },
+    {
+      "check": "config pins and web SIWE origin",
+      "http_status": 200,
+      "request_id": "6eca048c-a26a-4dca-9273-a4c90d65ee50"
+    },
+    {
+      "check": "published OpenAPI contains text validation fix",
+      "http_status": 200,
+      "request_id": "7edbbf11-dd8f-43c1-ad94-4a9573e5fba0"
+    },
+    {
+      "check": "web bearer preflight",
+      "http_status": 200,
+      "request_id": null
+    },
+    {
+      "check": "foreign origin preflight denied",
+      "http_status": 400,
+      "request_id": null
+    },
+    {
+      "check": "foreign origin preflight denied",
+      "http_status": 400,
+      "request_id": null
+    },
+    {
+      "check": "foreign origin preflight denied",
+      "http_status": 400,
+      "request_id": null
+    },
+    {
+      "check": "foreign origin GET has no CORS grant",
+      "http_status": 200,
+      "request_id": "6e1932de-6791-4f28-a53d-de0c688560c4"
+    },
+    {
+      "check": "anonymous account rejected with readable error",
+      "http_status": 401,
+      "request_id": "b8e8dc5c-47ee-4723-bfd4-9ee380222b7a"
+    },
+    {
+      "check": "wrong chain rejected",
+      "http_status": 400,
+      "request_id": "3e82f9c4-d42a-432c-a05d-0a92a10ce864"
+    },
+    {
+      "check": "SIWE challenge from hosted DB",
+      "http_status": 201,
+      "request_id": "d455b80c-dcac-40f5-bae3-9927a197b6f9"
+    },
+    {
+      "check": "SIWE signature verified",
+      "http_status": 200,
+      "request_id": "40936311-e8f9-4c4a-b7db-a2bd1fd29eb5"
+    },
+    {
+      "check": "authenticated owner",
+      "http_status": 200,
+      "request_id": "3c672e18-ba50-4c9f-88bb-704e5def1723"
+    },
+    {
+      "check": "NUL text rejected before PostgreSQL on live API",
+      "http_status": 422,
+      "request_id": "273450b7-4044-4955-b4c0-11f550d172bf"
+    },
+    {
+      "check": "invalid merchant did not create a profile",
+      "http_status": 200,
+      "request_id": "e0e9a26f-a9d9-4b31-8954-68cceb07ae80"
+    },
+    {
+      "check": "challenge replay rejected",
+      "http_status": 401,
+      "request_id": "f1a692e1-0066-4d07-b2eb-732495ce8fc0"
+    },
+    {
+      "check": "logout revokes session",
+      "http_status": 204,
+      "request_id": "38b8b765-114e-4573-bb95-7f3e95ea5967"
+    },
+    {
+      "check": "revoked bearer rejected",
+      "http_status": 401,
+      "request_id": "fe672100-7df0-4642-88f9-b3547434ffc4"
+    },
+    {
+      "check": "release opens real workspace and requests pinned API without editing URL"
+    },
+    {
+      "check": "browser loads Fuji catalog across exact CORS"
+    },
+    {
+      "check": "browser bearer reads owner subscriptions",
+      "http_status": 200,
+      "request_id": "456c3612-4c47-4151-8730-f1d841050252"
+    },
+    {
+      "check": "browser SIWE login and owner subscriptions with injected provider"
+    },
+    {
+      "check": "browser session revoked after UI logout",
+      "http_status": 401,
+      "request_id": "f10f9793-0a98-4467-b2a4-d6dccbf75d0b"
+    },
+    {
+      "check": "browser logout and no JavaScript page errors"
+    },
+    {
+      "check": "finished",
+      "status": "PASS"
+    }
+  ]
+}

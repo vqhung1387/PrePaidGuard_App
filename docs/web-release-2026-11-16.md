@@ -4,9 +4,9 @@
 
 - Web: https://prepaidguard-web.onrender.com
 - API: https://prepaidguard-api.onrender.com/docs
-- Source của cả hai: `ccd4f38e9ee6fb8b29fa4eb2dd555c0b6ece928e`, nhánh `fix/be-nghiem-thu-1116`. Cả 5 CI của SHA này success. Không merge main hoặc đổi nhánh của thành viên khác.
+- Source web: `ccd4f38e9ee6fb8b29fa4eb2dd555c0b6ece928e`; API mới nhất: `5f2528ab528f85242629356397c9011fa56cb160`, cùng nhánh `fix/be-nghiem-thu-1116`. Cả 5 CI của bản sửa API success, đã kiểm web cũ tương thích API mới. [Bằng chứng và bốn bản sửa](be-audit-2026-11-16.md). Không merge main hoặc đổi nhánh của thành viên khác.
 - Web Render: `srv-dbtcnqjncjis739sldgg`, release `dep-dbtcnqrncjis739slgbg`, Live. Static site, không tạo thêm backend/DB. Auto-deploy OFF để chỉ phát hành bản đã review; push tài liệu không thay bundle web.
-- API Render: `srv-dbt75f0ae00c739s69rg`, release mới nhất `dep-dbtd7n67bikc73dpj64g`, Live với healthCheckPath `/ready`; bundle ứng dụng vẫn `ccd4f38`. Bản AUTH/CORS trước đó là `dep-dbtcnv5ckfvc73efivvg`. Không thay secret/DB URL hoặc mở firewall DB.
+- API Render: `srv-dbt75f0ae00c739s69rg`, release mới nhất `dep-dbtdng3bc2fs73ds8log`, Live với source `5f2528a` và healthCheckPath `/ready`. Bằng chứng đổi health check ban đầu ở release `dep-dbtd7n67bikc73dpj64g` vẫn giữ để tra cứu. Không thay secret/DB URL hoặc mở firewall DB.
 - Flutter `3.47.9` như CI; build kiểm SDK commit chính xác `c197ca5199e9ee5661e865596c9c07294dfab51c`, `pub get --enforce-lockfile`, `build web --release --no-pub`. Publish `apps/flutter_app/build/web`, không commit binary build.
 
 Build pin `API_BASE_URL=https://prepaidguard-api.onrender.com`, `CHAIN_ID=43113`, `VAULT_ADDRESS=0xc2b19Df4e38CE6FA921120f2B16C8c3a9c6a2364`, `DEPLOYMENT_ID=43113-0xc2b19df4e38ce6fa921120f2b16c8c3a9c6a2364`. App mở thẳng workspace thật; màn mô phỏng vẫn có nút chuyển riêng. Không sửa giao diện/nghiệp vụ của role UI trong lượt phát hành này.

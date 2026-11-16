@@ -1,6 +1,6 @@
 # Bàn giao BE — 16/11/2026
 
-**Rà sâu tiếp sau nghiệm thu:** [bốn lỗi đã tái hiện và bản sửa](be-audit-2026-11-16.md), gồm scanner RPC, reset pending/replacement, text NUL và chia test EVM. Báo cáo nêu rõ98 test BE local và điều kiện rollout; không nhận bản đang chạy đã chứa fix chỉ từ kết quả local.
+**Rà sâu tiếp sau nghiệm thu:** [bốn lỗi đã tái hiện và bản sửa](be-audit-2026-11-16.md), gồm scanner RPC, reset pending/replacement, text NUL và chia test EVM. 98 test BE local đạt; commit sửa `5f2528a` có 5/5 CI xanh, API đã Live và kiểm 24 ca HTTPS/browser sau deploy đạt. Không lấy fault injection local làm bằng chứng đã giả lập lỗi/reorg trên Fuji.
 
 **Cập nhật mới nhất:** [Fuji/API và bằng chứng](fuji-deployment-2026-11-16.md), [web HTTPS đã phát hành](web-release-2026-11-16.md). API `/ready`200, luồng tiền Fuji PASS; AUTH/SIWE/CORS đã pin `https://prepaidguard-web.onrender.com`. Bảng BE dưới đây là trạng thái hiện tại. Các ghi chép thiếu gas/deploy ở mục lịch sử cuối tài liệu không còn là việc đang chờ.
 

@@ -16,7 +16,7 @@
 | Web | https://prepaidguard-web.onrender.com |
 | OpenAPI | https://prepaidguard-api.onrender.com/docs |
 | Readiness | `/ready` trả 200, kiểm DB migration, chain, code/token/mode/fingerprint và canonical block |
-| Render API release | `dep-dbtd7n67bikc73dpj64g`, source bundle `ccd4f38e9ee6fb8b29fa4eb2dd555c0b6ece928e`, Live; healthCheckPath `/ready` |
+| Render API release | `dep-dbtdng3bc2fs73ds8log`, source bundle `5f2528ab528f85242629356397c9011fa56cb160`, Live; healthCheckPath `/ready`; [bản sửa BE](be-audit-2026-11-16.md) |
 | Render Web release | `dep-dbtcnqrncjis739slgbg`, cùng source bundle `ccd4f38`, Live; Flutter 3.47.9, SDK commit `c197ca5199e9ee5661e865596c9c07294dfab51c` |
 
 AUTH_DOMAIN=`prepaidguard-web.onrender.com`, AUTH_URI=`https://prepaidguard-web.onrender.com`, CORS_ORIGINS chỉ gồm origin web này. Chi tiết phát hành và kiểm thử trình duyệt: [web HTTPS](web-release-2026-11-16.md). Đây là bản demo testnet của nhánh tích hợp, chưa merge main; không tự cập nhật mỗi lần push tài liệu.
