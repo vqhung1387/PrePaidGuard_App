@@ -21,8 +21,17 @@ class EscrowSummaryCard extends StatelessWidget {
   final bool hasMore;
   final bool merchant;
 
-  BigInt _parseAtomic(Object? value) =>
-      BigInt.tryParse(value?.toString() ?? '') ?? BigInt.zero;
+  static const _principalFields = [
+    'initial_principal',
+    'principal_released',
+    'remaining_principal',
+    'principal_refunded',
+  ];
+
+  static BigInt? _parseAtomic(Object? value) {
+    final amount = BigInt.tryParse(value?.toString() ?? '');
+    return amount != null && !amount.isNegative ? amount : null;
+  }
 
   String _sourceLabel(String raw) => switch (raw) {
     'LIVE' => 'LIVE (trực tiếp chuỗi)',
@@ -32,26 +41,27 @@ class EscrowSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final withPrincipal = subscriptions
-        .where((sub) => sub['remaining_principal'] != null)
-        .toList();
-    if (withPrincipal.isEmpty) return const SizedBox.shrink();
-
-    var initialTotal = BigInt.zero;
-    var releasedTotal = BigInt.zero;
-    var remainingTotal = BigInt.zero;
-    var refundedTotal = BigInt.zero;
+    if (subscriptions.isEmpty) return const SizedBox.shrink();
+    final totals = List.filled(_principalFields.length, BigInt.zero);
+    var validCount = 0;
     var activeCount = 0;
     DateTime? earliestRefundAt;
     String? earliestRefundRaw;
     BigInt? maxBlock;
     final sources = <String>{};
 
-    for (final sub in withPrincipal) {
-      initialTotal += _parseAtomic(sub['initial_principal']);
-      releasedTotal += _parseAtomic(sub['principal_released']);
-      remainingTotal += _parseAtomic(sub['remaining_principal']);
-      refundedTotal += _parseAtomic(sub['principal_refunded']);
+    for (final sub in subscriptions) {
+      final amounts = _principalFields
+          .map((key) => _parseAtomic(sub[key]))
+          .toList();
+      if (amounts.contains(null) ||
+          amounts[0] != amounts[1]! + amounts[2]! + amounts[3]!) {
+        continue;
+      }
+      validCount++;
+      for (var index = 0; index < totals.length; index++) {
+        totals[index] += amounts[index]!;
+      }
 
       if (sub['status'] == 'ACTIVE') {
         activeCount++;
@@ -62,18 +72,16 @@ class EscrowSummaryCard extends StatelessWidget {
               (earliestRefundAt == null || parsed.isBefore(earliestRefundAt))) {
             earliestRefundAt = parsed;
             earliestRefundRaw = rawRefund;
-          } else if (earliestRefundRaw == null) {
-            earliestRefundRaw = rawRefund;
           }
         }
       }
 
       final sync = sub['sync'];
+      final source = sync is Map ? sync['source']?.toString() : null;
+      sources.add(
+        source == null || source.isEmpty ? 'Chưa rõ' : _sourceLabel(source),
+      );
       if (sync is Map) {
-        final source = sync['source']?.toString();
-        if (source != null && source.isNotEmpty) {
-          sources.add(_sourceLabel(source));
-        }
         final block = BigInt.tryParse(sync['block_number']?.toString() ?? '');
         if (block != null && (maxBlock == null || block > maxBlock)) {
           maxBlock = block;
@@ -81,15 +89,19 @@ class EscrowSummaryCard extends StatelessWidget {
       }
     }
 
-    final sourceText = sources.isEmpty
-        ? _sourceLabel('PROJECTION')
-        : sources.join(' + ');
+    if (validCount == 0) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Text('Chưa đủ dữ liệu đối chiếu để tóm tắt tiền gốc.'),
+      );
+    }
+    final sourceText = sources.join(' + ');
     final theme = Theme.of(context);
     final metrics = [
-      ('Tổng gốc đã khóa', '${formatTokenAmount(initialTotal)} mUSDC'),
-      ('Tổng đã giải ngân', '${formatTokenAmount(releasedTotal)} mUSDC'),
-      ('Đang giữ trong Vault', '${formatTokenAmount(remainingTotal)} mUSDC'),
-      ('Tổng đã hoàn gốc', '${formatTokenAmount(refundedTotal)} mUSDC'),
+      ('Tổng gốc đã khóa', '${formatTokenAmount(totals[0])} mUSDC'),
+      ('Tổng đã giải ngân', '${formatTokenAmount(totals[1])} mUSDC'),
+      ('Đang giữ trong Vault', '${formatTokenAmount(totals[2])} mUSDC'),
+      ('Tổng đã hoàn gốc', '${formatTokenAmount(totals[3])} mUSDC'),
     ];
 
     return Padding(
@@ -159,7 +171,7 @@ class EscrowSummaryCard extends StatelessWidget {
               Text(
                 activeCount > 0
                     ? '$activeCount gói đang hoạt động${earliestRefundRaw != null ? ' · Mốc hoàn gốc sớm nhất: $earliestRefundRaw' : ''}. Hoàn gốc chỉ mở khi tới mốc của từng gói; không tự giải ngân.'
-                    : 'Không còn gói đang hoạt động trong danh sách này; toàn bộ tiền gốc hiển thị đã giải ngân hoặc hoàn về ví.',
+                    : 'Các đăng ký được cộng ở trên đều đã kết thúc.',
               ),
               const SizedBox(height: 6),
               Text(
@@ -169,10 +181,15 @@ class EscrowSummaryCard extends StatelessWidget {
               if (hasMore || filter != SubscriptionFilter.all) ...[
                 const SizedBox(height: 4),
                 Text(
-                  'Phạm vi cộng: ${withPrincipal.length} đăng ký đang hiển thị (${filter.label}${hasMore ? ', còn trang tiếp' : ''}).',
+                  'Phạm vi cộng: $validCount đăng ký đang hiển thị (${filter.label}${hasMore ? ', còn trang tiếp' : ''}).',
                   style: theme.textTheme.bodySmall?.copyWith(color: mutedText),
                 ),
               ],
+              if (validCount != subscriptions.length)
+                Text(
+                  'Bỏ qua ${subscriptions.length - validCount} đăng ký có dữ liệu tiền gốc thiếu hoặc không khớp.',
+                  style: theme.textTheme.bodySmall?.copyWith(color: mutedText),
+                ),
             ],
           ),
         ),

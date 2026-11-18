@@ -589,6 +589,16 @@ void main() {
           'refund_available_at': '2026-11-18T10:00:00Z',
           'sync': {'source': 'PROJECTION', 'block_number': '112'},
         },
+        {
+          ...f.subscription(f.customer),
+          'subscription_id': '3',
+          'status': 'ACTIVE',
+          'initial_principal': '999000000',
+          'remaining_principal': '999000000',
+          'principal_released': '0',
+          'principal_refunded': null,
+          'refund_available_at': '2026-11-17T12:00:00Z',
+        },
       ];
 
       await tester.pumpWidget(
@@ -620,6 +630,7 @@ void main() {
       expect(find.text('1 mUSDC'), findsOneWidget);
       expect(find.text('2 mUSDC'), findsOneWidget);
       expect(find.text('3 mUSDC'), findsOneWidget);
+      expect(find.textContaining('Bỏ qua 1 đăng ký'), findsOneWidget);
       expect(
         find.textContaining('1 gói đang hoạt động · Mốc hoàn gốc sớm nhất: 2026-11-18T12:00:00Z'),
         findsOneWidget,
