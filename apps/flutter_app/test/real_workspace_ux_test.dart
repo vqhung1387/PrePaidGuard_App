@@ -403,7 +403,7 @@ void main() {
 
       mode = 'timeout';
       await expectLater(
-        api.request('GET', '/api/v1/config'),
+        api.request('POST', '/api/v1/auth/challenge', body: {'a': 1}),
         throwsA(
           isA<ApiFailure>()
               .having((e) => e.code, 'code', 'NETWORK_TIMEOUT')
@@ -412,6 +412,32 @@ void main() {
       );
     },
   );
+
+  testWidgets('Config can arrive after the normal request deadline', (
+    tester,
+  ) async {
+    final api = HttpApi(
+      'https://api.example.com',
+      client: MockClient((_) async {
+        await Future<void>.delayed(const Duration(seconds: 20));
+        return http.Response('{"ok": true}', 200);
+      }),
+    );
+    addTearDown(api.close);
+
+    final config = expectLater(
+      api.request('GET', '/api/v1/config'),
+      completion({'ok': true}),
+    );
+    final login = expectLater(
+      api.request('POST', '/api/v1/auth/challenge', body: {'a': 1}),
+      throwsA(isA<ApiFailure>().having((e) => e.code, 'code', 'NETWORK_TIMEOUT')),
+    );
+    await tester.pump(const Duration(seconds: 15));
+    await login;
+    await tester.pump(const Duration(seconds: 5));
+    await config;
+  });
 
   test('Wallet error and eligibility reason classifiers output clear Vietnamese', () {
     expect(

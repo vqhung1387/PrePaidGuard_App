@@ -736,6 +736,13 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
                       : 'Kết nối API để tải danh sách gói và kiểm tra mạng của Vault.',
                   style: const TextStyle(color: mutedText),
                 ),
+                if (_connecting)
+                  Semantics(
+                    liveRegion: true,
+                    child: const Text(
+                      'Đang tải dữ liệu. Nếu máy chủ đang khởi động, vui lòng chờ khoảng một phút.',
+                    ),
+                  ),
                 const SizedBox(height: 20),
                 const Card(
                   child: ListTile(

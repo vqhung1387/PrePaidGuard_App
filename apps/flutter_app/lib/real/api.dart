@@ -61,16 +61,21 @@ class HttpApi implements ApiPort {
       request.headers['Content-Type'] = 'application/json';
       request.body = jsonEncode(body);
     }
+    // Render's free API can take about a minute to wake on the first call.
+    final timeout = Duration(
+      seconds: method == 'GET' && uri.path == '/api/v1/config' ? 75 : 15,
+    );
     final http.Response response;
     try {
-      response = await http.Response.fromStream(
-        await _client.send(request).timeout(const Duration(seconds: 15)),
-      ).timeout(const Duration(seconds: 15));
+      response = await _client
+          .send(request)
+          .then(http.Response.fromStream)
+          .timeout(timeout);
     } on TimeoutException {
       throw ApiFailure(
         0,
         'NETWORK_TIMEOUT',
-        'API phản hồi quá 15 giây (máy chủ có thể đang khởi động lại). Hãy thử lại sau vài giây.',
+        'API phản hồi quá ${timeout.inSeconds} giây. Hãy thử kết nối lại.',
       );
     } on http.ClientException {
       throw ApiFailure(
