@@ -3,10 +3,48 @@
 <head>
   <base href="$FLUTTER_BASE_HREF">
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#080f1c">
   <title>PrepaidGuard</title>
+  <style>
+    body { margin: 0; background: #080f1c; }
+    #startup {
+      position: fixed;
+      inset: 0;
+      box-sizing: border-box;
+      display: grid;
+      place-content: center;
+      padding: 24px;
+      color: #f1f7ff;
+      font: 1rem system-ui, sans-serif;
+      text-align: center;
+    }
+    #startup h1 { margin: 0; font-size: 1.5rem; }
+    #startup p { margin: 12px 0; }
+    #startup a { color: #67e8f9; }
+  </style>
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
+  <main id="startup">
+    <h1>PrepaidGuard</h1>
+    <p id="startup-status" role="status">Đang tải ứng dụng…</p>
+    <a id="startup-retry" href="" hidden>Tải lại trang</a>
+    <noscript><p>Bật JavaScript để mở ứng dụng.</p></noscript>
+  </main>
+  <script>
+    const startup = document.getElementById('startup');
+    const waitForStartup = setTimeout(() => {
+      document.getElementById('startup-status').textContent =
+        'Ứng dụng tải lâu hơn dự kiến. Bạn có thể thử tải lại.';
+      document.getElementById('startup-retry').hidden = false;
+    }, 12000);
+    window.addEventListener('flutter-first-frame', () => {
+      clearTimeout(waitForStartup);
+      startup.remove();
+    }, { once: true });
+  </script>
+  <script>
+    {{flutter_bootstrap_js}}
+  </script>
 </body>
 </html>
