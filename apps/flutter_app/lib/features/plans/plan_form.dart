@@ -52,6 +52,9 @@ class _PlanFormState extends State<PlanForm> {
     final price = parseTokenAmount(_price.text);
     final periods = parseWholeNumber(_periods.text, max: 120);
     final duration = parseWholeNumber(_duration.text, max: 3650);
+    final perPeriod = price == null
+        ? null
+        : '${formatTokenAmount(price)} USDC thử nghiệm';
     final total = price == null || periods == null
         ? '—'
         : '${formatTokenAmount(price * BigInt.from(periods))} USDC thử nghiệm';
@@ -62,7 +65,13 @@ class _PlanFormState extends State<PlanForm> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final fields = _buildFields(context);
-          final summary = _buildSummary(context, total, periods, duration);
+          final summary = _buildSummary(
+            context,
+            perPeriod,
+            total,
+            periods,
+            duration,
+          );
           if (constraints.maxWidth >= 740) {
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -156,10 +165,13 @@ class _PlanFormState extends State<PlanForm> {
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
-              decoration: const InputDecoration(labelText: 'Giá mỗi kỳ (USDC)'),
-              validator: (value) => parseTokenAmount(value ?? '') == null
-                  ? 'Nhập giá lớn hơn 0, tối đa 6 chữ số thập phân.'
-                  : null,
+              decoration: const InputDecoration(
+                labelText: 'Giá mỗi kỳ (USDC)',
+                helperText: tokenAmountHint,
+                helperMaxLines: 2,
+                errorMaxLines: 3,
+              ),
+              validator: validateTokenAmountInput,
             ),
             const SizedBox(height: 16),
             LayoutBuilder(
@@ -184,6 +196,7 @@ class _PlanFormState extends State<PlanForm> {
 
   Widget _buildSummary(
     BuildContext context,
+    String? perPeriod,
     String total,
     int? periods,
     int? duration,
@@ -201,6 +214,13 @@ class _PlanFormState extends State<PlanForm> {
               child: AccentIcon(Icons.account_balance_wallet_outlined),
             ),
             const SizedBox(height: 16),
+            if (perPeriod != null) ...[
+              Text(
+                'Mỗi kỳ: $perPeriod',
+                style: const TextStyle(color: mutedText),
+              ),
+              const SizedBox(height: 6),
+            ],
             Text('Tổng tiền gốc', style: theme.textTheme.titleMedium),
             const SizedBox(height: 6),
             Text(

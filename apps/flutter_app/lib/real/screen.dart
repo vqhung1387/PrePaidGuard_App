@@ -132,8 +132,11 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
 
   Future<Map<String, String>?> _form(
     String title,
-    Map<String, String> fields,
-  ) async {
+    Map<String, String> fields, {
+    String? amountField,
+    String? periodsField,
+  }) async {
+    final formKey = GlobalKey<FormState>();
     final controllers = {
       for (final entry in fields.entries)
         entry.key: TextEditingController(text: entry.value),
@@ -146,23 +149,70 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
           content: SizedBox(
             width: 560,
             child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (final entry in controllers.entries)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: TextField(
-                        controller: entry.value,
-                        decoration: InputDecoration(labelText: entry.key),
-                        maxLines:
-                            entry.key == 'QR payload' ||
-                                entry.key.startsWith('Raw giao dịch')
-                            ? 6
-                            : 1,
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final entry in controllers.entries)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: TextFormField(
+                          controller: entry.value,
+                          decoration: InputDecoration(
+                            labelText: entry.key,
+                            helperText:
+                                entry.key == amountField ? tokenAmountHint : null,
+                            helperMaxLines: 2,
+                            errorMaxLines: 3,
+                          ),
+                          validator: entry.key == amountField
+                              ? validateTokenAmountInput
+                              : null,
+                          maxLines:
+                              entry.key == 'QR payload' ||
+                                  entry.key.startsWith('Raw giao dịch')
+                              ? 6
+                              : 1,
+                        ),
                       ),
-                    ),
-                ],
+                    if (amountField != null && periodsField != null)
+                      ListenableBuilder(
+                        listenable: Listenable.merge([
+                          controllers[amountField]!,
+                          controllers[periodsField]!,
+                        ]),
+                        builder: (context, child) {
+                          final amount = parseTokenAmount(
+                            controllers[amountField]!.text,
+                          );
+                          final periods = parseWholeNumber(
+                            controllers[periodsField]!.text,
+                            max: 120,
+                          );
+                          if (amount == null) return const SizedBox.shrink();
+                          final unit = formatTokenAmount(amount);
+                          if (periods == null) {
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text('$unit mUSDC/kỳ'),
+                            );
+                          }
+                          final total = formatTokenAmount(
+                            amount * BigInt.from(periods),
+                          );
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              '$unit mUSDC/kỳ · Tổng $total mUSDC',
+                              style: const TextStyle(color: accent),
+                            ),
+                          );
+                        },
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -172,10 +222,13 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
               child: const Text('Hủy'),
             ),
             FilledButton(
-              onPressed: () => Navigator.pop(context, {
-                for (final entry in controllers.entries)
-                  entry.key: entry.value.text.trim(),
-              }),
+              onPressed: () {
+                if (!formKey.currentState!.validate()) return;
+                Navigator.pop(context, {
+                  for (final entry in controllers.entries)
+                    entry.key: entry.value.text.trim(),
+                });
+              },
               child: const Text('Xác nhận'),
             ),
           ],
@@ -198,24 +251,24 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
   }
 
   Future<void> _createPlan() async {
+    const amountField = 'USDC mỗi kỳ';
+    const periodsField = 'Số kỳ';
     final fields = await _form('Tạo gói on-chain', {
       'Tên gói': 'Gym demo',
       'Mô tả': 'Gói thử nghiệm',
-      'USDC mỗi kỳ': '50',
-      'Số kỳ': '2',
+      amountField: '50',
+      periodsField: '2',
       'Giây mỗi kỳ': '60',
       'Giây ân hạn': '120',
-    });
+    }, amountField: amountField, periodsField: periodsField);
     if (fields == null) return;
     await _run(() async {
-      final amount = parseTokenAmount(fields['USDC mỗi kỳ']!);
-      final periods = int.tryParse(fields['Số kỳ']!);
+      final amount = parseTokenAmount(fields[amountField]!);
+      final periods = parseWholeNumber(fields[periodsField]!, max: 120);
       final duration = int.tryParse(fields['Giây mỗi kỳ']!);
       final grace = int.tryParse(fields['Giây ân hạn']!);
       if (amount == null ||
           periods == null ||
-          periods < 1 ||
-          periods > 120 ||
           duration == null ||
           duration < 1 ||
           grace == null ||

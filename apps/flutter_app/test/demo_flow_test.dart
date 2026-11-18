@@ -92,9 +92,36 @@ void main() {
   test('Token amounts retain six decimals without rounding', () {
     expect(parseTokenAmount('12,345678'), BigInt.from(12345678));
     expect(parseTokenAmount('0.000001'), BigInt.one);
+    expect(parseTokenAmount('0.001'), BigInt.from(1000));
+    expect(parseTokenAmount('0,001'), BigInt.from(1000));
+    expect(parseTokenAmount('1,0010'), BigInt.from(1001000));
+    expect(parseTokenAmount('1000'), BigInt.from(1000000000));
+    expect(parseTokenAmount('  2500,5  '), BigInt.from(2500500000));
     expect(parseTokenAmount('0.0000001'), isNull);
     expect(parseTokenAmount('1e3'), isNull);
     expect(parseTokenAmount('0'), isNull);
+    for (final ambiguous in [
+      '1.000',
+      '10.000',
+      '100.000',
+      '1,000',
+      '1.000.000',
+      '1.234,56',
+      '1 000',
+    ]) {
+      expect(parseTokenAmount(ambiguous), isNull, reason: ambiguous);
+      expect(
+        validateTokenAmountInput(ambiguous),
+        isNotNull,
+        reason: ambiguous,
+      );
+    }
+    expect(
+      validateTokenAmountInput('1.000'),
+      contains('Không dùng dấu hàng nghìn'),
+    );
+    expect(validateTokenAmountInput('0.1234567'), contains('6 chữ số'));
+    expect(validateTokenAmountInput('1000'), isNull);
     expect(formatTokenAmount(BigInt.parse('1234000001')), '1.234,000001');
   });
 
