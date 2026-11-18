@@ -21,9 +21,9 @@ MVP UniHack cho quản lý ký quỹ dịch vụ trả trước trên Avalanche.
 
 ## Trạng thái
 
-Bản tích hợp sửa lỗi 15/11/2026 và việc còn lại được ghi tại [bàn giao mới nhất](docs/ban-giao-sua-loi-2026-11-15.md). Bản Web dùng ví/API thật đã có kiểm thử local; các màn hình catalog/lịch tập demo vẫn dùng dữ liệu mô phỏng.
+Web và API đã phát hành trên Render với Avalanche Fuji. Xem [kết quả nghiệm thu và việc còn lại](docs/nghiem-thu-final-2026-11-19.md). Các màn hình lịch tập và đặt lịch demo dùng dữ liệu mô phỏng.
 
-Backend đã có FastAPI, migration PostgreSQL và bộ kiểm thử. Xem [hướng dẫn backend](backend/README.md) và [handoff tích hợp](docs/backend-handoff.md). Nghiệm thu demo cần bản Flutter và deployment Fuji của nhóm.
+Xem [hướng dẫn backend](backend/README.md), [bàn giao tích hợp](docs/backend-handoff.md) và [deployment Fuji](docs/fuji-deployment-2026-11-16.md).
 
 ## Ranh giới trách nhiệm
 
@@ -32,14 +32,7 @@ Backend đã có FastAPI, migration PostgreSQL và bộ kiểm thử. Xem [hư�
 - Flutter yêu cầu ví ký giao dịch hoặc thông điệp EIP-712.
 - ABI và địa chỉ theo network được xuất từ contract sang shared; không sửa tay nhiều bản.
 
-## Bước tiếp theo
-
-1. Chốt docs/business-rules.md và shared/check-in.schema.json theo hướng dẫn trong shared/README.md.
-2. Chạy Flutter, Hardhat và backend theo README từng thư mục; kiểm tra deployment và ABI trước tích hợp.
-3. Thử luồng kết nối ví, ký EIP-712 và xác thực contract trước khi mở rộng giao diện.
-4. Làm tạo gói → đăng ký → check-in → refund bằng token thử nghiệm trên Fuji.
-
-Xem [docs/tasks.md](docs/tasks.md) để phân công chi tiết.
+Xem [bảng công việc](docs/task-board.md) để theo dõi phân công.
 
 ## Tài liệu thiết kế
 
