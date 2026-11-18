@@ -56,12 +56,25 @@ abstract class WalletPort {
 abstract class PendingStore {
   String? read(String key);
   void write(String key, String value);
+  Future<T> withSigningLock<T>(String key, Future<T> Function() action);
 }
 
 class MemoryPendingStore implements PendingStore {
   final values = <String, String>{};
+  final _signing = <String>{};
   @override
   String? read(String key) => values[key];
   @override
   void write(String key, String value) => values[key] = value;
+  @override
+  Future<T> withSigningLock<T>(String key, Future<T> Function() action) async {
+    if (!_signing.add(key)) {
+      throw StateError('Ví đang xử lý một giao dịch trong tab khác.');
+    }
+    try {
+      return await action();
+    } finally {
+      _signing.remove(key);
+    }
+  }
 }

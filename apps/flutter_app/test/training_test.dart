@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:prepaid_guard/app/prepaid_guard_app.dart';
+import 'support/demo_test_app.dart';
 import 'package:prepaid_guard/features/auth/demo_accounts.dart';
 import 'package:prepaid_guard/features/training/demo_training.dart';
 
@@ -37,7 +37,7 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    await tester.pumpWidget(const PrepaidGuardApp());
+    await tester.pumpWidget(const DemoTestApp());
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('auth-email')),

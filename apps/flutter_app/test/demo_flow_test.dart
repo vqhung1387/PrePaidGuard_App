@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prepaid_guard/app/prepaid_guard_theme.dart';
 import 'package:prepaid_guard/app/demo_workspace.dart';
-import 'package:prepaid_guard/app/prepaid_guard_app.dart';
+import 'support/demo_test_app.dart';
 import 'package:prepaid_guard/features/auth/demo_accounts.dart';
 import 'package:prepaid_guard/features/community/invite_link.dart';
 import 'package:prepaid_guard/features/plans/demo_plan.dart';
@@ -204,7 +204,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const PrepaidGuardApp());
+    await tester.pumpWidget(const DemoTestApp());
     await tester.pumpAndSettle();
     expect(find.text('Tạo gói demo'), findsNothing);
     await tester.enterText(
@@ -482,7 +482,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const PrepaidGuardApp());
+    await tester.pumpWidget(const DemoTestApp());
     await tester.pumpAndSettle();
     await tester.tap(find.text('Chưa có tài khoản? Đăng ký'));
     await tester.pumpAndSettle();

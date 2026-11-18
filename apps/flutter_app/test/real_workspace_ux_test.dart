@@ -82,18 +82,32 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: RealWorkspaceScreen(controller: controller, onDemo: () {}),
+          home: RealWorkspaceScreen(controller: controller),
         ),
       );
       await tester.pumpAndSettle();
 
-      await _tapScroll(tester, find.text('Tạo / publish gói'));
+      await tester.tap(find.text('Cơ sở'));
+      await tester.pumpAndSettle();
+      await _tapScroll(tester, find.text('Tạo gói dịch vụ'));
+      for (final (label, value) in [
+        ('mUSDC mỗi kỳ', '50'),
+        ('Số kỳ', '2'),
+        ('Thời lượng mỗi kỳ', '1 phút'),
+        ('Thời gian ân hạn', '2'),
+      ]) {
+        await tester.enterText(
+          find.widgetWithText(TextFormField, label),
+          value,
+        );
+      }
+      await tester.pumpAndSettle();
       expect(
         find.text('Tổng khóa trả trước: 100 mUSDC (50 mUSDC/kỳ × 2 kỳ)'),
         findsOneWidget,
       );
       expect(
-        find.textContaining('Mở check-in kỳ đầu sau 60 giây'),
+        find.textContaining('Check-in kỳ đầu sau 1 phút. Sau thêm 2 ngày'),
         findsOneWidget,
       );
 
@@ -102,7 +116,7 @@ void main() {
         'Gói Yoga\u0000lỗi',
       );
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'USDC mỗi kỳ'),
+        find.widgetWithText(TextFormField, 'mUSDC mỗi kỳ'),
         '1.000',
       );
       await tester.tap(find.text('Xác nhận'));
@@ -119,7 +133,7 @@ void main() {
         'Buổi sáng\nBuổi tối',
       );
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'USDC mỗi kỳ'),
+        find.widgetWithText(TextFormField, 'mUSDC mỗi kỳ'),
         '25',
       );
       await tester.enterText(
@@ -138,7 +152,7 @@ void main() {
       expect(wallet.transactions, isEmpty);
 
       // Reopen form after API failure -> inputs are preserved.
-      await _tapScroll(tester, find.text('Tạo / publish gói'));
+      await _tapScroll(tester, find.text('Tạo gói dịch vụ'));
       expect(find.text('Gói Yoga Chuyên Sâu'), findsOneWidget);
       expect(find.text('Buổi sáng\nBuổi tối'), findsOneWidget);
       expect(find.text('25'), findsOneWidget);
@@ -148,6 +162,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(api.lastDraftBody!['description'], 'Buổi sáng\nBuổi tối');
       expect(api.lastDraftBody!['price_per_period'], '25000000');
+      expect(api.lastDraftBody!['period_duration_seconds'], 60);
+      expect(api.lastDraftBody!['grace_period_seconds'], 172800);
       expect(wallet.transactions.length, 1);
 
       await tester.pumpWidget(const SizedBox());
@@ -183,24 +199,26 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: RealWorkspaceScreen(controller: controller, onDemo: () {}),
+          home: RealWorkspaceScreen(controller: controller),
         ),
       );
       await tester.pumpAndSettle();
 
+      await tester.tap(find.text('Cơ sở'));
+      await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
-        find.text('Draft: Gói Draft Kiểm Tra'),
+        find.text('Bản nháp: Gói Draft Kiểm Tra'),
         250,
         scrollable: find.byType(Scrollable).first,
       );
-      expect(find.text('Draft: Gói Draft Kiểm Tra'), findsOneWidget);
+      expect(find.text('Bản nháp: Gói Draft Kiểm Tra'), findsOneWidget);
       expect(
         find.textContaining('15 mUSDC/kỳ × 3 kỳ · Tổng 45 mUSDC'),
         findsOneWidget,
       );
 
-      await _tapScroll(tester, find.text('Publish draft'));
-      expect(find.text('Publish gói lên chuỗi'), findsOneWidget);
+      await _tapScroll(tester, find.text('Công bố bản nháp'));
+      expect(find.text('Kiểm tra và công bố gói'), findsOneWidget);
       expect(
         find.textContaining('Mỗi kỳ: 15 mUSDC × 3 kỳ = Tổng 45 mUSDC'),
         findsOneWidget,
@@ -261,7 +279,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: RealWorkspaceScreen(controller: controller, onDemo: () {}),
+          home: RealWorkspaceScreen(controller: controller),
         ),
       );
       await tester.pumpAndSettle();
@@ -269,7 +287,7 @@ void main() {
       await _tapScroll(tester, find.byTooltip('QR đăng ký'));
       expect(find.text('QR đăng ký gói'), findsOneWidget);
       expect(
-        find.textContaining('Đây là mã QR đăng ký gói, không phải mã check-in ký số.'),
+        find.textContaining('Chia sẻ gói'),
         findsOneWidget,
       );
       expect(find.textContaining('15 phút'), findsNothing);
@@ -277,6 +295,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Reject registration link inline in Import Check-in QR.
+      await tester.tap(find.text('Cơ sở'));
+      await tester.pumpAndSettle();
       await _tapScroll(tester, find.text('Nhập QR check-in'));
       await tester.enterText(
         find.widgetWithText(TextFormField, 'QR payload'),
@@ -522,7 +542,6 @@ void main() {
             apiFactory: (base) => HttpApi(base, client: client),
             walletFactory: () => multiWallet,
             storeFactory: MemoryPendingStore.new,
-            onDemo: () {},
           ),
         ),
       );
@@ -538,6 +557,8 @@ void main() {
       await tester.tap(find.text('Kết nối API'));
       await tester.pumpAndSettle();
       expect(find.textContaining('HTTP 502'), findsNothing);
+      await tester.tap(find.text('Kết nối ví / Đăng nhập'));
+      await tester.pumpAndSettle();
       expect(find.text('Chọn ví trình duyệt'), findsOneWidget);
       expect(find.text('Core'), findsOneWidget);
       expect(find.text('MetaMask'), findsOneWidget);
@@ -551,7 +572,40 @@ void main() {
   );
 
   testWidgets(
-    'Demo invite link stays in Demo even when API_BASE_URL is pinned, and plan_id deep-link auto-connects',
+    'Guests can read plan terms and private sections require a wallet',
+    (tester) async {
+      final wallet = f.FakeWallet();
+      final controller = LiveController(
+        api: f.FakeApi(),
+        wallet: wallet,
+        store: MemoryPendingStore(),
+      );
+      await controller.bootstrap();
+      await tester.pumpWidget(
+        MaterialApp(home: RealWorkspaceScreen(controller: controller)),
+      );
+      await tester.pumpAndSettle();
+      await _tapScroll(tester, find.text('Xem gói'));
+      expect(find.textContaining('Tổng trả trước: 100 mUSDC'), findsOneWidget);
+      expect(find.text('Kết nối ví để đăng ký'), findsOneWidget);
+      expect(wallet.transactions, isEmpty);
+      await tester.tap(find.text('Hủy'));
+      await tester.pumpAndSettle();
+
+      for (final section in ['Gói của tôi', 'Cơ sở', 'Giao dịch']) {
+        await tester.tap(find.text(section));
+        await tester.pumpAndSettle();
+        expect(find.text('Đăng nhập để tiếp tục'), findsOneWidget);
+        expect(find.text('Tạo hồ sơ cơ sở'), findsNothing);
+      }
+      expect(find.byTooltip('Thông tin thanh toán'), findsOneWidget);
+      expect(find.text('Thông tin mạng và Vault'), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
+    'Business keeps invites in the real workspace and plan links auto-connect',
     (tester) async {
       tester.view.physicalSize = const Size(1280, 960);
       tester.view.devicePixelRatio = 1;
@@ -567,8 +621,10 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Bản demo. Hãy dùng email và mật khẩu giả.'), findsOneWidget);
-      expect(find.text('Kết nối API và ví'), findsNothing);
+      expect(find.byKey(const ValueKey('auth-email')), findsNothing);
+      expect(find.text('Về demo'), findsNothing);
+      expect(find.text('Khám phá gói dịch vụ'), findsOneWidget);
+      expect(find.widgetWithText(TextField, 'API URL'), findsNothing);
 
       final api = f.FakeApi();
       await tester.pumpWidget(
@@ -581,12 +637,11 @@ void main() {
             apiFactory: (_) => api,
             walletFactory: f.FakeWallet.new,
             storeFactory: MemoryPendingStore.new,
-            onDemo: () {},
           ),
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Đã kết nối API'), findsOneWidget);
+      expect(find.text('Khám phá gói dịch vụ'), findsOneWidget);
       expect(find.textContaining('Đã mở gói #1 từ QR đăng ký'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox());
@@ -670,6 +725,9 @@ void main() {
         find.textContaining('1 gói đang hoạt động · Mốc hoàn gốc sớm nhất: 2026-11-18T12:00:00Z'),
         findsOneWidget,
       );
+      await tester.ensureVisible(find.text('Nguồn dữ liệu'));
+      await tester.tap(find.text('Nguồn dữ liệu'));
+      await tester.pumpAndSettle();
       expect(
         find.textContaining(
           'Nguồn dữ liệu: PROJECTION (bản chiếu sự kiện chuỗi) · Block #112',

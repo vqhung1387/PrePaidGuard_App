@@ -44,7 +44,7 @@ class HttpApi implements ApiPort {
     }
     if (this.base.scheme != 'https' &&
         !['localhost', '127.0.0.1', '10.0.2.2'].contains(this.base.host)) {
-      throw ArgumentError('Chỉ dùng HTTP cho local; demo cần HTTPS.');
+      throw ArgumentError('Dùng HTTPS để kết nối API. HTTP chỉ hỗ trợ trên máy cục bộ.');
     }
   }
   final Uri base;

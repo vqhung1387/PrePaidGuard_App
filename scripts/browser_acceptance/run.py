@@ -177,6 +177,11 @@ def main():
               if (method === 'eth_signTypedData_v4' && typeof params[1] === 'string')
                 params = [params[0], JSON.parse(params[1])];
               if (method === 'eth_sendTransaction' &&
+                  window.__testHoldNextVaultSend && String(params[0].to).toLowerCase() === VAULT) {
+                window.__testHoldNextVaultSend = false;
+                await new Promise(resolve => { window.__testReleaseVaultPrompt = resolve; });
+              }
+              if (method === 'eth_sendTransaction' &&
                   window.__testPauseNextVaultSend && String(params[0].to).toLowerCase() === VAULT) {
                 window.__testPauseNextVaultSend = false;
                 await fetch(rpcUrl, {method:'POST', headers:{'Content-Type':'application/json'},
@@ -206,20 +211,23 @@ def main():
                 tokens[key] = response.json()["access_token"]
         page.on("response", response_received)
 
-    def open_session(browser, account, key):
-        context = browser.new_context(viewport={"width": 1440, "height": 1100})
-        skew = args.merchant_clock_skew if key == "merchant" else args.subscriber_clock_skew
-        context.add_init_script(provider_script(account, skew))
+    def open_session(browser, account, key, context=None, query=""):
+        if context is None:
+            context = browser.new_context(viewport={"width": 1440, "height": 1100})
+            skew = args.merchant_clock_skew if key == "merchant" else args.subscriber_clock_skew
+            context.add_init_script(provider_script(account, skew))
         page = context.new_page()
         page.set_default_timeout(30000)
         attach_token(page, key)
-        page.goto(args.app_url + "/?real=1", wait_until="networkidle")
+        page.goto(args.app_url + "/" + query, wait_until="networkidle")
         placeholder = page.locator("flt-semantics-placeholder")
         placeholder.wait_for(state="attached", timeout=30000)
         placeholder.dispatch_event("click")
-        fill_field(page, "API URL", args.api_url)
-        click(page, "Kết nối API")
-        page.get_by_role("button", name="Kết nối ví / Đăng nhập", exact=True).wait_for(state="visible")
+        button(page, "Kết nối ví / Đăng nhập").wait_for(state="visible")
+        if page.get_by_role("textbox", name="API URL").count():
+            raise RuntimeError("Business workspace exposed an editable API setting")
+        if page.get_by_role("button", name="Về demo", exact=True).count():
+            raise RuntimeError("Business workspace exposed the demo switch")
         with page.expect_response(
             lambda r: r.url.endswith("/api/v1/auth/verify")
             and r.request.method == "POST"
@@ -228,7 +236,7 @@ def main():
         ) as verify_response:
             click(page, "Kết nối ví / Đăng nhập")
         tokens[key] = verify_response.value.json()["access_token"]
-        button(page, "Đăng xuất ví").wait_for(state="visible")
+        button(page, "Tài khoản ví").wait_for(state="visible")
         return context, page
 
     with sync_playwright() as playwright:
@@ -242,6 +250,7 @@ def main():
                 args=["--disable-gpu", "--no-first-run"])
             merchant_context, merchant = open_session(browser, accounts[1], "merchant")
             record("merchant SIWE browser login")
+            click(merchant, "Cơ sở")
             if merchant.get_by_role("button", name="Tạo hồ sơ cơ sở", exact=True).count():
                 click(merchant, "Tạo hồ sơ cơ sở")
                 form(merchant, {"Tên cơ sở": "Browser acceptance gym"})
@@ -250,14 +259,32 @@ def main():
                 if not profile["is_merchant"]:
                     click(merchant, "Tạo hồ sơ cơ sở")
                     form(merchant, {"Tên cơ sở": "Browser acceptance gym"})
-            click(merchant, "Tạo / publish gói")
+            click(merchant, "Tạo gói dịch vụ")
             form(merchant, {"Tên gói": plan_title, "Mô tả": "Local acceptance",
-                "USDC mỗi kỳ": "50", "Số kỳ": "2", "Giây mỗi kỳ": "6", "Giây ân hạn": "60"})
+                "mUSDC mỗi kỳ": "50", "Số kỳ": "2", "Thời lượng mỗi kỳ": "6 giây", "Thời gian ân hạn": "1 phút"})
             plan = until(lambda: next((item for item in api("/api/v1/plans?limit=100")["items"]
                 if item["title"] == plan_title), None))
             record("browser publish confirmed", plan_id=plan["plan_id"])
+            with browser.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True) as guest_context:
+                guest = guest_context.new_page()
+                guest.goto(args.app_url, wait_until="networkidle")
+                guest.locator("flt-semantics-placeholder").dispatch_event("click")
+                button(guest, "Xem gói").wait_for(state="visible")
+                guest.screenshot(path=str(args.output_dir / "guest-mobile.png"), full_page=True)
+                click(guest, "Xem gói")
+                guest.get_by_text(re.compile("Tổng trả trước: 100 mUSDC")).first.wait_for(state="visible")
+                button(guest, "Kết nối ví để đăng ký").wait_for(state="visible")
+                click(guest, "Hủy")
+                click(guest, "Cơ sở")
+                button(guest, "Kết nối ví").wait_for(state="visible")
+            record("guest can review published terms on mobile before signing in")
             customer_context, customer = open_session(browser, accounts[2], "customer")
             record("subscriber SIWE independent browser login")
+            _, parallel_tab = open_session(
+                browser, accounts[2], "parallel", customer_context,
+                query="?demo=1&invite=gym-khoi-dong",
+            )
+            record("business root and legacy demo invite both use real API workspace")
             blocked_tracking_calls = []
             def tracking_outage(route):
                 body = route.request.post_data_json
@@ -270,8 +297,22 @@ def main():
                     route.continue_()
             if args.inject_cache_failure:
                 customer_context.route("**/api/v1/transactions", tracking_outage)
+            customer.evaluate("window.__testHoldNextVaultSend = true")
             click(customer, "Đăng ký")
             click(customer, "Tiếp tục ký ví")
+            customer.wait_for_function("typeof window.__testReleaseVaultPrompt === 'function'")
+            try:
+                click(parallel_tab, "Đăng ký")
+                click(parallel_tab, "Tiếp tục ký ví")
+                parallel_tab.get_by_text(
+                    "Ví đang xử lý một giao dịch trong tab khác.", exact=True,
+                ).filter(visible=True).last.wait_for(state="visible")
+                if parallel_tab.evaluate("window.__testTransactions.length") != 0:
+                    raise RuntimeError("Second tab unexpectedly broadcast a transaction")
+                record("same-origin second tab blocked while wallet prompt is open")
+            finally:
+                customer.evaluate("window.__testReleaseVaultPrompt()")
+                parallel_tab.close()
             def membership():
                 rows = api("/api/v1/me/subscriptions?limit=100", tokens["customer"])["items"]
                 return next((item for item in rows if item["plan_id"] == plan["plan_id"]), None)
@@ -285,7 +326,7 @@ def main():
                 # Repeating the financial intent during storage/API failure must emit no new wallet transaction.
                 click(customer, "Đăng ký")
                 click(customer, "Tiếp tục ký ví")
-                customer.get_by_text(re.compile("Đã có giao dịch cùng thao tác đang chờ")).first.wait_for(state="visible")
+                customer.get_by_text(re.compile("Đã có giao dịch cùng thao tác đang chờ")).filter(visible=True).first.wait_for(state="visible")
                 if len(customer.evaluate("window.__testTransactions")) != before_retry:
                     raise RuntimeError("Cache failure retry broadcast an additional transaction")
                 if sum(item["plan_id"] == plan["plan_id"] for item in
@@ -306,6 +347,7 @@ def main():
             rpc(args.rpc_url, "evm_increaseTime", [7])
             rpc(args.rpc_url, "evm_mine", [])
             click(customer, "Làm mới trạng thái")
+            click(customer, "Gói của tôi")
             click(customer, "Tạo QR check-in")
             qr = customer.get_by_text(re.compile(r'^\{"version":1,')).first
             qr.wait_for(state="visible")
@@ -331,7 +373,7 @@ def main():
             click(merchant, "Nhập QR check-in")
             form(merchant, {"QR payload": payload})
             click(merchant, "Tiếp tục ký ví")
-            merchant.get_by_text(re.compile("QR đã dùng, sai kỳ hoặc chưa đủ điều kiện")).first.wait_for(state="visible", timeout=30000)
+            merchant.get_by_text(re.compile("QR đã dùng, sai kỳ hoặc chưa đủ điều kiện")).filter(visible=True).first.wait_for(state="visible", timeout=30000)
             if len(merchant.evaluate("window.__testTransactions")) != previous_count:
                 raise RuntimeError("Replay unexpectedly broadcast another transaction")
             if detail()["completed_periods"] != 1:
@@ -359,6 +401,7 @@ def main():
             if args.test_replacement:
                 customer.evaluate("window.__testFailPendingCache = false; window.__testPauseNextVaultSend = true")
                 previous = len(customer.evaluate("window.__testTransactions"))
+                click(customer, "Khám phá")
                 try:
                     click(customer, "Đăng ký")
                     click(customer, "Tiếp tục ký ví")
@@ -379,12 +422,14 @@ def main():
                     rpc(args.rpc_url, "evm_mine", [])
                 finally:
                     rpc(args.rpc_url, "evm_setAutomine", [True])
+                click(customer, "Giao dịch")
                 click(customer, "Đối chiếu giao dịch tăng phí hoặc hủy trong ví")
                 form(customer, {"Hash giao dịch mới": cancellation})
                 until(lambda: api("/api/v1/transactions/" + original_hash, tokens["customer"])["status"] == "CANCELLED")
                 record("browser reconciles confirmed cancellation without rebroadcasting")
                 before_retry = len(api("/api/v1/me/subscriptions?limit=100", tokens["customer"])["items"])
                 customer.evaluate("window.__testFailPendingCache = false")
+                click(customer, "Khám phá")
                 click(customer, "Đăng ký")
                 click(customer, "Tiếp tục ký ví")
                 until(lambda: len(api("/api/v1/me/subscriptions?limit=100", tokens["customer"])["items"]) == before_retry + 1)

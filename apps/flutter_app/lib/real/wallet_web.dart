@@ -25,10 +25,58 @@ extension type _Storage(JSObject _) implements JSObject {
   external void setItem(JSString key, JSString value);
 }
 
+@JS('navigator')
+external JSObject get _navigator;
+
+extension type _LockManager(JSObject _) implements JSObject {
+  external JSPromise<JSAny?> request(
+    JSString name,
+    JSObject options,
+    JSFunction callback,
+  );
+}
+
 WalletPort createWallet() => BrowserWallet();
 PendingStore createPendingStore() => BrowserPendingStore();
 
 class BrowserPendingStore implements PendingStore {
+  @override
+  Future<T> withSigningLock<T>(String key, Future<T> Function() action) async {
+    final locks = _navigator['locks'];
+    if (locks == null) {
+      throw StateError(
+        'Trình duyệt chưa hỗ trợ chặn ký trùng giữa các tab. Hãy mở app bằng Chrome hoặc Edge qua HTTPS.',
+      );
+    }
+    late T result;
+    Object? failure;
+    StackTrace? trace;
+    var acquired = false;
+    JSPromise<JSAny?> run(JSObject? lock) => Future<JSAny?>.sync(() async {
+      if (lock == null) return null;
+      acquired = true;
+      try {
+        result = await action();
+      } catch (error, stack) {
+        failure = error;
+        trace = stack;
+      }
+      return null;
+    }).toJS;
+    await _LockManager(locks as JSObject)
+        .request(
+          '$key.signing'.toJS,
+          {'ifAvailable': true}.jsify()! as JSObject,
+          run.toJS,
+        )
+        .toDart;
+    if (!acquired) {
+      throw StateError('Ví đang xử lý một giao dịch trong tab khác.');
+    }
+    if (failure case final error?) Error.throwWithStackTrace(error, trace!);
+    return result;
+  }
+
   @override
   String? read(String key) {
     try {
@@ -202,7 +250,9 @@ class BrowserWallet extends WalletPort {
 
   bool _readBool(JSObject obj, String key) {
     final value = obj.getProperty(key.toJS);
-    return value != null && value.isA<JSBoolean>() && (value as JSBoolean).toDart;
+    return value != null &&
+        value.isA<JSBoolean>() &&
+        (value as JSBoolean).toDart;
   }
 
   String _inferLabel(JSObject provider, {required String fallback}) {

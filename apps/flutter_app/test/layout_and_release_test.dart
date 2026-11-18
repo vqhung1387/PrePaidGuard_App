@@ -155,7 +155,6 @@ void main() {
             default:
               child = RealWorkspaceScreen(
                 controller: await f.signedIn(),
-                onDemo: () {},
               );
           }
           await tester.pumpWidget(

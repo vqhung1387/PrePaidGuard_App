@@ -74,8 +74,9 @@ class LiveController extends ChangeNotifier {
   String notice = '';
   bool busy = false, _disposed = false;
   int _generation = 0;
-  List<Json> plans = [],
-      drafts = [],
+  List<Json> _catalogPlans = [];
+  Json? _linkedPlan;
+  List<Json> drafts = [],
       memberships = [],
       merchantMemberships = [],
       issues = [],
@@ -86,6 +87,15 @@ class LiveController extends ChangeNotifier {
   SubscriptionFilter membershipFilter = SubscriptionFilter.all;
   SubscriptionFilter merchantMembershipFilter = SubscriptionFilter.all;
   final Map<String, List<Json>> _memoryPending = {};
+
+  List<Json> get plans {
+    final linked = _linkedPlan;
+    if (linked == null) return _catalogPlans;
+    return [
+      linked,
+      ..._catalogPlans.where((plan) => plan['plan_id'] != linked['plan_id']),
+    ];
+  }
 
   bool get loggedIn => account != null && api.token != null;
   bool get isMerchant => user?['is_merchant'] == true;
@@ -160,35 +170,43 @@ class LiveController extends ChangeNotifier {
         'Deployment không khớp bundle đã pin; khóa gửi giao dịch.',
       );
     }
-    config = value;
     final page = await _get('/api/v1/plans?limit=20');
-    plans = _items(page);
-    plansCursor = page['next_cursor'] as String?;
+    final initialPlans = _items(page);
+    final initialCursor = page['next_cursor'] as String?;
+    config = value;
+    _catalogPlans = initialPlans;
+    _linkedPlan = null;
+    plansCursor = initialCursor;
     _emit();
   }
 
   Future<void> openRegistration(Uri link) async {
     final id = link.queryParameters['plan_id'];
     if (id == null) return;
+    final chain = link.queryParameters['chain_id'];
+    final vault = link.queryParameters['vault'];
     if (config == null ||
-        link.queryParameters['chain_id'] != config!['chain_id'].toString() ||
-        address(link.queryParameters['vault']) !=
-            address(config!['vault_address'])) {
-      throw const FormatException('QR đăng ký sai network hoặc Vault.');
+        ((chain != null || vault != null) &&
+            (chain != config!['chain_id'].toString() ||
+                vault?.toLowerCase() != address(config!['vault_address'])))) {
+      throw const FormatException('QR đăng ký sai mạng hoặc Vault.');
     }
     final canonicalId = uint(id).toString();
-    final selected = await _get('/api/v1/plans/$canonicalId');
-    if (selected['plan_id'] != canonicalId ||
-        selected['chain_id'] != config!['chain_id'] ||
-        address(selected['vault_address']) !=
-            address(config!['vault_address'])) {
-      throw const FormatException('Plan từ API không khớp QR đăng ký.');
-    }
-    plans.removeWhere((plan) => plan['plan_id'] == canonicalId);
-    plans.insert(0, selected);
+    _linkedPlan = await _fetchLinkedPlan(canonicalId);
     notice =
         'Đã mở gói #$canonicalId từ QR đăng ký. Kiểm tra điều khoản trước khi ký.';
     _emit();
+  }
+
+  Future<Json> _fetchLinkedPlan(String id) async {
+    final selected = await _get('/api/v1/plans/$id');
+    if (selected['plan_id'] != id ||
+        selected['chain_id'] != config!['chain_id'] ||
+        address(selected['vault_address']) !=
+            address(config!['vault_address'])) {
+      throw const FormatException('Gói từ API không khớp liên kết đăng ký.');
+    }
+    return selected;
   }
 
   int _chain(dynamic value) => value is int
@@ -299,10 +317,23 @@ class LiveController extends ChangeNotifier {
     final planPage = await _refreshWindow(
       (cursor) => _page('/api/v1/plans', limit: 20, cursor: cursor),
       idField: 'plan_id',
-      loadedCount: plans.length,
+      loadedCount: _catalogPlans.length,
     );
-    plans = _items(planPage);
+    _catalogPlans = _items(planPage);
     plansCursor = planPage['next_cursor'] as String?;
+    final linked = _linkedPlan;
+    if (linked != null) {
+      final id = linked['plan_id'] as String;
+      try {
+        _linkedPlan =
+            _catalogPlans.where((plan) => plan['plan_id'] == id).firstOrNull ??
+            await _fetchLinkedPlan(id);
+      } on ApiFailure catch (error) {
+        if (error.status != 404) rethrow;
+        _linkedPlan = null;
+        notice = 'Gói #$id từ liên kết không còn được công bố.';
+      }
+    }
     if (!loggedIn || generation != _generation) {
       _emit();
       return;
@@ -470,24 +501,52 @@ class LiveController extends ChangeNotifier {
     final page = await _get(
       '/api/v1/plans?limit=20&cursor=${Uri.encodeQueryComponent(cursor)}',
     );
-    final seen = plans.map((plan) => plan['plan_id']).toSet();
-    plans.addAll(_items(page).where((plan) => seen.add(plan['plan_id'])));
+    final seen = _catalogPlans.map((plan) => plan['plan_id']).toSet();
+    _catalogPlans.addAll(
+      _items(page).where((plan) => seen.add(plan['plan_id'])),
+    );
     plansCursor = page['next_cursor'] as String?;
     _emit();
   }
 
   Future<void> createMerchant(String name) async {
     await assertContext();
-    await _post('/api/v1/merchants', {
-      'business_name': name,
-      'description': '',
-      'location_text': null,
-    });
-    await refresh();
+    final generation = _generation, key = _pendingKey;
+    var result = 'Đã tạo hồ sơ cơ sở.';
+    try {
+      await _post('/api/v1/merchants', {
+        'business_name': name,
+        'description': '',
+        'location_text': null,
+      });
+    } on ApiFailure catch (error) {
+      if (error.status != 409 || error.code != 'MERCHANT_EXISTS') rethrow;
+      result = 'Ví này đã có hồ sơ cơ sở.';
+    }
+    if (!_sameSession(generation, key)) return;
+    user = {...?user, 'is_merchant': true};
+    notice = result;
+    _emit();
+    try {
+      await refresh();
+    } on ApiFailure catch (error) {
+      if (!_sameSession(generation, key)) return;
+      if (error.status == 401) {
+        invalidate('$result Phiên hết hạn, hãy đăng nhập lại.');
+        return;
+      }
+      notice = '$result Chưa tải được dữ liệu mới, hãy làm mới trạng thái.';
+      _emit();
+    }
   }
 
   Future<void> publishPlan(Json terms) async {
+    await publishDraft(await createPlanDraft(terms));
+  }
+
+  Future<Json> createPlanDraft(Json terms) async {
     await assertContext();
+    final generation = _generation, key = _pendingKey;
     _mergeStoredPending();
     if (pending.any(
       (item) =>
@@ -498,12 +557,17 @@ class LiveController extends ChangeNotifier {
       );
     }
     final draft = await _post('/api/v1/plan-drafts', terms);
+    if (!_sameSession(generation, key)) {
+      throw StateError(
+        'Bản nháp đã lưu cho ví ban đầu. Hãy chọn lại ví đó để tiếp tục.',
+      );
+    }
     drafts.insert(0, draft);
     _emit();
-    await publishDraft(draft);
+    return draft;
   }
 
-  Future<void> publishDraft(Json draft) async {
+  Future<void> publishDraft(Json draft) => _withWalletSigning(() async {
     final sent = await _send(
       'CREATE_PLAN',
       config!['vault_address'],
@@ -511,9 +575,10 @@ class LiveController extends ChangeNotifier {
       {'plan_draft_id': draft['id']},
     );
     await _refreshAfterSend(sent);
-  }
+  });
 
   Future<void> _refreshAfterSend(Json item) async {
+    _reportReverted(item);
     try {
       await refresh();
     } catch (error) {
@@ -531,6 +596,14 @@ class LiveController extends ChangeNotifier {
           'Đã gửi giao dịch ${item['tx_hash']}; chưa cập nhật được. Kiểm tra hash trước khi gửi lại.';
       _emit();
     }
+    _reportReverted(item);
+  }
+
+  String _revertedMessage(Json item) =>
+      'Giao dịch thất bại trên blockchain. Mã giao dịch: ${item['tx_hash']}.';
+
+  void _reportReverted(Json item) {
+    if (item['status'] == 'REVERTED') throw StateError(_revertedMessage(item));
   }
 
   Future<void> _noPending(String action, Json refs) async {
@@ -603,12 +676,30 @@ class LiveController extends ChangeNotifier {
     }
   }
 
+  Future<T> _withWalletSigning<T>(Future<T> Function() action) async {
+    if (!loggedIn || config == null) {
+      throw StateError('Kết nối API và đăng nhập ví trước.');
+    }
+    final generation = _generation, key = _pendingKey;
+    return store.withSigningLock(key, () async {
+      if (!_sameSession(generation, key)) {
+        throw StateError('Phiên ví đã đổi. Hãy kiểm tra lại trước khi ký.');
+      }
+      await assertContext();
+      return action();
+    });
+  }
+
   Future<Json> _send(String action, String to, String data, Json refs) async {
     await assertContext();
-    await _noPending(action, refs);
     final originAccount = account!;
     final originKey = _pendingKey;
     final generation = _generation;
+    await _noPending(action, refs);
+    await assertContext();
+    if (!_sameSession(generation, originKey)) {
+      throw StateError('Phiên ví đã đổi. Hãy kiểm tra lại trước khi ký.');
+    }
     final hash = await wallet.request('eth_sendTransaction', [
       {'from': originAccount, 'to': address(to), 'data': data, 'value': '0x0'},
     ]);
@@ -684,7 +775,10 @@ class LiveController extends ChangeNotifier {
       item['replacement_tx_hash'] = result['replacement_tx_hash'];
     }
     _persistForOrigin(key, item);
-    if (_sameSession(session, key)) _emit();
+    if (_sameSession(session, key)) {
+      if (item['status'] == 'REVERTED') notice = _revertedMessage(item);
+      _emit();
+    }
   }
 
   Future<void> refreshPending() async {
@@ -833,7 +927,7 @@ class LiveController extends ChangeNotifier {
     notice =
         'Đã đối chiếu giao dịch thay thế $hash. Có thể kiểm tra lại thao tác.';
     _emit();
-    await _refreshAfterSend(item);
+    await _refreshAfterSend(replacement ?? item);
   }
 
   Future<BigInt> _tokenRead(String data) async {
@@ -846,7 +940,7 @@ class LiveController extends ChangeNotifier {
     return BigInt.parse(result.replaceFirst('0x', ''), radix: 16);
   }
 
-  Future<void> subscribe(Json plan) async {
+  Future<void> subscribe(Json plan) => _withWalletSigning(() async {
     await assertContext();
     await _noPending('SUBSCRIBE', {'plan_id': plan['plan_id']});
     final amount = uint(plan['total_price']);
@@ -875,7 +969,7 @@ class LiveController extends ChangeNotifier {
       {'plan_id': plan['plan_id']},
     );
     await _refreshAfterSend(sent);
-  }
+  });
 
   Future<Json> eligibility(String id) =>
       _get('/api/v1/subscriptions/$id/eligibility');
@@ -1003,15 +1097,18 @@ class LiveController extends ChangeNotifier {
     }
   }
 
-  Future<({
-    Json qr,
-    Json message,
-    Json sub,
-    Json eligible,
-    BigInt deadline,
-    String? expiredError,
-    String? eligibilityError,
-  })> _inspectQr(String payload) async {
+  Future<
+    ({
+      Json qr,
+      Json message,
+      Json sub,
+      Json eligible,
+      BigInt deadline,
+      String? expiredError,
+      String? eligibilityError,
+    })
+  >
+  _inspectQr(String payload) async {
     await assertContext();
     final qr = parseQr(payload, config!);
     final message = Map<String, dynamic>.from(qr['message'] as Map);
@@ -1092,7 +1189,7 @@ class LiveController extends ChangeNotifier {
     };
   }
 
-  Future<void> confirmQr(String payload) async {
+  Future<void> confirmQr(String payload) => _withWalletSigning(() async {
     final inspected = await _inspectQr(payload);
     if (inspected.expiredError != null) {
       throw StateError(inspected.expiredError!);
@@ -1108,9 +1205,9 @@ class LiveController extends ChangeNotifier {
       {'subscription_id': message['subscriptionId']},
     );
     await _refreshAfterSend(sent);
-  }
+  });
 
-  Future<void> refund(String id) async {
+  Future<void> refund(String id) => _withWalletSigning(() async {
     await assertContext();
     final sub = await detail(id);
     if (address(sub['subscriber_address']) != account)
@@ -1127,7 +1224,7 @@ class LiveController extends ChangeNotifier {
       {'subscription_id': id},
     );
     await _refreshAfterSend(sent);
-  }
+  });
 
   @override
   void dispose() {
