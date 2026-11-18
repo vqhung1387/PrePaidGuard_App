@@ -1,0 +1,320 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:prepaid_guard/real/api.dart';
+import 'package:prepaid_guard/real/controller.dart';
+import 'package:prepaid_guard/real/screen.dart';
+import 'package:prepaid_guard/real/wallet_port.dart';
+import 'real_mode_test.dart' as f;
+
+class _UxTestApi extends f.FakeApi {
+  bool failDraftCreate = false;
+  Json? lastDraftBody;
+  final List<Json> customDrafts = [];
+  Json? subscriptionDetailOverride;
+
+  @override
+  Future<dynamic> request(String method, String path, {Json? body}) async {
+    if (method == 'POST' && path == '/api/v1/plan-drafts') {
+      if (failDraftCreate) {
+        throw ApiFailure(503, 'RPC_UNAVAILABLE', 'Máy chủ tạm bận.');
+      }
+      lastDraftBody = body;
+      final created = {
+        'id': 'draft-1',
+        'client_reference': '0x${'cc' * 32}',
+        'token_address': f.token,
+        'state': 'DRAFT',
+        ...body!,
+        'total_price':
+            (BigInt.parse(body['price_per_period'] as String) *
+                    BigInt.from(body['total_periods'] as int))
+                .toString(),
+      };
+      customDrafts.insert(0, created);
+      return created;
+    }
+    if (path.startsWith('/api/v1/plan-drafts?')) {
+      return {'items': customDrafts, 'next_cursor': null};
+    }
+    if (path == '/api/v1/subscriptions/1' &&
+        subscriptionDetailOverride != null) {
+      return subscriptionDetailOverride!;
+    }
+    return super.request(method, path, body: body);
+  }
+}
+
+Future<void> _tapScroll(WidgetTester tester, Finder finder) async {
+  await tester.scrollUntilVisible(
+    finder,
+    250,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
+  await tester.tap(finder);
+  await tester.pumpAndSettle();
+}
+
+void main() {
+  testWidgets(
+    'Real plan form preserves inputs on error, keeps multiline description, rejects NUL and shows pre-sign summary',
+    (tester) async {
+      tester.view.physicalSize = const Size(1280, 960);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final api = _UxTestApi()
+        ..owner = f.merchant
+        ..merchantProfile = true
+        ..failDraftCreate = true;
+      final wallet = f.FakeWallet()..account = f.merchant;
+      final controller = await f.signedIn(wallet: wallet, api: api);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RealWorkspaceScreen(controller: controller, onDemo: () {}),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _tapScroll(tester, find.text('Tạo / publish gói'));
+      expect(
+        find.text('Tổng khóa trả trước: 100 mUSDC (50 mUSDC/kỳ × 2 kỳ)'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Mở check-in kỳ đầu sau 60 giây'),
+        findsOneWidget,
+      );
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Tên gói'),
+        'Gói Yoga\u0000lỗi',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'USDC mỗi kỳ'),
+        '1.000',
+      );
+      await tester.tap(find.text('Xác nhận'));
+      await tester.pumpAndSettle();
+      expect(find.text('Không được chứa ký tự NUL.'), findsOneWidget);
+      expect(find.textContaining('Không dùng dấu hàng nghìn'), findsOneWidget);
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Tên gói'),
+        'Gói Yoga Chuyên Sâu',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Mô tả'),
+        'Buổi sáng\nBuổi tối',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'USDC mỗi kỳ'),
+        '25',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Số kỳ'),
+        '4',
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Tổng khóa trả trước: 100 mUSDC (25 mUSDC/kỳ × 4 kỳ)'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Xác nhận'));
+      await tester.pumpAndSettle();
+      expect(wallet.transactions, isEmpty);
+
+      // Reopen form after API failure -> inputs are preserved.
+      await _tapScroll(tester, find.text('Tạo / publish gói'));
+      expect(find.text('Gói Yoga Chuyên Sâu'), findsOneWidget);
+      expect(find.text('Buổi sáng\nBuổi tối'), findsOneWidget);
+      expect(find.text('25'), findsOneWidget);
+
+      api.failDraftCreate = false;
+      await tester.tap(find.text('Xác nhận'));
+      await tester.pumpAndSettle();
+      expect(api.lastDraftBody!['description'], 'Buổi sáng\nBuổi tối');
+      expect(api.lastDraftBody!['price_per_period'], '25000000');
+      expect(wallet.transactions.length, 1);
+
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
+    'Draft row displays terms and requires confirmation before wallet tx',
+    (tester) async {
+      tester.view.physicalSize = const Size(1280, 960);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final api = _UxTestApi()
+        ..owner = f.merchant
+        ..merchantProfile = true
+        ..customDrafts.add({
+          'id': 'draft-9',
+          'client_reference': '0x${'dd' * 32}',
+          'token_address': f.token,
+          'title': 'Gói Draft Kiểm Tra',
+          'description': '',
+          'price_per_period': '15000000',
+          'total_periods': 3,
+          'period_duration_seconds': 60,
+          'grace_period_seconds': 180,
+          'total_price': '45000000',
+          'state': 'DRAFT',
+        });
+      final wallet = f.FakeWallet()..account = f.merchant;
+      final controller = await f.signedIn(wallet: wallet, api: api);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RealWorkspaceScreen(controller: controller, onDemo: () {}),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(
+        find.text('Draft: Gói Draft Kiểm Tra'),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Draft: Gói Draft Kiểm Tra'), findsOneWidget);
+      expect(
+        find.textContaining('15 mUSDC/kỳ × 3 kỳ · Tổng 45 mUSDC'),
+        findsOneWidget,
+      );
+
+      await _tapScroll(tester, find.text('Publish draft'));
+      expect(find.text('Publish gói lên chuỗi'), findsOneWidget);
+      expect(
+        find.textContaining('Mỗi kỳ: 15 mUSDC × 3 kỳ = Tổng 45 mUSDC'),
+        findsOneWidget,
+      );
+      expect(wallet.transactions, isEmpty);
+
+      await tester.tap(find.text('Hủy'));
+      await tester.pumpAndSettle();
+      expect(wallet.transactions, isEmpty);
+
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
+    'Registration QR copy avoids check-in 15-min text and import QR previews details before signing',
+    (tester) async {
+      tester.view.physicalSize = const Size(1280, 960);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final fixture =
+          jsonDecode(
+                File('../../shared/check-in.fixture.json').readAsStringSync(),
+              )
+              as Json;
+      final signer = fixture['signer'].toString().toLowerCase();
+      final payload = jsonEncode({
+        'version': 1,
+        'kind': 'PREPAIDGUARD_CHECK_IN',
+        'chainId': 43113,
+        'verifyingContract': f.vault,
+        'message': fixture['message'],
+        'signature': fixture['signature'],
+      });
+
+      final api = _UxTestApi()
+        ..owner = f.merchant
+        ..merchantProfile = true
+        ..subscriptionDetailOverride = {
+          ...f.subscription(signer),
+          'plan_id': '1',
+          'initial_principal': '100000000',
+          'remaining_principal': '100000000',
+          'total_periods': 2,
+          'completed_periods': 0,
+        };
+      final wallet = f.FakeWallet()..account = f.merchant;
+      final controller = LiveController(
+        api: api,
+        wallet: wallet,
+        store: MemoryPendingStore(),
+        nowSeconds: () => int.parse(fixture['message']['deadline']) - 100,
+      );
+      await controller.bootstrap();
+      await controller.login();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RealWorkspaceScreen(controller: controller, onDemo: () {}),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _tapScroll(tester, find.byTooltip('QR đăng ký'));
+      expect(find.text('QR đăng ký gói'), findsOneWidget);
+      expect(
+        find.textContaining('Đây là mã QR đăng ký gói, không phải mã check-in ký số.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('15 phút'), findsNothing);
+      await tester.tap(find.text('Đóng'));
+      await tester.pumpAndSettle();
+
+      // Reject registration link inline in Import Check-in QR.
+      await _tapScroll(tester, find.text('Nhập QR check-in'));
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'QR payload'),
+        'https://prepaidguard-web.onrender.com/?real=1&plan_id=1',
+      );
+      await tester.tap(find.text('Xác nhận'));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Đây là liên kết web / QR đăng ký gói'),
+        findsOneWidget,
+      );
+      expect(wallet.transactions, isEmpty);
+
+      // Valid QR opens pre-sign confirmation showing subscriber, period, and amount.
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'QR payload'),
+        payload,
+      );
+      await tester.tap(find.text('Xác nhận'));
+      await tester.pumpAndSettle();
+      expect(find.text('Giải ngân một kỳ'), findsOneWidget);
+      expect(find.textContaining('Đăng ký #1 (Gói #1)'), findsOneWidget);
+      expect(find.textContaining('Ví hội viên: $signer'), findsOneWidget);
+      expect(find.textContaining('Kỳ giải ngân: Kỳ 1/2 · Nonce 0'), findsOneWidget);
+      expect(
+        find.textContaining('Số tiền giải ngân kỳ này: 50 mUSDC'),
+        findsOneWidget,
+      );
+      expect(wallet.transactions, isEmpty);
+
+      // Cancel preserves QR draft on reopen; confirming sends 1 tx and clears it.
+      await tester.tap(find.text('Hủy'));
+      await tester.pumpAndSettle();
+      expect(wallet.transactions, isEmpty);
+
+      await _tapScroll(tester, find.text('Nhập QR check-in'));
+      expect(find.text(payload), findsOneWidget);
+      await tester.tap(find.text('Xác nhận'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tiếp tục ký ví'));
+      await tester.pumpAndSettle();
+      expect(wallet.transactions.length, 1);
+
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+}

@@ -18,6 +18,27 @@ enum SubscriptionFilter {
   final String? apiValue;
 }
 
+String formatEligibilityReasons(Object? reasons, {bool forRefund = false}) {
+  if (reasons is! List || reasons.isEmpty) {
+    return 'chưa đủ điều kiện';
+  }
+  return reasons
+      .map(
+        (reason) => switch (reason.toString()) {
+          'TOO_EARLY' => 'chưa tới mốc mở kỳ tiếp theo',
+          'REFUND_WINDOW_OPEN' =>
+            'đã qua hạn check-in và chuyển sang khung hoàn gốc',
+          'TERMINAL_STATE' => 'đăng ký đã kết thúc',
+          'READY' =>
+            forRefund
+                ? 'đang trong khung check-in, chưa tới mốc hoàn gốc'
+                : 'đã sẵn sàng',
+          final other => other,
+        },
+      )
+      .join(', ');
+}
+
 class LiveController extends ChangeNotifier {
   LiveController({
     required this.api,
@@ -949,33 +970,132 @@ class LiveController extends ChangeNotifier {
     });
   }
 
-  Future<void> confirmQr(String payload) async {
+  String? validateQrLocally(String? raw) {
+    final value = (raw ?? '').trim();
+    if (value.isEmpty) return 'Dán JSON mã QR check-in của hội viên.';
+    if (value.contains('\u0000')) {
+      return 'Dữ liệu không hợp lệ (chứa ký tự NUL).';
+    }
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      return 'Đây là liên kết web / QR đăng ký gói, không phải mã QR check-in ký số của hội viên.';
+    }
+    if (config == null) return 'Kết nối API trước khi kiểm tra QR.';
+    try {
+      final qr = parseQr(value, config!);
+      final message = qr['message'] as Map<String, dynamic>;
+      if (loggedIn && address(message['merchant']) != account) {
+        return 'QR không dành cho ví cơ sở đang đăng nhập.';
+      }
+      return null;
+    } on FormatException catch (error) {
+      return error.message;
+    } catch (_) {
+      return 'Payload QR không đúng định dạng JSON check-in.';
+    }
+  }
+
+  Future<({
+    Json qr,
+    Json message,
+    Json sub,
+    Json eligible,
+    BigInt deadline,
+    String? expiredError,
+    String? eligibilityError,
+  })> _inspectQr(String payload) async {
     await assertContext();
     final qr = parseQr(payload, config!);
     final message = Map<String, dynamic>.from(qr['message'] as Map);
-    if (address(message['merchant']) != account)
+    if (address(message['merchant']) != account) {
       throw StateError('QR không dành cho ví merchant này.');
+    }
     final deadline = uint(message['deadline']);
     final sub = await detail(message['subscriptionId']);
     final eligible = await eligibility(message['subscriptionId']);
     final chainTime = _chainTime(sub, eligible);
-    if (deadline < BigInt.from(chainTime) ||
-        deadline > BigInt.from(chainTime + 900)) {
-      throw StateError('QR hết hạn hoặc deadline quá xa.');
-    }
-    if (eligible['can_check_in'] != true ||
-        eligible['nonce'] != message['nonce'] ||
-        eligible['next_period_index'] != message['periodIndex']) {
-      throw StateError('QR đã dùng, sai kỳ hoặc chưa đủ điều kiện.');
-    }
     final domain = typedData(config!, message)['domain'] as Json;
     if (recoverCheckIn(domain, message, qr['signature']) !=
-        address(sub['subscriber_address']))
+        address(sub['subscriber_address'])) {
       throw StateError('Chữ ký QR sai subscriber.');
+    }
+    final expiredError =
+        deadline < BigInt.from(chainTime) ||
+            deadline > BigInt.from(chainTime + 900)
+        ? 'QR hết hạn hoặc deadline quá xa.'
+        : null;
+    final eligibilityError =
+        eligible['can_check_in'] != true ||
+            eligible['nonce'] != message['nonce'] ||
+            eligible['next_period_index'] != message['periodIndex']
+        ? 'QR đã dùng, sai kỳ hoặc chưa đủ điều kiện.'
+        : null;
+    return (
+      qr: qr,
+      message: message,
+      sub: sub,
+      eligible: eligible,
+      deadline: deadline,
+      expiredError: expiredError,
+      eligibilityError: eligibilityError,
+    );
+  }
+
+  Future<Json> previewCheckInQr(String payload) async {
+    final inspected = await _inspectQr(payload);
+    final sub = inspected.sub;
+    final message = inspected.message;
+    final planId = sub['plan_id']?.toString();
+    final matchingPlan = plans
+        .where((plan) => plan['plan_id']?.toString() == planId)
+        .firstOrNull;
+    final totalPeriods = sub['total_periods'] is int
+        ? sub['total_periods'] as int
+        : int.tryParse(sub['total_periods']?.toString() ?? '') ?? 1;
+    final initialPrincipal = BigInt.tryParse(
+      sub['initial_principal']?.toString() ?? '',
+    );
+    final releaseAmount =
+        matchingPlan?['price_per_period']?.toString() ??
+        (initialPrincipal != null && totalPeriods > 0
+            ? (initialPrincipal ~/ BigInt.from(totalPeriods)).toString()
+            : null);
+    final warning =
+        inspected.expiredError ??
+        (inspected.eligibilityError == null
+            ? null
+            : '${inspected.eligibilityError} (${formatEligibilityReasons(inspected.eligible['reasons'])})');
+    return {
+      'subscription_id':
+          sub['subscription_id']?.toString() ?? message['subscriptionId'],
+      'plan_id': planId ?? '—',
+      'subscriber_address': sub['subscriber_address'],
+      'period_index': message['periodIndex'],
+      'total_periods': sub['total_periods'] ?? '?',
+      'nonce': message['nonce'],
+      'release_amount': releaseAmount,
+      'remaining_principal': sub['remaining_principal'],
+      'deadline_iso': DateTime.fromMillisecondsSinceEpoch(
+        inspected.deadline.toInt() * 1000,
+        isUtc: true,
+      ).toIso8601String(),
+      'ready': warning == null,
+      'warning': warning,
+    };
+  }
+
+  Future<void> confirmQr(String payload) async {
+    final inspected = await _inspectQr(payload);
+    if (inspected.expiredError != null) {
+      throw StateError(inspected.expiredError!);
+    }
+    if (inspected.eligibilityError != null) {
+      throw StateError(inspected.eligibilityError!);
+    }
+    final message = inspected.message;
     final sent = await _send(
       'CHECK_IN',
       config!['vault_address'],
-      encodeCheckIn(message, qr['signature']),
+      encodeCheckIn(message, inspected.qr['signature']),
       {'subscription_id': message['subscriptionId']},
     );
     await _refreshAfterSend(sent);

@@ -21,6 +21,14 @@ class RealWorkspaceScreen extends StatefulWidget {
 }
 
 class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
+  static const _defaultPlanDraft = <String, String>{
+    'Tên gói': 'Gym demo',
+    'Mô tả': 'Gói thử nghiệm',
+    'USDC mỗi kỳ': '50',
+    'Số kỳ': '2',
+    'Giây mỗi kỳ': '60',
+    'Giây ân hạn': '120',
+  };
   final _apiUrl = TextEditingController(
     text: const String.fromEnvironment(
       'API_BASE_URL',
@@ -31,6 +39,9 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
   Timer? _poll;
   bool _connecting = false;
   int _modalDepth = 0;
+  String _merchantNameDraft = '';
+  late Map<String, String> _planFormDraft = Map.of(_defaultPlanDraft);
+  String _qrPayloadDraft = '';
 
   @override
   void initState() {
@@ -60,6 +71,11 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
   }
 
   void _changed() {
+    if (!(_controller?.loggedIn ?? false)) {
+      _merchantNameDraft = '';
+      _planFormDraft = Map.of(_defaultPlanDraft);
+      _qrPayloadDraft = '';
+    }
     if (mounted) setState(() {});
   }
 
@@ -130,11 +146,19 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
     }
   }
 
+  String? _validateRequiredName(String? raw) {
+    final trimmed = (raw ?? '').trim();
+    if (trimmed.isEmpty) return 'Không được để trống trường này.';
+    if (trimmed.length > 120) return 'Tên tối đa 120 ký tự.';
+    return null;
+  }
+
   Future<Map<String, String>?> _form(
     String title,
     Map<String, String> fields, {
     String? amountField,
-    String? periodsField,
+    Map<String, String? Function(String?)> validators = const {},
+    Widget Function(Map<String, TextEditingController>)? summaryBuilder,
   }) async {
     final formKey = GlobalKey<FormState>();
     final controllers = {
@@ -167,50 +191,32 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
                             helperMaxLines: 2,
                             errorMaxLines: 3,
                           ),
-                          validator: entry.key == amountField
-                              ? validateTokenAmountInput
-                              : null,
-                          maxLines:
-                              entry.key == 'QR payload' ||
-                                  entry.key.startsWith('Raw giao dịch')
-                              ? 6
-                              : 1,
+                          validator: (value) {
+                            if ((value ?? '').contains('\u0000')) {
+                              return 'Không được chứa ký tự NUL.';
+                            }
+                            final custom = validators[entry.key];
+                            if (custom != null) return custom(value);
+                            if (entry.key == amountField) {
+                              return validateTokenAmountInput(value);
+                            }
+                            return null;
+                          },
+                          minLines: entry.key == 'Mô tả'
+                              ? 2
+                              : (entry.key == 'QR payload' ||
+                                        entry.key.startsWith('Raw giao dịch')
+                                    ? 3
+                                    : 1),
+                          maxLines: entry.key == 'Mô tả'
+                              ? 3
+                              : (entry.key == 'QR payload' ||
+                                        entry.key.startsWith('Raw giao dịch')
+                                    ? 6
+                                    : 1),
                         ),
                       ),
-                    if (amountField != null && periodsField != null)
-                      ListenableBuilder(
-                        listenable: Listenable.merge([
-                          controllers[amountField]!,
-                          controllers[periodsField]!,
-                        ]),
-                        builder: (context, child) {
-                          final amount = parseTokenAmount(
-                            controllers[amountField]!.text,
-                          );
-                          final periods = parseWholeNumber(
-                            controllers[periodsField]!.text,
-                            max: 120,
-                          );
-                          if (amount == null) return const SizedBox.shrink();
-                          final unit = formatTokenAmount(amount);
-                          if (periods == null) {
-                            return Padding(
-                              padding: const EdgeInsets.only(top: 6),
-                              child: Text('$unit mUSDC/kỳ'),
-                            );
-                          }
-                          final total = formatTokenAmount(
-                            amount * BigInt.from(periods),
-                          );
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Text(
-                              '$unit mUSDC/kỳ · Tổng $total mUSDC',
-                              style: const TextStyle(color: accent),
-                            ),
-                          );
-                        },
-                      ),
+                    if (summaryBuilder != null) summaryBuilder(controllers),
                   ],
                 ),
               ),
@@ -245,34 +251,119 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
   }
 
   Future<void> _createMerchant() async {
-    final fields = await _form('Tạo hồ sơ cơ sở', {'Tên cơ sở': ''});
-    if (fields != null)
-      await _run(() => _controller!.createMerchant(fields['Tên cơ sở']!));
+    final fields = await _form(
+      'Tạo hồ sơ cơ sở',
+      {'Tên cơ sở': _merchantNameDraft},
+      validators: {'Tên cơ sở': _validateRequiredName},
+    );
+    if (fields == null) return;
+    _merchantNameDraft = fields['Tên cơ sở']!;
+    await _run(() async {
+      await _controller!.createMerchant(_merchantNameDraft);
+      _merchantNameDraft = '';
+    });
   }
 
   Future<void> _createPlan() async {
     const amountField = 'USDC mỗi kỳ';
     const periodsField = 'Số kỳ';
-    final fields = await _form('Tạo gói on-chain', {
-      'Tên gói': 'Gym demo',
-      'Mô tả': 'Gói thử nghiệm',
-      amountField: '50',
-      periodsField: '2',
-      'Giây mỗi kỳ': '60',
-      'Giây ân hạn': '120',
-    }, amountField: amountField, periodsField: periodsField);
+    const durationField = 'Giây mỗi kỳ';
+    const graceField = 'Giây ân hạn';
+    final fields = await _form(
+      'Tạo gói on-chain',
+      _planFormDraft,
+      amountField: amountField,
+      validators: {
+        'Tên gói': _validateRequiredName,
+        'Mô tả': (value) => (value ?? '').length > 2000
+            ? 'Mô tả tối đa 2000 ký tự.'
+            : null,
+        periodsField: (value) => parseWholeNumber(value ?? '', max: 120) == null
+            ? 'Nhập số kỳ nguyên từ 1 đến 120.'
+            : null,
+        durationField: (value) =>
+            parseWholeNumber(value ?? '', max: 315360000) == null
+            ? 'Nhập số giây nguyên dương.'
+            : null,
+        graceField: (value) =>
+            parseWholeNumber(value ?? '', max: 315360000) == null
+            ? 'Nhập số giây nguyên dương.'
+            : null,
+      },
+      summaryBuilder: (controllers) => ListenableBuilder(
+        listenable: Listenable.merge([
+          controllers[amountField]!,
+          controllers[periodsField]!,
+          controllers[durationField]!,
+          controllers[graceField]!,
+        ]),
+        builder: (context, child) {
+          final amount = parseTokenAmount(controllers[amountField]!.text);
+          final periods = parseWholeNumber(
+            controllers[periodsField]!.text,
+            max: 120,
+          );
+          final duration = parseWholeNumber(
+            controllers[durationField]!.text,
+            max: 315360000,
+          );
+          final grace = parseWholeNumber(
+            controllers[graceField]!.text,
+            max: 315360000,
+          );
+          final unit = amount == null ? null : formatTokenAmount(amount);
+          final total = amount != null && periods != null
+              ? formatTokenAmount(amount * BigInt.from(periods))
+              : null;
+          return Container(
+            margin: const EdgeInsets.only(top: 10),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: panelRaised,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: panelOutline),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (total != null && unit != null)
+                  Text(
+                    'Tổng khóa trả trước: $total mUSDC ($unit mUSDC/kỳ × $periods kỳ)',
+                    style: const TextStyle(
+                      color: accent,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  )
+                else if (unit != null)
+                  Text('$unit mUSDC/kỳ', style: const TextStyle(color: accent)),
+                if (duration != null && grace != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Mở check-in kỳ đầu sau $duration giây; mở hoàn gốc chưa dùng sau thêm $grace giây ân hạn.',
+                  ),
+                ],
+                const SizedBox(height: 4),
+                const Text(
+                  'Sau khi publish on-chain không sửa được điều khoản. Ví cơ sở sẽ ký giao dịch createPlan và trả gas.',
+                  style: TextStyle(color: mutedText),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
     if (fields == null) return;
+    _planFormDraft = Map.of(fields);
     await _run(() async {
       final amount = parseTokenAmount(fields[amountField]!);
       final periods = parseWholeNumber(fields[periodsField]!, max: 120);
-      final duration = int.tryParse(fields['Giây mỗi kỳ']!);
-      final grace = int.tryParse(fields['Giây ân hạn']!);
+      final duration = parseWholeNumber(fields[durationField]!, max: 315360000);
+      final grace = parseWholeNumber(fields[graceField]!, max: 315360000);
       if (amount == null ||
           periods == null ||
           duration == null ||
-          duration < 1 ||
           grace == null ||
-          grace < 1 ||
           fields['Tên gói']!.isEmpty) {
         throw const FormatException(
           'Nhập tên, giá và thời lượng dương; số kỳ 1–120.',
@@ -286,6 +377,7 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
         'period_duration_seconds': duration,
         'grace_period_seconds': grace,
       });
+      _planFormDraft = Map.of(_defaultPlanDraft);
     });
   }
 
@@ -295,7 +387,7 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
           context: context,
           builder: (context) => AlertDialog(
             title: Text(title),
-            content: Text(message),
+            content: SingleChildScrollView(child: Text(message)),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
@@ -310,7 +402,12 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
         ),
       ) ??
       false;
-  Future<void> _qr(String title, String payload) async {
+  Future<void> _qr(
+    String title,
+    String payload, {
+    required String note,
+    String copyLabel = 'Sao chép payload',
+  }) async {
     if (!mounted) return;
     await _withModal(
       () => showDialog<void>(
@@ -335,9 +432,7 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
                   const SizedBox(height: 12),
                   SelectionArea(child: Text(payload)),
                   const SizedBox(height: 12),
-                  const Text(
-                    'Mã check-in có hạn 15 phút. Tạo lại mã không thu hồi mã cũ chưa dùng; contract chỉ tiêu thụ nonce một lần.',
-                  ),
+                  Text(note),
                 ],
               ),
             ),
@@ -345,7 +440,7 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
           actions: [
             TextButton(
               onPressed: () => Clipboard.setData(ClipboardData(text: payload)),
-              child: const Text('Sao chép payload'),
+              child: Text(copyLabel),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -359,17 +454,51 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
 
   Future<void> _showQr(Json sub) async => _run(() async {
     final payload = await _controller!.createCheckIn(sub['subscription_id']);
-    await _qr('QR check-in ký số', payload);
+    await _qr(
+      'QR check-in ký số',
+      payload,
+      note:
+          'Mã check-in EIP-712 có hạn 15 phút và chỉ giải ngân đúng 1 kỳ. Tạo lại mã không thu hồi mã cũ chưa dùng; contract chỉ tiêu thụ mỗi nonce một lần.',
+    );
   });
   Future<void> _importQr() async {
-    final fields = await _form('Nhập QR check-in', {'QR payload': ''});
+    final c = _controller!;
+    final fields = await _form(
+      'Nhập QR check-in',
+      {'QR payload': _qrPayloadDraft},
+      validators: {'QR payload': c.validateQrLocally},
+    );
     if (fields == null) return;
-    if (!await _confirm(
-      'Giải ngân một kỳ',
-      'Kiểm tra payload của khách. Sau bước kiểm chứng, ví merchant sẽ yêu cầu ký giao dịch và trả gas.',
-    ))
-      return;
-    await _run(() => _controller!.confirmQr(fields['QR payload']!));
+    _qrPayloadDraft = fields['QR payload']!;
+    Json? preview;
+    await _run(() async {
+      preview = await c.previewCheckInQr(_qrPayloadDraft);
+    });
+    final p = preview;
+    if (p == null || !mounted) return;
+    final amountText = p['release_amount'] != null
+        ? '${_money(p['release_amount'])} mUSDC'
+        : '—';
+    final remainingText = p['remaining_principal'] != null
+        ? '${_money(p['remaining_principal'])} mUSDC'
+        : '—';
+    final warning = p['warning'] as String?;
+    final details = [
+      'Đăng ký #${p['subscription_id']} (Gói #${p['plan_id']})',
+      'Ví hội viên: ${p['subscriber_address']}',
+      'Kỳ giải ngân: Kỳ ${p['period_index']}/${p['total_periods']} · Nonce ${p['nonce']}',
+      'Số tiền giải ngân kỳ này: $amountText (gốc còn giữ: $remainingText)',
+      'Hạn mã QR (UTC): ${p['deadline_iso']}',
+      if (warning != null)
+        'Cảnh báo: $warning'
+      else
+        'Trạng thái: Đủ điều kiện — ví cơ sở sẽ ký giao dịch check-in và trả gas.',
+    ].join('\n');
+    if (!await _confirm('Giải ngân một kỳ', details)) return;
+    await _run(() async {
+      await c.confirmQr(_qrPayloadDraft);
+      _qrPayloadDraft = '';
+    });
   }
 
   Future<void> _showDetail(Json sub) async {
@@ -733,6 +862,9 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
                                                   },
                                                 )
                                                 .toString(),
+                                            note:
+                                                'Liên kết mở gói #${plan['plan_id']} (${plan['title']} · Trả trước ${_money(plan['total_price'])} mUSDC) trên Chain ${c.config!['chain_id']}. Đây là mã QR đăng ký gói, không phải mã check-in ký số.',
+                                            copyLabel: 'Sao chép liên kết',
                                           ),
                                     icon: const Icon(Icons.qr_code),
                                   ),
@@ -817,10 +949,26 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
                     ))
                       ListTile(
                         title: Text('Draft: ${draft['title']}'),
+                        subtitle: draft['price_per_period'] == null
+                            ? null
+                            : Text(
+                                '${_money(draft['price_per_period'])} mUSDC/kỳ × ${draft['total_periods']} kỳ · Tổng ${_money(draft['total_price'])} mUSDC\nKỳ ${draft['period_duration_seconds']} giây · Ân hạn ${draft['grace_period_seconds']} giây',
+                              ),
                         trailing: TextButton(
                           onPressed: busy
                               ? null
-                              : () => _run(() => c.publishDraft(draft)),
+                              : () async {
+                                  final summary =
+                                      draft['price_per_period'] == null
+                                      ? 'Gói: ${draft['title']}\nSau khi publish on-chain không thể sửa điều khoản. Ví cơ sở sẽ ký giao dịch và trả gas.'
+                                      : 'Gói: ${draft['title']}\nMỗi kỳ: ${_money(draft['price_per_period'])} mUSDC × ${draft['total_periods']} kỳ = Tổng ${_money(draft['total_price'])} mUSDC\nThời lượng kỳ: ${draft['period_duration_seconds']} giây · Ân hạn hoàn gốc: ${draft['grace_period_seconds']} giây\n\nSau khi publish on-chain không thể sửa điều khoản. Ví cơ sở sẽ ký giao dịch và trả gas.';
+                                  if (await _confirm(
+                                    'Publish gói lên chuỗi',
+                                    summary,
+                                  )) {
+                                    await _run(() => c.publishDraft(draft));
+                                  }
+                                },
                           child: const Text('Publish draft'),
                         ),
                       ),
@@ -879,15 +1027,39 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
                               onPressed: busy
                                   ? null
                                   : () async {
-                                      final fields = await _form(
-                                        'Đối chiếu giao dịch thay thế đã xác nhận',
-                                        {
-                                          'Hash giao dịch mới': '',
-                                          if (item['sender_nonce'] == null)
+                                        final fields = await _form(
+                                          'Đối chiếu giao dịch thay thế đã xác nhận',
+                                          {
+                                            'Hash giao dịch mới': '',
+                                            if (item['sender_nonce'] == null)
+                                              'Raw giao dịch gốc đã ký (không nhập seed/private key)':
+                                                  '',
+                                          },
+                                          validators: {
+                                            'Hash giao dịch mới': (value) {
+                                              final v = (value ?? '').trim();
+                                              if (!RegExp(
+                                                r'^0x[0-9a-fA-F]{64}$',
+                                              ).hasMatch(v)) {
+                                                return 'Nhập hash giao dịch dạng 0x + 64 ký tự hex.';
+                                              }
+                                              return null;
+                                            },
                                             'Raw giao dịch gốc đã ký (không nhập seed/private key)':
-                                                '',
-                                        },
-                                      );
+                                                (value) {
+                                                  final v = (value ?? '')
+                                                      .trim();
+                                                  if (v.isEmpty) return null;
+                                                  if (v.length > 32770 ||
+                                                      !RegExp(
+                                                        r'^0x(?:[0-9a-fA-F]{2})+$',
+                                                      ).hasMatch(v)) {
+                                                    return 'Chỉ nhập raw giao dịch đã ký dạng 0x; không nhập seed/private key.';
+                                                  }
+                                                  return null;
+                                                },
+                                          },
+                                        );
                                       if (fields != null)
                                         await _run(
                                           () => c.replaceTransaction(
