@@ -211,7 +211,8 @@ class LiveController extends ChangeNotifier {
     if (config == null) throw StateError('Kết nối API trước.');
     final accounts = await wallet.request('eth_requestAccounts') as List;
     if (accounts.isEmpty) throw StateError('Ví chưa cấp tài khoản.');
-    final selected = address(accounts.first);
+    final walletAccount = accounts.first;
+    final selected = address(walletAccount);
     final chain = _chain(await wallet.request('eth_chainId'));
     if (chain != config!['chain_id'])
       throw StateError(
@@ -224,7 +225,7 @@ class LiveController extends ChangeNotifier {
     final message = challenge['message'] as String;
     final signature = await wallet.request('personal_sign', [
       '0x${utf8.encode(message).map((b) => b.toRadixString(16).padLeft(2, '0')).join()}',
-      selected,
+      walletAccount,
     ]);
     final result = await _post('/api/v1/auth/verify', {
       'challenge_id': challenge['challenge_id'],

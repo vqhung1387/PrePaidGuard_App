@@ -37,6 +37,10 @@ String classifyWalletError({
       lower.contains('intrinsic gas too low')) {
     return 'Không đủ AVAX trên mạng thử nghiệm để trả phí gas giao dịch.';
   }
+  if (method == 'personal_sign') {
+    final details = code == null ? '' : ' (mã ví $code)';
+    return 'Ví chưa trả chữ ký đăng nhập$details. Mở tiện ích ví để xem có thông báo lỗi không.';
+  }
   return 'Ví không thực hiện được $method. Kiểm tra ví và giao dịch đang chờ trước khi thử lại.';
 }
 

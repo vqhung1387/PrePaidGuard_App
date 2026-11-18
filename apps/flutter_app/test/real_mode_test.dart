@@ -63,6 +63,7 @@ class FakeWallet extends WalletPort {
   String chain = '0xa869';
   final calls = <String>[];
   final transactions = <Json>[];
+  List<dynamic>? loginSignatureParams;
   final stream = StreamController<void>.broadcast();
   String? typedSignature;
   Completer<dynamic>? sendGate;
@@ -81,6 +82,7 @@ class FakeWallet extends WalletPort {
       case 'eth_chainId':
         return chain;
       case 'personal_sign':
+        loginSignatureParams = params;
         return '0x${'11' * 65}';
       case 'eth_signTypedData_v4':
         return typedSignature!;
@@ -657,6 +659,20 @@ void main() {
     expect(() => uint('-1'), throwsFormatException);
     expect(() => uint((BigInt.one << 256).toString()), throwsFormatException);
   });
+  test('sign-in passes the wallet account to the signer unchanged', () async {
+    const walletAccount = '0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed';
+    final w = FakeWallet()..account = walletAccount;
+    final a = FakeApi()..owner = walletAccount.toLowerCase();
+    final c = await signedIn(wallet: w, api: a);
+    addTearDown(c.dispose);
+
+    expect(w.loginSignatureParams, [
+      '0x7365727665722053495745206d657373616765',
+      walletAccount,
+    ]);
+    expect(c.account, walletAccount.toLowerCase());
+  });
+
   test('wrong network and pinned deployment block login/transaction', () async {
     final w = FakeWallet()..chain = '0x1';
     final c = LiveController(

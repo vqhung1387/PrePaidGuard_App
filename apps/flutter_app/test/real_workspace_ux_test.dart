@@ -445,6 +445,14 @@ void main() {
       contains('Bạn đã từ chối'),
     );
     expect(
+      classifyWalletError(
+        code: -32603,
+        message: 'Internal error with private wallet context',
+        method: 'personal_sign',
+      ),
+      'Ví chưa trả chữ ký đăng nhập (mã ví -32603). Mở tiện ích ví để xem có thông báo lỗi không.',
+    );
+    expect(
       classifyWalletError(code: 4100, method: 'eth_requestAccounts'),
       contains('Ví đang khóa'),
     );
