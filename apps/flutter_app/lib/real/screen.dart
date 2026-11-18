@@ -9,6 +9,7 @@ import '../features/plans/demo_plan.dart';
 import '../shared/widgets/brand_mark.dart';
 import 'api.dart';
 import 'controller.dart';
+import 'escrow_summary_card.dart';
 import 'subscription_details.dart';
 import 'wallet.dart';
 
@@ -970,6 +971,12 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
                 if (logged) ...[
                   _heading('Gói của tôi'),
                   _membershipFilters(c!, merchant: false),
+                  EscrowSummaryCard(
+                    subscriptions: c.memberships,
+                    config: c.config!,
+                    filter: c.membershipFilter,
+                    hasMore: c.membershipsCursor != null,
+                  ),
                   for (final issue in c.issues)
                     Text(
                       'Cảnh báo gói #${issue['subscription_id']}: ${issue['code']} — ${issue['message']}',
@@ -1049,6 +1056,13 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
                       ),
                     _heading('Đăng ký tại cơ sở'),
                     _membershipFilters(c, merchant: true),
+                    EscrowSummaryCard(
+                      subscriptions: c.merchantMemberships,
+                      config: c.config!,
+                      filter: c.merchantMembershipFilter,
+                      hasMore: c.merchantMembershipsCursor != null,
+                      merchant: true,
+                    ),
                     for (final issue in c.merchantIssues)
                       Text(
                         'Cảnh báo gói #${issue['subscription_id']}: ${issue['code']} — ${issue['message']}',

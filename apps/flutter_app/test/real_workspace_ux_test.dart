@@ -9,6 +9,7 @@ import 'package:http/testing.dart';
 import 'package:prepaid_guard/app/prepaid_guard_app.dart';
 import 'package:prepaid_guard/real/api.dart';
 import 'package:prepaid_guard/real/controller.dart';
+import 'package:prepaid_guard/real/escrow_summary_card.dart';
 import 'package:prepaid_guard/real/screen.dart';
 import 'package:prepaid_guard/real/wallet_port.dart';
 import 'real_mode_test.dart' as f;
@@ -552,6 +553,87 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Đã kết nối API'), findsOneWidget);
       expect(find.textContaining('Đã mở gói #1 từ QR đăng ký'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
+    'EscrowSummaryCard computes exact principal sums, cites source/block, and fits 320px at 2.0x scale',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final subs = [
+        {
+          ...f.subscription(f.customer),
+          'subscription_id': '1',
+          'status': 'ACTIVE',
+          'initial_principal': '3000000',
+          'principal_released': '1000000',
+          'remaining_principal': '2000000',
+          'principal_refunded': '0',
+          'refund_available_at': '2026-11-18T12:00:00Z',
+          'sync': {'source': 'PROJECTION', 'block_number': '105'},
+        },
+        {
+          ...f.subscription(f.customer),
+          'subscription_id': '2',
+          'status': 'REFUNDED',
+          'initial_principal': '3000000',
+          'principal_released': '0',
+          'remaining_principal': '0',
+          'principal_refunded': '3000000',
+          'refund_available_at': '2026-11-18T10:00:00Z',
+          'sync': {'source': 'PROJECTION', 'block_number': '112'},
+        },
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (context, widget) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(2.0)),
+            child: widget!,
+          ),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: EscrowSummaryCard(
+                subscriptions: subs,
+                config: f.configuration(),
+                filter: SubscriptionFilter.active,
+                hasMore: true,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Tổng gốc đã khóa'), findsOneWidget);
+      expect(find.text('6 mUSDC'), findsOneWidget);
+      expect(find.text('1 mUSDC'), findsOneWidget);
+      expect(find.text('2 mUSDC'), findsOneWidget);
+      expect(find.text('3 mUSDC'), findsOneWidget);
+      expect(
+        find.textContaining('1 gói đang hoạt động · Mốc hoàn gốc sớm nhất: 2026-11-18T12:00:00Z'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining(
+          'Nguồn dữ liệu: PROJECTION (bản chiếu sự kiện chuỗi) · Block #112',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('2 đăng ký đang hiển thị (Đang sử dụng, còn trang tiếp)'),
+        findsOneWidget,
+      );
 
       await tester.pumpWidget(const SizedBox());
     },
