@@ -33,10 +33,12 @@
   </main>
   <script>
     const startup = document.getElementById('startup');
+    const retry = document.getElementById('startup-retry');
+    retry.href = window.location.href;
     const waitForStartup = setTimeout(() => {
       document.getElementById('startup-status').textContent =
         'Ứng dụng tải lâu hơn dự kiến. Bạn có thể thử tải lại.';
-      document.getElementById('startup-retry').hidden = false;
+      retry.hidden = false;
     }, 12000);
     window.addEventListener('flutter-first-frame', () => {
       clearTimeout(waitForStartup);
