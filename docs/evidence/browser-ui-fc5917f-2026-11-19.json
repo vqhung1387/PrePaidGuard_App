@@ -1,0 +1,87 @@
+{
+  "timestamp_utc": "2026-11-18T17:40:53.462020+00:00",
+  "status": "pass",
+  "steps": [
+    {
+      "name": "merchant SIWE browser login",
+      "status": "pass"
+    },
+    {
+      "name": "browser publish confirmed",
+      "status": "pass",
+      "plan_id": "1"
+    },
+    {
+      "name": "guest can review published terms on mobile before signing in",
+      "status": "pass"
+    },
+    {
+      "name": "subscriber SIWE independent browser login",
+      "status": "pass"
+    },
+    {
+      "name": "business root and legacy demo invite both use real API workspace",
+      "status": "pass"
+    },
+    {
+      "name": "same-origin second tab blocked while wallet prompt is open",
+      "status": "pass"
+    },
+    {
+      "name": "cache failure retains hash; retry emits no duplicate transaction; recovery confirms",
+      "status": "pass",
+      "wallet_transaction_count": 2,
+      "injected_write_failures": 3
+    },
+    {
+      "name": "browser approve and subscribe confirmed",
+      "status": "pass",
+      "subscription_id": "1"
+    },
+    {
+      "name": "browser signs and renders CheckIn QR",
+      "status": "pass",
+      "merchant_clock_skew_seconds": -30,
+      "subscriber_clock_skew_seconds": 30
+    },
+    {
+      "name": "merchant imports signed QR and release confirms",
+      "status": "pass"
+    },
+    {
+      "name": "old QR replay rejected without extra payment",
+      "status": "pass"
+    },
+    {
+      "name": "browser refund confirmed and principal conserved",
+      "status": "pass",
+      "principal_released": "50000000",
+      "principal_refunded": "50000000",
+      "remaining_principal": "0"
+    },
+    {
+      "name": "real account detail displays on-chain principal and labelled yield",
+      "status": "pass"
+    },
+    {
+      "name": "browser reconciles confirmed cancellation without rebroadcasting",
+      "status": "pass"
+    },
+    {
+      "name": "browser retries after cancellation and creates exactly one subscription",
+      "status": "pass"
+    },
+    {
+      "name": "two independent browser contexts exercised",
+      "status": "pass",
+      "merchant_transactions": 2,
+      "subscriber_transactions": 6
+    }
+  ],
+  "scope": "Local EVM31337; test injected EIP1193 provider; no physical wallet/Fuji claims",
+  "fault_injection": {
+    "cache_failure": true,
+    "merchant_clock_skew_seconds": -30,
+    "subscriber_clock_skew_seconds": 30
+  }
+}

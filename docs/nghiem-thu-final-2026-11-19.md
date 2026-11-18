@@ -2,7 +2,15 @@
 
 Web và API đã phát hành mã ứng dụng [`8b4ec38`](https://github.com/vqhung1387/PrePaidGuard_App/commit/8b4ec380cfa65df901f17f677bf000bd40a645c9). Năm workflow CI của mốc này đã qua. Render ghi web `dep-dbut178m7kps73ddh0dg` và API `dep-dbussl6i0phs73bhmm1g` cùng SHA. Khi bàn giao, web, API `/health`, `/ready`, `/api/v1/config` và `/api/v1/plans/1` đều trả HTTP 200. Cấu hình probe trong repo dùng `/health`; `/ready` kiểm PostgreSQL và RPC Fuji. [Web](https://prepaidguard-web.onrender.com/) · [API readiness](https://prepaidguard-api.onrender.com/ready) · [GitHub Actions](https://github.com/vqhung1387/PrePaidGuard_App/actions/runs/44343776881)
 
+## Bản tích hợp UI mới
+
+Nhánh tích hợp đã gộp [`fc5917f`](https://github.com/vqhung1387/PrePaidGuard_App/commit/fc5917f48f1091ae52017c300f9a31d44273a275) vào mốc kiểm thử chung. Bản này tách màn hội viên và cơ sở, mở catalog thật từ trang chủ để khách xem điều khoản trước khi kết nối ví, và chặn ký trùng từ hai tab. Link mời demo cũ mở workspace thật. Git xác nhận mã ứng dụng, API, contract, cấu hình và script kiểm thử sau khi gộp trùng với bản `fc5917f` đã kiểm thử.
+
+Flutter analyze và build Web đạt, 121/121 test Flutter và 16/16 bước Chrome local đạt. Bộ Chrome kiểm khách ở viewport mobile, hai ví riêng, cùng ví trên hai tab, tạo gói, đăng ký, ký QR, giải ngân 50 mUSDC, hoàn 50 mUSDC, từ chối dùng lại QR và phục hồi sau khi hủy giao dịch. [Báo cáo Chrome local](evidence/browser-ui-fc5917f-2026-11-19.json) · [CI Flutter](https://github.com/vqhung1387/PrePaidGuard_App/actions/runs/44360667461) · [CI trình duyệt](https://github.com/vqhung1387/PrePaidGuard_App/actions/runs/44360665046)
+
 ## Kết quả kiểm thử
+
+Các giao dịch Core và lần quét QR trên iPhone thật trong bảng dưới đây thuộc đợt nghiệm thu web `8b4ec38`.
 
 | Môi trường | Kết quả | Bằng chứng |
 | --- | --- | --- |
@@ -15,9 +23,10 @@ Web và API đã phát hành mã ứng dụng [`8b4ec38`](https://github.com/vqh
 
 | Ưu tiên | Đầu mối | Tiêu chí hoàn thành |
 | --- | --- | --- |
-| 1 | UI | Sau khi cảnh báo được xử lý, chạy xuyên suốt bằng hai địa chỉ Core trên web Live. Cơ sở công bố gói có đủ thời gian thao tác. Hội viên đăng ký và ký QR. Cơ sở nhập QR, giải ngân, hội viên hoàn phần còn lại. Lưu receipt và đối chiếu số tiền của hai vai. |
-| 2 | UI | Kiểm lại API khởi động chậm trên Safari iPhone 12 thật. Thử chuyển từ link QR sang trình duyệt ví và ký trên điện thoại. Xác nhận ca dùng hai thiết bị vật lý. |
-| 3 | BE | Kiểm ngày hết hạn PostgreSQL trên Render. Mốc đã ghi nhận là 16/12/2026. Sao lưu và thử khôi phục vào DB riêng trước mốc hết hạn. |
-| 4 | Lead | Rà PR đưa nhánh tích hợp vào `main` sau khi kiểm thử. Kiểm CI và URL bản phát hành sau khi chốt. |
+| 1 | Lead | Xác nhận CI xanh trên SHA tích hợp. Kiểm phiên bản đang Live trên Render và phát hành đúng SHA đã qua CI. Smoke trang chủ, link QR, API và hai màn vai trò trên URL công khai. |
+| 2 | UI | Sau khi cảnh báo Core được xử lý, chạy xuyên suốt bằng hai địa chỉ Core trên web Live. Cơ sở công bố gói có đủ thời gian thao tác. Hội viên đăng ký và ký QR. Cơ sở nhập QR, giải ngân, hội viên hoàn phần còn lại. Lưu receipt và đối chiếu số tiền của hai vai. |
+| 3 | UI | Kiểm lại API khởi động chậm trên Safari iPhone 12 thật. Thử chuyển từ link QR sang trình duyệt ví và ký trên điện thoại. Xác nhận ca dùng hai thiết bị vật lý và hỗ trợ khóa ký của trình duyệt ví. |
+| 4 | BE | Kiểm ngày hết hạn PostgreSQL trên Render. Mốc đã ghi nhận là 16/12/2026. Sao lưu và thử khôi phục vào DB riêng trước mốc hết hạn. |
+| 5 | Lead | Rà PR đưa nhánh tích hợp vào `main` và kiểm lại CI của HEAD sau khi merge. |
 
 MVP dùng Fuji và mUSDC thử nghiệm. Yield trên Fuji đang `DISABLED`. QR đăng ký đã mở bằng camera hệ thống trên iPhone. Nghiệp vụ check-in hiện hỗ trợ nhập payload. Booking, lịch tập và giờ đông vẫn thuộc phần demo.
