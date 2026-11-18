@@ -162,6 +162,7 @@ class _PlanFormState extends State<PlanForm> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _price,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),

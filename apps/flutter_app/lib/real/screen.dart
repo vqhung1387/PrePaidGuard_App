@@ -223,6 +223,9 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 6),
                         child: TextFormField(
                           controller: entry.value,
+                          autovalidateMode: entry.key == amountField
+                              ? AutovalidateMode.onUserInteraction
+                              : AutovalidateMode.disabled,
                           decoration: InputDecoration(
                             labelText: entry.key,
                             helperText:

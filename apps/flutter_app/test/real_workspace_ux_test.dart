@@ -127,6 +127,7 @@ void main() {
         '4',
       );
       await tester.pumpAndSettle();
+      expect(find.textContaining('Không dùng dấu hàng nghìn'), findsNothing);
       expect(
         find.text('Tổng khóa trả trước: 100 mUSDC (25 mUSDC/kỳ × 4 kỳ)'),
         findsOneWidget,

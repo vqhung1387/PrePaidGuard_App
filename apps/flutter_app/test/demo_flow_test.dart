@@ -234,8 +234,12 @@ void main() {
 
     final fields = find.byType(TextFormField);
     await tester.enterText(fields.at(0), 'Gym 3 tháng');
+    await tester.enterText(fields.at(2), '1.000');
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Không dùng dấu hàng nghìn'), findsOneWidget);
     await tester.enterText(fields.at(2), '12,345678');
     await tester.pumpAndSettle();
+    expect(find.textContaining('Không dùng dấu hàng nghìn'), findsNothing);
     expect(find.text('37,037034 USDC thử nghiệm'), findsOneWidget);
 
     await tester.ensureVisible(create);
