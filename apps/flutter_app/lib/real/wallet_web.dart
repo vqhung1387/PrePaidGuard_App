@@ -322,7 +322,7 @@ class BrowserWallet extends WalletPort {
     final provider = _activeProvider();
     if (provider == null) {
       throw StateError(
-        'Không tìm thấy ví EIP-1193. Mở bằng trình duyệt có MetaMask/Core tương thích.',
+        'Trình duyệt này chưa có ví để ký. Xem hướng dẫn dưới nút kết nối ví.',
       );
     }
     _listen(provider);

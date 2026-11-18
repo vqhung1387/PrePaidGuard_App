@@ -864,9 +864,11 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
                             ],
                           ),
                         ],
-                        const Text(
-                          'Giao dịch được ký qua ví trình duyệt tương thích EIP-1193.',
-                          style: TextStyle(color: mutedText),
+                        Text(
+                          connected && c!.wallet.providers.isEmpty
+                              ? 'Bạn vẫn có thể xem các gói. Để ký trên điện thoại, mở trang này trong trình duyệt của MetaMask. Trên máy tính, dùng Chrome có tiện ích Core hoặc MetaMask.'
+                              : 'Ví sẽ yêu cầu bạn xác nhận trước khi ký.',
+                          style: const TextStyle(color: mutedText),
                         ),
                       ],
                     ),
