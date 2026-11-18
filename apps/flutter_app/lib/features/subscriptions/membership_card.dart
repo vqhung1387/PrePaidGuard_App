@@ -74,13 +74,15 @@ class _MembershipSummary extends StatelessWidget {
           style: type.headlineLarge?.copyWith(color: accent),
         ),
         const SizedBox(height: 10),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: LinearProgressIndicator(
-            value: membership.releasedPeriods / plan.periods,
-            minHeight: 8,
-            backgroundColor: panelOutline,
-            semanticsLabel: progress,
+        ExcludeSemantics(
+          // The text below announces progress, keeping the bar decorative.
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: membership.releasedPeriods / plan.periods,
+              minHeight: 8,
+              backgroundColor: panelOutline,
+            ),
           ),
         ),
         const SizedBox(height: 8),

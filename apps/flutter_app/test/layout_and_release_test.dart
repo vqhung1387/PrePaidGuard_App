@@ -17,6 +17,32 @@ import 'package:prepaid_guard/real/screen.dart';
 import 'real_mode_test.dart' as f;
 
 void main() {
+  testWidgets('membership actions have their own accessible labels', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      final workspace = DemoWorkspace();
+      final plan = workspace.samplePlan;
+      workspace.subscribe('subscriber', plan);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MembershipCard(
+              membership: workspace.memberships('subscriber')[plan]!,
+              onRequestCheckIn: () {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel('Check-in kỳ đầu (demo)'), findsOneWidget);
+      expect(find.bySemanticsLabel('Xem từng kỳ giải ngân'), findsOneWidget);
+    } finally {
+      semantics.dispose();
+    }
+  });
+
   test(
     'review: 128 generated release sequences preserve principal and reject stale approval',
     () {
