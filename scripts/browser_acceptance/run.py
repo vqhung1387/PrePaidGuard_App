@@ -89,17 +89,28 @@ def main():
         raise TimeoutError("Acceptance condition was not observed")
 
     def button(page, name):
-        locator = page.get_by_role("button", name=name, exact=True)
-        if locator.count():
-            return locator.first
-        page.mouse.move(1100, 700)
+        target = page.get_by_role("button", name=name, exact=True).first
+        width, height = page.viewport_size["width"], page.viewport_size["height"]
+
+        def in_viewport():
+            box = target.bounding_box(timeout=1000) if target.count() else None
+            return (
+                box is not None
+                and 0 <= box["x"] + box["width"] / 2 < width
+                and 0 <= box["y"] + box["height"] / 2 < height
+            )
+
+        # Flutter can keep an off-screen control in the semantics tree.
+        if in_viewport():
+            return target
+        page.mouse.move(width * 0.75, height * 0.65)
         page.mouse.wheel(0, -20000)
         for _ in range(25):
             page.wait_for_timeout(100)
-            if locator.count():
-                return locator.first
+            if in_viewport():
+                return target
             page.mouse.wheel(0, 600)
-        raise RuntimeError("Button unavailable: " + name)
+        raise RuntimeError("Button not visible in the viewport: " + name)
 
     def click(page, name):
         target = button(page, name)
