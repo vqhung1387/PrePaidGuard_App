@@ -10,7 +10,15 @@ import 'prepaid_guard_theme.dart';
 import 'workspace_home.dart';
 
 class PrepaidGuardApp extends StatefulWidget {
-  const PrepaidGuardApp({super.key});
+  const PrepaidGuardApp({
+    super.key,
+    this.initialUri,
+    this.apiBaseUrl = const String.fromEnvironment('API_BASE_URL'),
+  });
+
+  final Uri? initialUri;
+  final String apiBaseUrl;
+
   @override
   State<PrepaidGuardApp> createState() => _PrepaidGuardAppState();
 }
@@ -18,10 +26,11 @@ class PrepaidGuardApp extends StatefulWidget {
 class _PrepaidGuardAppState extends State<PrepaidGuardApp> {
   final _accounts = DemoAccounts();
   final _workspace = DemoWorkspace();
-  final _fromInvite = isDemoInvite(Uri.base);
-  bool _real =
-      Uri.base.queryParameters['real'] == '1' ||
-      const String.fromEnvironment('API_BASE_URL').isNotEmpty;
+  Uri get _entryUri => widget.initialUri ?? Uri.base;
+  late final bool _fromInvite = isDemoInvite(_entryUri);
+  late bool _real =
+      _entryUri.queryParameters['real'] == '1' ||
+      (!_fromInvite && widget.apiBaseUrl.isNotEmpty);
   String? _email;
 
   @override
@@ -48,7 +57,11 @@ class _PrepaidGuardAppState extends State<PrepaidGuardApp> {
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       theme: prepaidGuardTheme(),
       home: _real
-          ? RealWorkspaceScreen(onDemo: () => setState(() => _real = false))
+          ? RealWorkspaceScreen(
+              initialUri: _entryUri,
+              apiBaseUrl: widget.apiBaseUrl,
+              onDemo: () => setState(() => _real = false),
+            )
           : Stack(
               children: [
                 Positioned.fill(child: demo),

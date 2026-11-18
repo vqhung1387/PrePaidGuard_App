@@ -3,7 +3,7 @@ import 'wallet_port.dart';
 WalletPort createWallet() => UnsupportedWallet();
 PendingStore createPendingStore() => MemoryPendingStore();
 
-class UnsupportedWallet implements WalletPort {
+class UnsupportedWallet extends WalletPort {
   @override
   Stream<void> get changes => const Stream.empty();
   @override

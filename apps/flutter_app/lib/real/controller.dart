@@ -54,9 +54,13 @@ class LiveController extends ChangeNotifier {
   }) : nowSeconds =
            nowSeconds ??
            (() => DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000) {
-    _changes = wallet.changes.listen(
-      (_) => invalidate('Ví hoặc network đã đổi; hãy đăng nhập lại.'),
-    );
+    _changes = wallet.changes.listen((_) {
+      if (loggedIn) {
+        invalidate('Ví hoặc network đã đổi; hãy đăng nhập lại.');
+      } else {
+        _emit();
+      }
+    });
   }
   final ApiPort api;
   final WalletPort wallet;
@@ -512,7 +516,8 @@ class LiveController extends ChangeNotifier {
     try {
       await refresh();
     } catch (error) {
-      item['last_error'] = 'Đã gửi giao dịch; chưa cập nhật được: $error';
+      item['last_error'] =
+          'Đã gửi giao dịch; chưa cập nhật được: ${formatUserError(error)}';
       if (error is ApiFailure &&
           error.status == 401 &&
           pending.contains(item)) {
@@ -630,7 +635,8 @@ class LiveController extends ChangeNotifier {
     try {
       await _track(item, originKey: originKey, generation: generation);
     } catch (error) {
-      item['last_error'] = 'Đã gửi giao dịch; chưa theo dõi được: $error';
+      item['last_error'] =
+          'Đã gửi giao dịch; chưa theo dõi được: ${formatUserError(error)}';
       _persistForOrigin(originKey, item);
       if (error is ApiFailure &&
           error.status == 401 &&
@@ -690,10 +696,10 @@ class LiveController extends ChangeNotifier {
         await _track(item, originKey: key, generation: generation);
       } on ApiFailure catch (error) {
         if (error.status == 401) rethrow;
-        item['last_error'] = error.toString();
+        item['last_error'] = formatUserError(error);
         _persistForOrigin(key, item);
       } catch (error) {
-        item['last_error'] = error.toString();
+        item['last_error'] = formatUserError(error);
         _persistForOrigin(key, item);
       }
     }
@@ -938,7 +944,9 @@ class LiveController extends ChangeNotifier {
       throw StateError('Chỉ subscriber ký mã của mình.');
     final eligible = await eligibility(id);
     if (eligible['can_check_in'] != true)
-      throw StateError('Chưa được check-in: ${eligible['reasons']}');
+      throw StateError(
+        'Chưa được check-in: ${formatEligibilityReasons(eligible['reasons'])}',
+      );
     final message = <String, dynamic>{
       'subscriptionId': id,
       'merchant': sub['merchant_address'],
@@ -1108,7 +1116,9 @@ class LiveController extends ChangeNotifier {
       throw StateError('Chỉ chủ gói được refund.');
     final eligible = await eligibility(id);
     if (eligible['can_refund'] != true)
-      throw StateError('Chưa đủ điều kiện refund: ${eligible['reasons']}');
+      throw StateError(
+        'Chưa đủ điều kiện refund: ${formatEligibilityReasons(eligible['reasons'], forRefund: true)}',
+      );
     final sent = await _send(
       'REFUND',
       config!['vault_address'],

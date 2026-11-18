@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -10,6 +11,17 @@ class ApiFailure implements Exception {
   final String message;
   @override
   String toString() => '$code: $message';
+}
+
+String formatUserError(Object error) {
+  if (error is ApiFailure) return error.message;
+  if (error is StateError) return error.message;
+  if (error is FormatException) return error.message;
+  if (error is ArgumentError) {
+    return error.message?.toString() ?? 'Tham số không hợp lệ.';
+  }
+  final raw = error.toString();
+  return raw.startsWith('Exception: ') ? raw.substring(11) : raw;
 }
 
 abstract class ApiPort {
@@ -44,31 +56,55 @@ class HttpApi implements ApiPort {
   Future<dynamic> request(String method, String path, {Json? body}) async {
     final uri = Uri.parse('${base.origin}$path');
     final request = http.Request(method, uri);
-    request.headers['Content-Type'] = 'application/json';
     if (token != null) request.headers['Authorization'] = 'Bearer $token';
-    if (body != null) request.body = jsonEncode(body);
-    final response = await http.Response.fromStream(
-      await _client.send(request).timeout(const Duration(seconds: 15)),
-    ).timeout(const Duration(seconds: 15));
+    if (body != null) {
+      request.headers['Content-Type'] = 'application/json';
+      request.body = jsonEncode(body);
+    }
+    final http.Response response;
+    try {
+      response = await http.Response.fromStream(
+        await _client.send(request).timeout(const Duration(seconds: 15)),
+      ).timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      throw ApiFailure(
+        0,
+        'NETWORK_TIMEOUT',
+        'API phản hồi quá 15 giây (máy chủ có thể đang khởi động lại). Hãy thử lại sau vài giây.',
+      );
+    } on http.ClientException {
+      throw ApiFailure(
+        0,
+        'NETWORK_ERROR',
+        'Không kết nối được tới API (${base.origin}). Kiểm tra kết nối mạng, URL API hoặc thử lại sau ít phút.',
+      );
+    }
     dynamic value;
     if (response.body.isNotEmpty) {
       try {
         value = jsonDecode(response.body);
       } on FormatException {
-        throw ApiFailure(
-          response.statusCode,
-          'INVALID_RESPONSE',
-          'API không trả JSON hợp lệ.',
-        );
+        final message = response.statusCode >= 500
+            ? 'Máy chủ API đang tạm gián đoạn (HTTP ${response.statusCode}, phản hồi không phải JSON). Hãy thử lại sau ít phút.'
+            : 'API không trả JSON hợp lệ (HTTP ${response.statusCode}). Kiểm tra lại địa chỉ API origin.';
+        throw ApiFailure(response.statusCode, 'INVALID_RESPONSE', message);
       }
     }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final error = value is Map ? value['error'] : null;
-      throw ApiFailure(
-        response.statusCode,
-        error is Map ? error['code']?.toString() ?? 'HTTP_ERROR' : 'HTTP_ERROR',
-        error is Map ? error['message']?.toString() ?? 'API lỗi.' : 'API lỗi.',
-      );
+      final code = error is Map
+          ? error['code']?.toString() ?? 'HTTP_ERROR'
+          : 'HTTP_ERROR';
+      var message = error is Map
+          ? error['message']?.toString() ?? 'API lỗi (HTTP ${response.statusCode}).'
+          : 'API lỗi (HTTP ${response.statusCode}).';
+      if (response.statusCode == 429) {
+        final retryAfter = response.headers['retry-after']?.trim();
+        if (retryAfter != null && retryAfter.isNotEmpty) {
+          message = '$message Hãy thử lại sau $retryAfter giây.';
+        }
+      }
+      throw ApiFailure(response.statusCode, code, message);
     }
     return value;
   }

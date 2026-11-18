@@ -58,7 +58,7 @@ Json eligible() => {
   },
 };
 
-class FakeWallet implements WalletPort {
+class FakeWallet extends WalletPort {
   String account = customer;
   String chain = '0xa869';
   final calls = <String>[];

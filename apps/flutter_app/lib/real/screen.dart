@@ -13,9 +13,25 @@ import 'subscription_details.dart';
 import 'wallet.dart';
 
 class RealWorkspaceScreen extends StatefulWidget {
-  const RealWorkspaceScreen({super.key, required this.onDemo, this.controller});
+  const RealWorkspaceScreen({
+    super.key,
+    required this.onDemo,
+    this.controller,
+    this.initialUri,
+    this.apiBaseUrl,
+    this.apiFactory,
+    this.walletFactory,
+    this.storeFactory,
+  });
+
   final VoidCallback onDemo;
   final LiveController? controller;
+  final Uri? initialUri;
+  final String? apiBaseUrl;
+  final ApiPort Function(String baseUrl)? apiFactory;
+  final WalletPort Function()? walletFactory;
+  final PendingStore Function()? storeFactory;
+
   @override
   State<RealWorkspaceScreen> createState() => _RealWorkspaceScreenState();
 }
@@ -29,11 +45,13 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
     'Giây mỗi kỳ': '60',
     'Giây ân hạn': '120',
   };
-  final _apiUrl = TextEditingController(
-    text: const String.fromEnvironment(
-      'API_BASE_URL',
-      defaultValue: 'http://localhost:8000',
-    ),
+  late final TextEditingController _apiUrl = TextEditingController(
+    text: (widget.apiBaseUrl != null && widget.apiBaseUrl!.isNotEmpty)
+        ? widget.apiBaseUrl!
+        : const String.fromEnvironment(
+            'API_BASE_URL',
+            defaultValue: 'http://localhost:8000',
+          ),
   );
   LiveController? _controller;
   Timer? _poll;
@@ -43,11 +61,22 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
   late Map<String, String> _planFormDraft = Map.of(_defaultPlanDraft);
   String _qrPayloadDraft = '';
 
+  Uri get _entryUri => widget.initialUri ?? Uri.base;
+
   @override
   void initState() {
     super.initState();
     _controller = widget.controller;
     _controller?.addListener(_changed);
+    if (_controller == null &&
+        _entryUri.queryParameters.containsKey('plan_id') &&
+        _apiUrl.text.trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _controller == null && !_connecting) {
+          _connect();
+        }
+      });
+    }
     _poll = Timer.periodic(const Duration(seconds: 8), (_) {
       final c = _controller;
       if (c != null &&
@@ -65,7 +94,7 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
               submitted.any((item) => item['status'] != 'SUBMITTED')) {
             await c.refresh();
           }
-        });
+        }, background: true);
       }
     });
   }
@@ -89,14 +118,16 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
   }
 
   void _showError(Object error) {
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
-    }
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger?.hideCurrentSnackBar();
+    messenger?.showSnackBar(SnackBar(content: Text(formatUserError(error))));
   }
 
-  Future<void> _run(Future<void> Function() action) async {
+  Future<void> _run(
+    Future<void> Function() action, {
+    bool background = false,
+  }) async {
     try {
       final c = _controller;
       if (c == null) {
@@ -104,8 +135,11 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
       } else {
         await c.operation(action);
       }
+      if (!background && mounted) {
+        ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
+      }
     } catch (error) {
-      _showError(error);
+      if (!background) _showError(error);
     }
   }
 
@@ -113,11 +147,12 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
     if (_connecting) return;
     setState(() => _connecting = true);
     try {
-      final api = HttpApi(_apiUrl.text.trim());
+      final base = _apiUrl.text.trim();
+      final api = widget.apiFactory?.call(base) ?? HttpApi(base);
       final c = LiveController(
         api: api,
-        wallet: createWallet(),
-        store: createPendingStore(),
+        wallet: widget.walletFactory?.call() ?? createWallet(),
+        store: widget.storeFactory?.call() ?? createPendingStore(),
       );
       final previous = _controller;
       if (previous?.loggedIn == true) {
@@ -137,8 +172,11 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
       c.addListener(_changed);
       await c.operation(() async {
         await c.bootstrap();
-        await c.openRegistration(Uri.base);
+        await c.openRegistration(_entryUri);
       });
+      if (mounted) {
+        ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
+      }
     } catch (error) {
       _showError(error);
     } finally {
@@ -769,6 +807,37 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
                               ),
                           ],
                         ),
+                        if (connected && !logged && c!.wallet.providers.length > 1) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            'Chọn ví trình duyệt',
+                            style: Theme.of(context).textTheme.labelLarge,
+                          ),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: [
+                              for (final provider in c.wallet.providers)
+                                ChoiceChip(
+                                  label: Text(provider.name),
+                                  selected:
+                                      c.wallet.selectedProviderId ==
+                                      provider.id,
+                                  onSelected:
+                                      busy ||
+                                          c.wallet.selectedProviderId ==
+                                              provider.id
+                                      ? null
+                                      : (_) => setState(
+                                          () => c.wallet.selectProvider(
+                                            provider.id,
+                                          ),
+                                        ),
+                                ),
+                            ],
+                          ),
+                        ],
                         if (busy) ...[
                           const SizedBox(height: 14),
                           const LinearProgressIndicator(),
@@ -849,7 +918,7 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
                                         ? null
                                         : () => _qr(
                                             'QR đăng ký gói',
-                                            Uri.base
+                                            _entryUri
                                                 .replace(
                                                   queryParameters: {
                                                     'real': '1',

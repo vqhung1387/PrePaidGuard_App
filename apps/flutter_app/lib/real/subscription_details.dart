@@ -101,7 +101,7 @@ class _SubscriptionDetailsState extends State<SubscriptionDetails> {
         _cursor = next;
       });
     } catch (error) {
-      if (mounted) setState(() => _error = error.toString());
+      if (mounted) setState(() => _error = formatUserError(error));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
