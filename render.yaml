@@ -7,7 +7,7 @@ services:
     plan: free
     dockerfilePath: ./backend/Dockerfile
     dockerContext: .
-    healthCheckPath: /ready
+    healthCheckPath: /health
     envVars:
       - key: ENVIRONMENT
         value: demo

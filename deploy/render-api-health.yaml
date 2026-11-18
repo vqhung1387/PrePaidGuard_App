@@ -17,4 +17,5 @@ services:
     renderSubdomainPolicy: enabled
     previews:
       generation: "off"
-    healthCheckPath: /ready
+    # Fuji RPC outages must not cause Render to remove a running API from routing.
+    healthCheckPath: /health
