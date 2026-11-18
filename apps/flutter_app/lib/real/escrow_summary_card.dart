@@ -114,9 +114,7 @@ class EscrowSummaryCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                merchant
-                    ? 'Tóm tắt dòng tiền cơ sở (dữ liệu thật)'
-                    : 'Tóm tắt tiền gốc và hoàn tiền (dữ liệu thật)',
+                merchant ? 'Dòng tiền cơ sở' : 'Tiền gốc của bạn',
                 style: theme.textTheme.titleMedium,
               ),
               const SizedBox(height: 12),
@@ -173,11 +171,6 @@ class EscrowSummaryCard extends StatelessWidget {
                     ? '$activeCount gói đang hoạt động${earliestRefundRaw != null ? ' · Mốc hoàn gốc sớm nhất: $earliestRefundRaw' : ''}. Hoàn gốc chỉ mở khi tới mốc của từng gói; không tự giải ngân.'
                     : 'Các đăng ký được cộng ở trên đều đã kết thúc.',
               ),
-              const SizedBox(height: 6),
-              Text(
-                'Nguồn dữ liệu: $sourceText${maxBlock != null ? ' · Block #$maxBlock' : ''} · mUSDC thử nghiệm (Chain ${config['chain_id']}, Yield ${config['yield_mode']})',
-                style: theme.textTheme.bodySmall?.copyWith(color: mutedText),
-              ),
               if (hasMore || filter != SubscriptionFilter.all) ...[
                 const SizedBox(height: 4),
                 Text(
@@ -190,6 +183,19 @@ class EscrowSummaryCard extends StatelessWidget {
                   'Bỏ qua ${subscriptions.length - validCount} đăng ký có dữ liệu tiền gốc thiếu hoặc không khớp.',
                   style: theme.textTheme.bodySmall?.copyWith(color: mutedText),
                 ),
+              ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                title: const Text('Nguồn dữ liệu'),
+                expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Nguồn dữ liệu: $sourceText${maxBlock != null ? ' · Block #$maxBlock' : ''} · mUSDC thử nghiệm (Chain ${config['chain_id']}, Yield ${config['yield_mode']})',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: mutedText,
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),

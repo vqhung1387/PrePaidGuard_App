@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:prepaid_guard/real/api.dart';
 import 'package:prepaid_guard/real/screen.dart';
 import 'package:prepaid_guard/app/prepaid_guard_app.dart';
-import 'package:prepaid_guard/features/auth/demo_accounts.dart';
 import 'real_mode_test.dart' as f;
 
 Json membership(String mode) => {
@@ -66,10 +65,10 @@ void main() {
         final controller = await f.signedIn(api: DetailApi(mode));
         controller.memberships = [membership(mode)];
         await tester.pumpWidget(
-          MaterialApp(
-            home: RealWorkspaceScreen(controller: controller, onDemo: () {}),
-          ),
+          MaterialApp(home: RealWorkspaceScreen(controller: controller)),
         );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Gói của tôi'));
         await tester.pumpAndSettle();
         await tester.scrollUntilVisible(
           find.text('Chi tiết / lịch sử'),
@@ -120,25 +119,22 @@ void main() {
     );
   }
 
-  testWidgets('signed-in demo has a clear route to the real wallet workspace', (
+  testWidgets('business entry never offers a demo login or switch', (
     tester,
   ) async {
-    await tester.pumpWidget(const PrepaidGuardApp());
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.byKey(const ValueKey('auth-email')),
-      DemoAccounts.exampleEmail,
-    );
-    await tester.enterText(
-      find.byKey(const ValueKey('auth-password')),
-      DemoAccounts.examplePassword,
-    );
-    await tester.tap(find.widgetWithText(FilledButton, 'Đăng nhập'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Mở tài khoản ví và dữ liệu thật'));
-    await tester.pumpAndSettle();
-    expect(find.text('Kết nối API và ví'), findsOneWidget);
-    expect(tester.takeException(), isNull);
+    for (final route in ['/', '/?demo=1', '/?real=0&invite=gym-khoi-dong']) {
+      await tester.pumpWidget(
+        PrepaidGuardApp(
+          initialUri: Uri.parse('https://prepaidguard-web.onrender.com$route'),
+          apiBaseUrl: '',
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Khám phá gói dịch vụ'), findsOneWidget);
+      expect(find.byKey(const ValueKey('auth-email')), findsNothing);
+      expect(find.text('Về demo'), findsNothing);
+      expect(tester.takeException(), isNull);
+    }
     await tester.pumpWidget(const SizedBox());
   });
 }
