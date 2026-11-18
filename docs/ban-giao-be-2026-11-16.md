@@ -1,5 +1,7 @@
 # Bàn giao BE — 16/11/2026
 
+**Chuyển sang kiểm thử toàn app:** dùng [bàn giao Antigravity ngày18/11](ban-giao-antigravity-kiem-thu-app-2026-11-18.md) để kiểm UI/ví/hành trình sử dụng thực tế, gồm quan sát API timeout/502 mới cần xác minh. Các kết quả BE dưới đây không thay nghiệm thu người dùng toàn app.
+
 **Rà sâu tiếp sau nghiệm thu:** [bốn lỗi đã tái hiện và bản sửa](be-audit-2026-11-16.md), gồm scanner RPC, reset pending/replacement, text NUL và chia test EVM. 98 test BE local đạt; commit sửa `5f2528a` có 5/5 CI xanh, API đã Live và kiểm 24 ca HTTPS/browser sau deploy đạt. Không lấy fault injection local làm bằng chứng đã giả lập lỗi/reorg trên Fuji.
 
 **Cập nhật mới nhất:** [Fuji/API và bằng chứng](fuji-deployment-2026-11-16.md), [web HTTPS đã phát hành](web-release-2026-11-16.md). API `/ready`200, luồng tiền Fuji PASS; AUTH/SIWE/CORS đã pin `https://prepaidguard-web.onrender.com`. Bảng BE dưới đây là trạng thái hiện tại. Các ghi chép thiếu gas/deploy ở mục lịch sử cuối tài liệu không còn là việc đang chờ.
