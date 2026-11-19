@@ -37,7 +37,7 @@ class AccentIcon extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: const Color(0xff173c50),
+        color: panelRaised,
         borderRadius: BorderRadius.circular(12),
       ),
       alignment: Alignment.center,

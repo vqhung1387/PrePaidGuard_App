@@ -319,7 +319,7 @@ class LiveController extends ChangeNotifier {
       }
     } catch (_) {
       notice =
-          'Không đọc được pending cache. Kiểm tra lịch sử ví/explorer trước khi gửi lại.';
+          'Chưa đọc được giao dịch đang chờ trên thiết bị. Kiểm tra lịch sử trong ví trước khi gửi lại.';
     }
   }
 
@@ -968,10 +968,13 @@ class LiveController extends ChangeNotifier {
         {'amount': amount.toString()},
       );
       if (approval['status'] == 'REVERTED') {
-        throw StateError('Approve đã revert; kiểm tra ví và token.');
+        throw StateError(
+          'Yêu cầu cấp quyền dùng mUSDC đã thất bại. Kiểm tra trạng thái trong ví trước khi thử lại.',
+        );
       }
       if (approval['status'] != 'CONFIRMED') {
-        notice = 'Approve đang chờ. Refresh, rồi bấm đăng ký khi đã confirmed.';
+        notice =
+            'Đang chờ ví xác nhận quyền sử dụng mUSDC. Khi mục Giao dịch hiển thị đã xác nhận, bạn có thể tiếp tục đăng ký gói.';
         return;
       }
     }

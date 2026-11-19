@@ -9,6 +9,7 @@ import '../features/plans/demo_plan.dart';
 import '../shared/widgets/brand_mark.dart';
 import 'api.dart';
 import 'controller.dart';
+import 'plan_cashflow_preview.dart';
 import 'escrow_summary_card.dart';
 import 'subscription_details.dart';
 import 'wallet.dart';
@@ -76,6 +77,7 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
     if (_section != section) setState(() => _section = section);
   }
 
+  String? _planStateFilter;
   String _merchantNameDraft = '';
   late Map<String, String> _planFormDraft = Map.of(_defaultPlanDraft);
   String _qrPayloadDraft = '';
@@ -121,6 +123,7 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
 
   void _changed() {
     if (!(_controller?.loggedIn ?? false)) {
+      _planStateFilter = null;
       _merchantNameDraft = '';
       _planFormDraft = Map.of(_defaultPlanDraft);
       _qrPayloadDraft = '';
@@ -736,13 +739,26 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
     );
   }
 
+  Future<void> _reviewDraft(LiveController c, Json draft) async {
+    final terms = [
+      'Gói: ${draft['title']}',
+      if (draft['price_per_period'] != null) ...[
+        'Mỗi kỳ: ${_money(draft['price_per_period'])} mUSDC × ${draft['total_periods']} kỳ = Tổng ${_money(draft['total_price'])} mUSDC',
+        'Thời lượng kỳ: ${_duration(draft['period_duration_seconds'])} · Ân hạn hoàn gốc: ${_duration(draft['grace_period_seconds'])}',
+      ],
+      'Sau khi công bố, điều khoản của gói được cố định. Ví cơ sở xác nhận giao dịch và trả phí mạng.',
+    ];
+    final account = c.account;
+    if (await _confirm('Kiểm tra và công bố gói', terms.join('\n\n')) &&
+        mounted &&
+        _controller == c &&
+        c.account == account) {
+      await _run(() => c.publishDraft(draft));
+    }
+  }
+
   List<Widget> _businessSection(LiveController c, bool busy) => [
-    _sectionHeader(
-      c.isMerchant ? 'Vận hành cơ sở' : 'Cơ sở của bạn',
-      description: c.isMerchant
-          ? 'Công bố gói, xác nhận check-in và theo dõi khoản giải ngân.'
-          : null,
-    ),
+    if (!c.isMerchant) _sectionHeader('Cơ sở của bạn'),
     if (!c.isMerchant)
       _emptyState(
         Icons.business_outlined,
@@ -754,77 +770,130 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
         ),
       ),
     if (c.isMerchant) ...[
-      Card(
-        color: panelRaised,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Tiếp nhận hội viên',
-                style: Theme.of(context).textTheme.titleLarge,
+      _serviceBanner(
+        title: 'Vận hành cơ sở',
+        description:
+            'Tiếp nhận hội viên, xác nhận lượt sử dụng và theo dõi các khoản thanh toán theo kỳ.',
+        image: 'assets/gym-referral.jpg',
+        action: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: accent,
               ),
-              const SizedBox(height: 6),
-              const Text(
-                'Dán mã QR hội viên gửi để kiểm tra kỳ và số tiền trước khi xác nhận.',
-                style: TextStyle(color: mutedText),
+              onPressed: busy ? null : _importQr,
+              icon: const Icon(Icons.qr_code_scanner),
+              label: const Text('Nhập QR check-in'),
+            ),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                side: const BorderSide(color: Color(0xffa9c8b9)),
               ),
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 10,
-                runSpacing: 8,
-                children: [
-                  FilledButton.icon(
-                    onPressed: busy ? null : _importQr,
-                    icon: const Icon(Icons.qr_code_scanner),
-                    label: const Text('Nhập QR check-in'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: busy ? null : _createPlan,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Tạo gói dịch vụ'),
-                  ),
-                ],
-              ),
-            ],
-          ),
+              onPressed: busy ? null : _createPlan,
+              icon: const Icon(Icons.add),
+              label: const Text('Tạo gói dịch vụ'),
+            ),
+          ],
         ),
       ),
       _heading('Gói của cơ sở'),
+      if (c.drafts.isNotEmpty || _planStateFilter != null)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              for (final (state, label) in <(String?, String)>[
+                (null, 'Tất cả gói'),
+                ('DRAFT', 'Bản nháp'),
+                ('PUBLISHED', 'Đã công bố'),
+              ])
+                ChoiceChip(
+                  label: Text(label),
+                  selected: _planStateFilter == state,
+                  onSelected: (_) => setState(() => _planStateFilter = state),
+                ),
+            ],
+          ),
+        ),
       if (c.drafts.isEmpty)
         const Text(
           'Gói đã lưu và gói đã công bố sẽ xuất hiện ở đây.',
           style: TextStyle(color: mutedText),
+        )
+      else if (_planStateFilter != null &&
+          !c.drafts.any((item) => item['state'] == _planStateFilter))
+        Text(
+          c.draftsCursor != null
+              ? 'Chưa có gói khớp trong phần đã tải.'
+              : 'Chưa có gói ở trạng thái đã chọn.',
+          style: const TextStyle(color: mutedText),
         ),
-      for (final plan in c.drafts.where((plan) => plan['state'] == 'PUBLISHED'))
-        ListTile(
-          leading: const Icon(Icons.storefront_outlined, color: accent),
-          title: Text(_planName(plan)),
-          subtitle: Text(
-            'Đã công bố · ${_money(plan['total_price'])} mUSDC trả trước',
-          ),
-        ),
-      for (final draft in c.drafts.where((d) => d['state'] == 'DRAFT'))
-        ListTile(
-          title: Text('Bản nháp: ${draft['title']}'),
-          subtitle: draft['price_per_period'] == null
-              ? null
-              : Text(
-                  '${_money(draft['price_per_period'])} mUSDC/kỳ × ${draft['total_periods']} kỳ · Tổng ${_money(draft['total_price'])} mUSDC\nKỳ ${draft['period_duration_seconds']} giây · Ân hạn ${draft['grace_period_seconds']} giây',
-                ),
-          trailing: TextButton(
-            onPressed: busy
-                ? null
-                : () async {
-                    final summary = draft['price_per_period'] == null
-                        ? 'Gói: ${draft['title']}\nSau khi công bố, điều khoản của gói được cố định. Ví cơ sở xác nhận giao dịch và trả phí mạng.'
-                        : 'Gói: ${draft['title']}\nMỗi kỳ: ${_money(draft['price_per_period'])} mUSDC × ${draft['total_periods']} kỳ = Tổng ${_money(draft['total_price'])} mUSDC\nThời lượng kỳ: ${draft['period_duration_seconds']} giây · Ân hạn hoàn gốc: ${draft['grace_period_seconds']} giây\n\nSau khi công bố, điều khoản của gói được cố định. Ví cơ sở xác nhận giao dịch và trả phí mạng.';
-                    if (await _confirm('Kiểm tra và công bố gói', summary)) {
-                      await _run(() => c.publishDraft(draft));
-                    }
-                  },
-            child: const Text('Công bố bản nháp'),
+      for (final draft in c.drafts.where(
+        (item) => _planStateFilter == null || item['state'] == _planStateFilter,
+      ))
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      AccentIcon(
+                        draft['state'] == 'DRAFT'
+                            ? Icons.edit_note
+                            : Icons.storefront_outlined,
+                        size: 38,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          draft['state'] == 'DRAFT'
+                              ? 'Bản nháp: ${draft['title']}'
+                              : _planName(draft),
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (draft['price_per_period'] != null) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      '${_money(draft['price_per_period'])} mUSDC/kỳ × ${draft['total_periods']} kỳ · Tổng ${_money(draft['total_price'])} mUSDC',
+                    ),
+                    Text(
+                      'Mỗi kỳ ${_duration(draft['period_duration_seconds'])} · Ân hạn ${_duration(draft['grace_period_seconds'])}',
+                      style: const TextStyle(color: mutedText),
+                    ),
+                  ],
+                  if (draft['state'] == 'DRAFT')
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: busy ? null : () => _reviewDraft(c, draft),
+                        icon: const Icon(Icons.publish_outlined),
+                        label: const Text('Công bố bản nháp'),
+                      ),
+                    )
+                  else if (draft['state'] == 'PUBLISHED')
+                    const Padding(
+                      padding: EdgeInsets.only(top: 8),
+                      child: Text(
+                        'Đang mở đăng ký',
+                        style: TextStyle(color: accent),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
       if (c.draftsCursor != null)
@@ -845,7 +914,7 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
       for (final issue in c.merchantIssues)
         Text(
           'Cảnh báo gói #${issue['subscription_id']}: ${issue['code']} — ${issue['message']}',
-          style: const TextStyle(color: Colors.orange),
+          style: const TextStyle(color: Color(0xff895008)),
         ),
       for (final sub in c.merchantMemberships)
         _subscription(sub, merchant: true),
@@ -907,7 +976,7 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
         : name;
   }
 
-  Future<void> _login(LiveController c) async {
+  Future<bool> _login(LiveController c) async {
     final providers = c.wallet.providers;
     if (providers.length > 1) {
       final selected = await _withModal(
@@ -925,10 +994,15 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
           ),
         ),
       );
-      if (selected == null || !mounted || _controller != c) return;
+      if (selected == null || !mounted || _controller != c) return false;
       c.wallet.selectProvider(selected);
     }
-    await _run(c.login);
+    var completed = false;
+    await _run(() async {
+      await c.login();
+      completed = true;
+    });
+    return completed && c.loggedIn;
   }
 
   Future<void> _accountDetails(LiveController c) => _withModal(
@@ -1021,64 +1095,99 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
     ),
   );
 
-  Widget _catalogHero() => LayoutBuilder(
+  Widget _serviceBanner({
+    required String title,
+    required String description,
+    required String image,
+    Widget? action,
+  }) => LayoutBuilder(
     builder: (context, constraints) {
       final wide = constraints.maxWidth >= 680;
       return ClipRRect(
         borderRadius: BorderRadius.circular(22),
-        child: Stack(
-          children: [
-            if (wide)
+        child: SizedBox(
+          width: double.infinity,
+          child: Stack(
+            children: [
               Positioned.fill(
-                child: Image.asset(
-                  'assets/gym-hero.jpg',
-                  fit: BoxFit.cover,
-                  alignment: Alignment.centerRight,
-                  excludeFromSemantics: true,
-                ),
-              ),
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: wide ? null : panelRaised,
-                  gradient: wide
-                      ? const LinearGradient(
-                          colors: [
-                            Color(0xff102436),
-                            Color(0xf2102436),
-                            Color(0x40102436),
-                          ],
-                          stops: [0, .49, 1],
-                        )
-                      : null,
-                ),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.all(wide ? 36 : 22),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 510),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const AccentIcon(Icons.shield_outlined),
-                    const SizedBox(height: 14),
-                    Text(
-                      'Khám phá gói dịch vụ',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.headlineLarge?.copyWith(color: brightText),
+                child: ColoredBox(
+                  color: const Color(0xff123b30),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: FractionallySizedBox(
+                      widthFactor: wide ? .56 : 1,
+                      heightFactor: 1,
+                      child: Image.asset(
+                        image,
+                        fit: BoxFit.cover,
+                        alignment: const Alignment(.35, -.15),
+                        excludeFromSemantics: true,
+                      ),
                     ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      'Xem giá trả trước, thời hạn và điều kiện hoàn gốc trước khi đăng ký. Cơ sở nhận tiền theo từng kỳ đã xác nhận sử dụng.',
-                      style: TextStyle(color: Color(0xffc4d3e1), height: 1.5),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ],
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xff123b30),
+                        wide
+                            ? const Color(0xff123b30)
+                            : const Color(0xe6123b30),
+                        wide
+                            ? const Color(0x06123b30)
+                            : const Color(0x99123b30),
+                      ],
+                      stops: [0, wide ? .43 : .30, 1],
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: wide ? 42 : 22,
+                  vertical: wide ? 37 : 26,
+                ),
+                child: SizedBox(
+                  width: wide ? constraints.maxWidth * .45 : double.infinity,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 4,
+                        color: const Color(0xffc4e493),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.headlineLarge
+                            ?.copyWith(
+                              color: Colors.white,
+                              height: 1.12,
+                              fontSize: wide ? 42 : 31,
+                            ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        description,
+                        style: const TextStyle(
+                          color: Color(0xfff0f5ee),
+                          height: 1.5,
+                        ),
+                      ),
+                      if (action != null) ...[
+                        const SizedBox(height: 16),
+                        action,
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     },
@@ -1090,130 +1199,328 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
     final location = (plan['merchant'] as Map?)?['location_text']
         ?.toString()
         .trim();
-    final terms = <String>[
-      _providerName(plan),
-      if (location != null && location.isNotEmpty) location,
-      if ((plan['description']?.toString().trim() ?? '').isNotEmpty)
-        plan['description'].toString().trim(),
-      'Tổng trả trước: ${_money(plan['total_price'])} mUSDC',
-      'Mỗi kỳ: ${_money(plan['price_per_period'])} mUSDC · ${plan['total_periods']} kỳ',
-      'Mỗi kỳ kéo dài ${_duration(plan['period_duration_seconds'])}. Kỳ đầu mở sau thời lượng này kể từ lúc đăng ký.',
-      'Cơ sở nhận tiền sau khi xác nhận bạn đã sử dụng dịch vụ. Bạn có thể yêu cầu hoàn phần gốc chưa dùng khi kết thúc ${_duration(plan['grace_period_seconds'])} ân hạn của kỳ tiếp theo.',
-      'Thanh toán bằng mUSDC thử nghiệm. Ví có thể yêu cầu cấp quyền sử dụng token trước khi ký đăng ký.',
-    ];
-    final confirmed = await _confirm(
-      'Đăng ký ${_planName(plan)}',
-      terms.join('\n\n'),
-      confirmLabel: logged ? 'Tiếp tục ký ví' : 'Kết nối ví để đăng ký',
-    );
+    final description = plan['description']?.toString().trim() ?? '';
+    final confirmed =
+        await _withModal<bool?>(
+          () => showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              scrollable: true,
+              title: Text('Đăng ký ${_planName(plan)}'),
+              content: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _providerName(plan),
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    if (location != null && location.isNotEmpty) Text(location),
+                    if (description.isNotEmpty)
+                      Text(
+                        description,
+                        style: const TextStyle(color: mutedText),
+                      ),
+                    const SizedBox(height: 16),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: panelRaised,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Tổng trả trước: ${_money(plan['total_price'])} mUSDC',
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Mỗi kỳ: ${_money(plan['price_per_period'])} mUSDC · ${plan['total_periods']} kỳ',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Lịch thanh toán',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    Text(
+                      'Mỗi kỳ kéo dài ${_duration(plan['period_duration_seconds'])}. Kỳ đầu mở sau thời lượng này kể từ lúc đăng ký. Cơ sở nhận tiền sau khi xác nhận bạn đã sử dụng dịch vụ.',
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Điều kiện hoàn tiền',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    Text(
+                      'Bạn có thể yêu cầu hoàn phần gốc chưa dùng khi kết thúc ${_duration(plan['grace_period_seconds'])} ân hạn của kỳ tiếp theo.',
+                    ),
+                    const Divider(height: 26),
+                    const Text(
+                      'Thanh toán bằng mUSDC thử nghiệm. Ví có thể yêu cầu cấp quyền sử dụng token trước khi ký đăng ký.',
+                      style: TextStyle(color: mutedText),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Hủy'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: Text(
+                    logged ? 'Tiếp tục ký ví' : 'Kết nối ví để đăng ký',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ) ??
+        false;
     if (!confirmed || !mounted || _controller != c || c.account != account) {
       return;
     }
     if (logged) {
       await _run(() => c.subscribe(plan));
-    } else {
-      await _login(c);
+    } else if (await _login(c) &&
+        mounted &&
+        _controller == c &&
+        _section == _Section.catalog) {
+      final refreshed = c.plans
+          .where((item) => item['plan_id'] == plan['plan_id'])
+          .firstOrNull;
+      if (refreshed == null) {
+        _showError(
+          StateError(
+            'Gói vừa chọn chưa có trong danh mục mới. Hãy mở lại gói trước khi đăng ký.',
+          ),
+        );
+      } else {
+        await _reviewPlan(c, refreshed);
+      }
     }
   }
 
   Widget _planCard(LiveController c, Json plan, bool busy) {
     final theme = Theme.of(context);
     final description = plan['description']?.toString().trim() ?? '';
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(22),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                const AccentIcon(Icons.storefront_outlined, size: 34),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    _providerName(plan),
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: mutedText,
-                    ),
-                  ),
+    final overview = Padding(
+      padding: const EdgeInsets.all(22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const AccentIcon(Icons.storefront_outlined, size: 34),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _providerName(plan),
+                  style: theme.textTheme.bodyMedium?.copyWith(color: mutedText),
                 ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Text(_planName(plan), style: theme.textTheme.titleLarge),
-            if (description.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                description,
-                style: const TextStyle(color: mutedText),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Divider(height: 1),
-            ),
-            const Text('Tổng trả trước', style: TextStyle(color: mutedText)),
-            const SizedBox(height: 4),
+          ),
+          const SizedBox(height: 14),
+          Text(_planName(plan), style: theme.textTheme.titleLarge),
+          if (description.isNotEmpty) ...[
+            const SizedBox(height: 6),
             Text(
-              '${_money(plan['total_price'])} mUSDC',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                color: accent,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${_money(plan['price_per_period'])} mUSDC/kỳ  ·  ${plan['total_periods']} kỳ',
-            ),
-            Text(
-              '${_duration(plan['period_duration_seconds'])}/kỳ  ·  Ân hạn ${_duration(plan['grace_period_seconds'])}',
+              description,
               style: const TextStyle(color: mutedText),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton(
-                    onPressed: busy ? null : () => _reviewPlan(c, plan),
-                    child: Text(c.loggedIn ? 'Đăng ký' : 'Xem gói'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton.outlined(
-                  tooltip: 'QR đăng ký',
-                  onPressed: busy
-                      ? null
-                      : () => _qr(
-                          'QR đăng ký gói',
-                          _entryUri
-                              .replace(
-                                queryParameters: {
-                                  'plan_id': plan['plan_id'].toString(),
-                                  'chain_id': c.config!['chain_id'].toString(),
-                                  'vault': c.config!['vault_address']
-                                      .toString(),
-                                },
-                                fragment: '',
-                              )
-                              .toString(),
-                          note:
-                              'Chia sẻ gói ${_planName(plan)} để khách xem điều khoản và đăng ký.',
-                          copyLabel: 'Sao chép liên kết',
-                        ),
-                  icon: const Icon(Icons.qr_code),
-                ),
-              ],
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
-        ),
+          const SizedBox(height: 14),
+          Text(
+            '${plan['total_periods']} kỳ  ·  ${_duration(plan['period_duration_seconds'])}/kỳ',
+            style: theme.textTheme.titleSmall,
+          ),
+        ],
+      ),
+    );
+    final pricing = Padding(
+      padding: const EdgeInsets.fromLTRB(22, 0, 22, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Divider(height: 16),
+          const Text('Tổng trả trước', style: TextStyle(color: mutedText)),
+          Text(
+            '${_money(plan['total_price'])} mUSDC',
+            style: theme.textTheme.headlineMedium?.copyWith(color: accent),
+          ),
+          Text(
+            '${_money(plan['price_per_period'])} mUSDC/kỳ · Ân hạn ${_duration(plan['grace_period_seconds'])}',
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton(
+                  onPressed: busy ? null : () => _reviewPlan(c, plan),
+                  child: Text(c.loggedIn ? 'Đăng ký' : 'Xem gói'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.outlined(
+                tooltip: 'QR đăng ký',
+                onPressed: busy
+                    ? null
+                    : () => _qr(
+                        'QR đăng ký gói',
+                        _entryUri
+                            .replace(
+                              queryParameters: {
+                                'plan_id': plan['plan_id'].toString(),
+                                'chain_id': c.config!['chain_id'].toString(),
+                                'vault': c.config!['vault_address'].toString(),
+                              },
+                              fragment: '',
+                            )
+                            .toString(),
+                        note:
+                            'Chia sẻ gói ${_planName(plan)} để khách xem điều khoản và đăng ký.',
+                        copyLabel: 'Sao chép liên kết',
+                      ),
+                icon: const Icon(Icons.qr_code),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    final info = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [overview, pricing],
+    );
+    final count = int.tryParse(plan['total_periods'].toString());
+    final unit = BigInt.tryParse(plan['price_per_period'].toString());
+    final total = BigInt.tryParse(plan['total_price'].toString());
+    final preview =
+        count != null &&
+            count > 0 &&
+            unit != null &&
+            unit > BigInt.zero &&
+            total == unit * BigInt.from(count)
+        ? PlanCashflowPreview(
+            key: ValueKey(plan['plan_id']),
+            periods: count,
+            unit: unit,
+          )
+        : null;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: LayoutBuilder(
+        builder: (context, box) {
+          if (preview == null) return info;
+          if (box.maxWidth >= 720) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(child: info),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 16, 16, 16),
+                    child: preview,
+                  ),
+                ),
+              ],
+            );
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              info,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                child: preview,
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
+  Widget _catalogCover() => LayoutBuilder(
+    builder: (context, box) {
+      final wide = box.maxWidth >= 700;
+      final copy = Padding(
+        padding: EdgeInsets.all(wide ? 32 : 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Khám phá gói dịch vụ',
+              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                color: const Color(0xff163e32),
+                fontSize: wide ? 46 : 32,
+                height: 1.05,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Chọn gói dài hạn và xem tiền trả trước được phân bổ ra sao sau mỗi lần xác nhận sử dụng.',
+              style: TextStyle(color: mutedText, fontSize: 16, height: 1.4),
+            ),
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              onPressed: () => _openSection(_Section.memberships),
+              icon: const Icon(Icons.confirmation_number_outlined, size: 18),
+              label: const Text('Mở gói của tôi'),
+            ),
+          ],
+        ),
+      );
+      final photo = Image.asset(
+        'assets/gym-referral.jpg',
+        fit: BoxFit.cover,
+        alignment: Alignment(0, wide ? -.45 : -.8),
+        excludeFromSemantics: true,
+      );
+      return Card(
+        color: const Color(0xffedf1e5),
+        clipBehavior: Clip.antiAlias,
+        child: wide
+            ? Stack(
+                children: [
+                  Positioned.fill(
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: FractionallySizedBox(
+                        widthFactor: .48,
+                        heightFactor: 1,
+                        child: photo,
+                      ),
+                    ),
+                  ),
+                  FractionallySizedBox(widthFactor: .52, child: copy),
+                ],
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(height: 98, child: photo),
+                  copy,
+                ],
+              ),
+      );
+    },
+  );
+
   List<Widget> _catalog(LiveController? c, bool busy) => [
-    _catalogHero(),
+    _catalogCover(),
     _heading('Gói đã công bố'),
     if (c?.config == null)
       _emptyState(
@@ -1248,7 +1555,7 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
         ),
       LayoutBuilder(
         builder: (context, constraints) {
-          final wide = constraints.maxWidth >= 730;
+          final wide = constraints.maxWidth >= 730 && c.plans.length > 1;
           final width = wide
               ? (constraints.maxWidth - 16) / 2
               : constraints.maxWidth;
@@ -1257,7 +1564,11 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
             runSpacing: 16,
             children: [
               for (final plan in c.plans)
-                SizedBox(width: width, child: _planCard(c, plan, busy)),
+                SizedBox(
+                  key: ValueKey(plan['plan_id']),
+                  width: width,
+                  child: _planCard(c, plan, busy),
+                ),
             ],
           );
         },
@@ -1291,7 +1602,7 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
     for (final issue in c.issues)
       Text(
         'Đăng ký #${issue['subscription_id']}: ${issue['message']}',
-        style: const TextStyle(color: Colors.orange),
+        style: const TextStyle(color: Color(0xff895008)),
       ),
     if (c.memberships.isEmpty)
       _emptyState(
@@ -1438,6 +1749,25 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
           'Kết nối ví cơ sở để công bố gói, tiếp nhận check-in và theo dõi tiền nhận theo kỳ.',
         _ => 'Kết nối ví đã gửi giao dịch để xem trạng thái xác nhận.',
       };
+      if (_section == _Section.business) {
+        return [
+          _sectionHeader('Cơ sở của bạn'),
+          _serviceBanner(
+            title: 'Đăng nhập để tiếp tục',
+            description: description,
+            image: 'assets/gym-referral.jpg',
+            action: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: accent,
+              ),
+              onPressed: busy ? null : () => _login(c),
+              icon: const Icon(Icons.account_balance_wallet_outlined),
+              label: const Text('Kết nối ví'),
+            ),
+          ),
+        ];
+      }
       return [
         _sectionHeader(_section.label),
         _emptyState(
@@ -1459,44 +1789,69 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
     };
   }
 
-  Widget _navigation() => DecoratedBox(
-    decoration: const BoxDecoration(
-      color: panel,
-      border: Border(bottom: BorderSide(color: panelOutline)),
-    ),
-    child: Align(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1160),
-        child: SizedBox(
-          width: double.infinity,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-            child: Wrap(
-              spacing: 4,
-              runSpacing: 2,
-              children: [
-                for (final section in _Section.values)
-                  Semantics(
-                    selected: _section == section,
-                    child: TextButton(
-                      style: TextButton.styleFrom(
-                        backgroundColor: _section == section ? canvas : null,
-                        foregroundColor: _section == section
-                            ? accent
-                            : mutedText,
-                        minimumSize: const Size(0, 44),
-                      ),
-                      onPressed: () => _openSection(section),
-                      child: Text(section.label),
-                    ),
-                  ),
-              ],
+  Widget _navigation({required bool mobile}) {
+    final tabs = [
+      for (final section in _Section.values)
+        Semantics(
+          selected: section == _section,
+          child: TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: section == _section ? accent : mutedText,
+              backgroundColor: section == _section ? panelRaised : null,
+              minimumSize: const Size(0, 44),
+              padding: EdgeInsets.symmetric(
+                horizontal: mobile ? 3 : 14,
+                vertical: 6,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
+            onPressed: () => _openSection(section),
+            child: mobile
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(section.icon, size: 19),
+                      const SizedBox(height: 3),
+                      Text(
+                        section.label,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  )
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(section.icon, size: 18),
+                      const SizedBox(width: 8),
+                      Text(section.label),
+                    ],
+                  ),
           ),
         ),
+    ];
+    return Material(
+      color: panel,
+      child: SafeArea(
+        top: false,
+        bottom: mobile,
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: mobile ? 4 : 10,
+            vertical: 5,
+          ),
+          child: mobile
+              ? Row(children: [for (final tab in tabs) Expanded(child: tab)])
+              : Wrap(spacing: 4, children: tabs),
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1507,9 +1862,32 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
     final compact =
         MediaQuery.sizeOf(context).width < 480 ||
         MediaQuery.textScalerOf(context).scale(14) > 20;
+    final width = MediaQuery.sizeOf(context).width;
+    final bottomTabs = width < 680;
+    final inlineTabs = width >= 1100 && !compact;
     return Scaffold(
+      bottomNavigationBar: bottomTabs ? _navigation(mobile: true) : null,
       appBar: AppBar(
-        title: const BrandMark(),
+        title: !inlineTabs
+            ? const BrandMark()
+            : Row(
+                children: [
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 178),
+                    child: const BrandMark(),
+                  ),
+                  const SizedBox(width: 24),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: _navigation(mobile: false),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
         actions: [
           if (connected && !logged)
             Padding(
@@ -1546,7 +1924,7 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            _navigation(),
+            if (!bottomTabs && !inlineTabs) _navigation(mobile: false),
             SizedBox(
               height: 2,
               child: busy ? const LinearProgressIndicator() : null,

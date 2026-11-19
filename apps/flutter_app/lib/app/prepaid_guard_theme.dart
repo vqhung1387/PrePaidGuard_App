@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 
-const canvas = Color(0xff080f1c);
-const panel = Color(0xff111e30);
-const panelRaised = Color(0xff16263b);
-const panelOutline = Color(0xff2a3c54);
-const accent = Color(0xff60e4fb);
-const mutedText = Color(0xff9aafc7);
-const brightText = Color(0xfff1f7ff);
+const canvas = Color(0xfff5f6f2);
+const panel = Color(0xffffffff);
+const panelRaised = Color(0xffeaf1ea);
+const panelOutline = Color(0xffd5dfd8);
+const accent = Color(0xff11614b);
+const mutedText = Color(0xff52655d);
+const brightText = Color(0xff182d25);
 
 ThemeData prepaidGuardTheme() {
   final colors =
       ColorScheme.fromSeed(
         seedColor: accent,
-        brightness: Brightness.dark,
+        brightness: Brightness.light,
       ).copyWith(
         primary: accent,
-        onPrimary: canvas,
+        onPrimary: Colors.white,
         surface: panel,
         onSurface: brightText,
         onSurfaceVariant: mutedText,
@@ -82,11 +82,11 @@ ThemeData prepaidGuardTheme() {
     ),
     navigationBarTheme: const NavigationBarThemeData(
       backgroundColor: panel,
-      indicatorColor: Color(0xff173c50),
+      indicatorColor: panelRaised,
     ),
     navigationRailTheme: const NavigationRailThemeData(
       backgroundColor: panel,
-      indicatorColor: Color(0xff173c50),
+      indicatorColor: panelRaised,
       selectedIconTheme: IconThemeData(color: accent),
       selectedLabelTextStyle: TextStyle(
         color: accent,
