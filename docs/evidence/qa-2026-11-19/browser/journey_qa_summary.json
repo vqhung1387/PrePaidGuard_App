@@ -1,0 +1,162 @@
+{
+  "timestamp_utc": "2026-11-19T02:21:52.526777+00:00",
+  "scope": "PrePaidGuard Final QA 19/11/2026: Multi-Position Accounting, Recovery, UI/UX, Keyboard, Zoom 200%",
+  "plan_id": "1",
+  "accounting_logs": [
+    {
+      "position_index": 1,
+      "subscription_id": "1",
+      "plan_id": "1",
+      "type": "STANDARD_50_50",
+      "principal_released": "50000000",
+      "principal_refunded": "50000000",
+      "remaining_principal": "0",
+      "merchant_musdc_delta": 50.0,
+      "subscriber_musdc_delta": -50.0,
+      "vault_musdc_final": 0.0,
+      "receipts": {
+        "subscribe": {
+          "tx": "0xa0018fe7b5c88538d07df591b99d819db4153505b070c3f4613ee8a07fabe9b7",
+          "block": 8,
+          "gasUsed": 300648
+        },
+        "release_period_1": {
+          "tx": "0x6c931c8b5b5e2b24237776e4fc4d980356c588f01d1c6230f70cd1b421226cc5",
+          "block": 10,
+          "gasUsed": 173506
+        },
+        "refund_period_2": {
+          "tx": "0xaa004f6e7c21d2fc42978ed7a5769380fc1a02bb9c7075094ac2a2ebd0a52638",
+          "block": 12,
+          "gasUsed": 103627
+        }
+      }
+    },
+    {
+      "position_index": 2,
+      "subscription_id": "2",
+      "plan_id": "1",
+      "type": "FULL_REFUND_100_PCT",
+      "principal_released": "0",
+      "principal_refunded": "100000000",
+      "remaining_principal": "0",
+      "merchant_musdc_delta": 0.0,
+      "subscriber_musdc_delta": 0.0,
+      "vault_musdc_final": 0.0,
+      "receipts": {
+        "subscribe": {
+          "tx": "0xc79fd8350a11c1ad0f1b8480d6b3aa30b26f32ce020caea4f6c3c230f7488939",
+          "block": 14,
+          "gasUsed": 283548
+        },
+        "refund_all": {
+          "tx": "0x974eccb55235a11df32cc04eca080bf5557d0743d0e8f801b7fc24823822976e",
+          "block": 16,
+          "gasUsed": 117307
+        }
+      }
+    },
+    {
+      "position_index": 3,
+      "subscription_id": "3",
+      "plan_id": "1",
+      "type": "FULLY_COMPLETED_100_PCT",
+      "principal_released": "100000000",
+      "principal_refunded": "0",
+      "remaining_principal": "0",
+      "merchant_musdc_delta": 100.0,
+      "subscriber_musdc_delta": -100.0,
+      "vault_musdc_final": 0.0,
+      "receipts": {
+        "subscribe": {
+          "tx": "0x23969ecfeb6fac395c510ad8c395fc44cdf207fdfd8a6c87b2b5bcb3bc5e7c79",
+          "block": 18,
+          "gasUsed": 283548
+        },
+        "release_period_1": {
+          "tx": "0x8acdb0eb6cf5ce823f48abb3592f1afc0e661fb2a2f8329b86a3744da78cee61",
+          "block": 20,
+          "gasUsed": 156406
+        },
+        "release_period_2": {
+          "tx": "0x4ab35069ba21c27c184929c8f05eb44c2d6eb12495409ece33e25460fae29dc9",
+          "block": 22,
+          "gasUsed": 117680
+        }
+      }
+    }
+  ],
+  "results": [
+    {
+      "name": "merchant SIWE login",
+      "status": "pass"
+    },
+    {
+      "name": "merchant published 100 mUSDC plan",
+      "status": "pass",
+      "plan_id": "1"
+    },
+    {
+      "name": "subscriber SIWE login",
+      "status": "pass"
+    },
+    {
+      "name": "POSITION-1-accounting-pass",
+      "status": "pass",
+      "sub_id": "1",
+      "released": "50000000",
+      "refunded": "50000000",
+      "vault_remaining": "0"
+    },
+    {
+      "name": "POSITION-2-full-refund-pass",
+      "status": "pass",
+      "sub_id": "2",
+      "released": "0",
+      "refunded": "100000000",
+      "vault_remaining": "0"
+    },
+    {
+      "name": "POSITION-3-fully-completed-pass",
+      "status": "pass",
+      "sub_id": "3",
+      "released": "100000000",
+      "refunded": "0",
+      "vault_remaining": "0"
+    },
+    {
+      "name": "PHASE3-user-reject-4001-pass",
+      "status": "pass"
+    },
+    {
+      "name": "PHASE3-catalog-503-direct-link-accessible-pass",
+      "status": "pass",
+      "plan_accessible": true
+    },
+    {
+      "name": "PHASE4-form-validation-pass",
+      "status": "pass"
+    },
+    {
+      "name": "PHASE4-keyboard-escape-pass",
+      "status": "pass",
+      "dialog_closed": true
+    },
+    {
+      "name": "PHASE4-zoom-200-pass",
+      "status": "pass",
+      "overflow": false
+    },
+    {
+      "name": "PHASE4-legacy-demo-invite-pass",
+      "status": "pass",
+      "opens_workspace": false
+    },
+    {
+      "name": "PHASE5-real-core-and-iphone-status",
+      "status": "BLOCKED",
+      "reason": "Core flagged 'Scam application' on web Live (Blockaid report submitted); physical iPhone requires device holder"
+    }
+  ],
+  "all_passed": true
+}

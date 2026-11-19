@@ -27,6 +27,7 @@ def main():
     parser.add_argument("--browser")
     parser.add_argument("--node-executable", default="node")
     parser.add_argument("--output-dir", type=Path)
+    parser.add_argument("--runner", default="run.py")
     args = parser.parse_args()
     if not local_rpc(args.rpc_url):
         parser.error("RPC must be a clean HTTP loopback origin")
@@ -219,7 +220,7 @@ def main():
         print("Isolated EVM/API/web ready; running browser acceptance.", flush=True)
         cmd = [
             sys.executable,
-            str(root / "scripts/browser_acceptance/run.py"),
+            str(root / "scripts/browser_acceptance" / args.runner),
             "--app-url",
             "http://127.0.0.1:18090",
             "--api-url",

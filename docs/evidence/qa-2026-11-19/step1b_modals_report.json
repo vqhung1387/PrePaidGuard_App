@@ -1,0 +1,23 @@
+[
+  {
+    "action": "tab_Gói của tôi",
+    "text_sample": "PrepaidGuard Khám phá Gói của tôi Cơ sở Giao dịch Chưa đọc được blockchain. Vui lòng thử lại. Gói của tôi Tải lại",
+    "screenshot": "screenshots/12_live_guest_tab_Gói của tôi.png"
+  },
+  {
+    "action": "tab_Cơ sở",
+    "text_sample": "PrepaidGuard Khám phá Gói của tôi Cơ sở Giao dịch Chưa đọc được blockchain. Vui lòng thử lại. Cơ sở Tải lại",
+    "screenshot": "screenshots/12_live_guest_tab_Cơ sở.png"
+  },
+  {
+    "action": "tab_Giao dịch",
+    "text_sample": "PrepaidGuard Khám phá Gói của tôi Cơ sở Giao dịch Chưa đọc được blockchain. Vui lòng thử lại. Giao dịch Tải lại",
+    "screenshot": "screenshots/12_live_guest_tab_Giao dịch.png"
+  },
+  {
+    "action": "api_503_simulation",
+    "has_retry_button": false,
+    "text_sample": "PrepaidGuard Khám phá Gói của tôi Cơ sở Giao dịch Dịch vụ tạm thời bận. Khám phá gói dịch vụ Xem giá trả trước, thời hạn và điều kiện hoàn gốc trước khi đăng ký. Cơ sở nhận tiền theo từng kỳ đã xác nhận sử dụng. Gói đã công bố Tải lại",
+    "screenshot": "screenshots/13_live_api_503_error_state.png"
+  }
+]

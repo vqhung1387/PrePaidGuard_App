@@ -1,0 +1,261 @@
+{
+  "timestamp_utc": "2026-11-19T02:01:03.636251+00:00",
+  "environment": "Web Live (Render) + API Live (Render)",
+  "web_url": "https://prepaidguard-web.onrender.com",
+  "api_url": "https://prepaidguard-api.onrender.com",
+  "http_probes": {
+    "API:/health": {
+      "url": "https://prepaidguard-api.onrender.com/health",
+      "status": 200,
+      "headers": {
+        "Date": "Thu, 19 Nov 2026 02:01:04 GMT",
+        "Content-Type": "application/json",
+        "Transfer-Encoding": "chunked",
+        "Connection": "close",
+        "rndr-id": "76974cd4-b381-46f3",
+        "Server": "cloudflare",
+        "vary": "Origin",
+        "x-render-origin-server": "uvicorn",
+        "x-request-id": "0395b886-7a62-450e-ae50-d5a01261329b",
+        "cf-cache-status": "DYNAMIC",
+        "CF-RAY": "a5cb9ff7dc021ad8-SIN",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "length": 15,
+      "sha256": "a29ee2b15c494311c52521766e44af56a3ad2248e7a8ab465e5206463c13d288",
+      "elapsed_ms": 438.0,
+      "body_preview": "{\"status\":\"ok\"}"
+    },
+    "API:/ready": {
+      "url": "https://prepaidguard-api.onrender.com/ready",
+      "status": 200,
+      "headers": {
+        "Date": "Thu, 19 Nov 2026 02:01:06 GMT",
+        "Content-Type": "application/json",
+        "Transfer-Encoding": "chunked",
+        "Connection": "close",
+        "rndr-id": "40ad8d0c-d878-4810",
+        "Server": "cloudflare",
+        "vary": "Origin",
+        "x-render-origin-server": "uvicorn",
+        "x-request-id": "4bc60e01-c341-496d-8b61-4c1169238f37",
+        "cf-cache-status": "DYNAMIC",
+        "CF-RAY": "a5cb9ff95f9444c6-SIN",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "length": 18,
+      "sha256": "31bf75f4c0a97cc1f7b60df824fa390b3be9ba014f29b63c87c698ba63d9a9fd",
+      "elapsed_ms": 2172.0,
+      "body_preview": "{\"status\":\"ready\"}"
+    },
+    "API:/api/v1/config": {
+      "url": "https://prepaidguard-api.onrender.com/api/v1/config",
+      "status": 200,
+      "headers": {
+        "Date": "Thu, 19 Nov 2026 02:01:06 GMT",
+        "Content-Type": "application/json",
+        "Transfer-Encoding": "chunked",
+        "Connection": "close",
+        "rndr-id": "2a1b9f24-6a70-48ee",
+        "Server": "cloudflare",
+        "vary": "Origin",
+        "x-render-origin-server": "uvicorn",
+        "x-request-id": "3709b3f1-953b-4446-bc4b-48523c7ad73e",
+        "cf-cache-status": "DYNAMIC",
+        "CF-RAY": "a5cba006d892fd35-SIN",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "length": 620,
+      "sha256": "388f226c461f47302f3ff2f6dab0e2a7a313177a28e1153cc9cfd778b93bb809",
+      "elapsed_ms": 203.0,
+      "body_preview": "{\"environment\":\"demo\",\"deployment_id\":\"43113-0xc2b19df4e38ce6fa921120f2b16c8c3a9c6a2364\",\"chain_id\":43113,\"chain_name\":\"Avalanche Fuji\",\"rpc_url\":\"https://api.avax-test.network/ext/bc/C/rpc\",\"explorer"
+    },
+    "API:/api/v1/plans/1": {
+      "url": "https://prepaidguard-api.onrender.com/api/v1/plans/1",
+      "status": 200,
+      "headers": {
+        "Date": "Thu, 19 Nov 2026 02:01:07 GMT",
+        "Content-Type": "application/json",
+        "Transfer-Encoding": "chunked",
+        "Connection": "close",
+        "rndr-id": "7d7b33ae-bfc6-44a4",
+        "Server": "cloudflare",
+        "vary": "Origin",
+        "x-render-origin-server": "uvicorn",
+        "x-request-id": "629d7068-bce3-4138-8e71-0173ba27b2a4",
+        "cf-cache-status": "DYNAMIC",
+        "CF-RAY": "a5cba0083b8cf8c4-SIN",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "length": 979,
+      "sha256": "2af67419fbf9bcd7ae100100017248b4701f954229860e45114f867ad5ed8841",
+      "elapsed_ms": 766.0,
+      "body_preview": "{\"plan_id\":\"1\",\"chain_id\":43113,\"vault_address\":\"0xc2b19df4e38ce6fa921120f2b16c8c3a9c6a2364\",\"merchant_address\":\"0xb6b3259e4edc8e15ccd514f22dc3d2ddb5166e68\",\"merchant\":{\"id\":\"43bcb30f-877c-444f-8dd6-d"
+    },
+    "API:/api/v1/plans": {
+      "url": "https://prepaidguard-api.onrender.com/api/v1/plans",
+      "status": 200,
+      "headers": {
+        "Date": "Thu, 19 Nov 2026 02:01:07 GMT",
+        "Content-Type": "application/json",
+        "Transfer-Encoding": "chunked",
+        "Connection": "close",
+        "rndr-id": "f728f99e-bd04-4569",
+        "Server": "cloudflare",
+        "vary": "Origin",
+        "x-render-origin-server": "uvicorn",
+        "x-request-id": "d9dde5f9-5e2a-4172-86cd-b1b9704d732d",
+        "cf-cache-status": "DYNAMIC",
+        "CF-RAY": "a5cba00cffaa2f82-SIN",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "length": 1010,
+      "sha256": "bc487ea73d2e67be696c75bf7159e875df61fc823c1231948f1dc99724548469",
+      "elapsed_ms": 562.0,
+      "body_preview": "{\"items\":[{\"plan_id\":\"1\",\"chain_id\":43113,\"vault_address\":\"0xc2b19df4e38ce6fa921120f2b16c8c3a9c6a2364\",\"merchant_address\":\"0xb6b3259e4edc8e15ccd514f22dc3d2ddb5166e68\",\"merchant\":{\"id\":\"43bcb30f-877c-4"
+    },
+    "WEB:/": {
+      "url": "https://prepaidguard-web.onrender.com/",
+      "status": 200,
+      "headers": {
+        "Date": "Thu, 19 Nov 2026 02:01:07 GMT",
+        "Content-Type": "text/html; charset=utf-8",
+        "Transfer-Encoding": "chunked",
+        "Connection": "close",
+        "cache-control": "public, max-age=0, s-maxage=300",
+        "Age": "74",
+        "etag": "W/\"c886e177e695a4ab313e2539d78c0024\"",
+        "last-modified": "Wed, 18 Nov 2026 17:50:08 UTC",
+        "rndr-id": "6bc1e64b-9ef5-4e45",
+        "Server": "cloudflare",
+        "strict-transport-security": "max-age=315360000; includeSubdomains; preload",
+        "vary": "Accept-Encoding",
+        "x-content-type-options": "nosniff",
+        "cf-cache-status": "HIT",
+        "CF-RAY": "a5cba010880d5fc3-SIN",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "length": 14664,
+      "sha256": "96ea634f6e7376894b46c07642ac2ec5693f51afba210ba687cea0cb71cc7699",
+      "elapsed_ms": 250.0,
+      "body_preview": "<!doctype html>\n<html lang=\"vi\">\n<head>\n  <base href=\"/\">\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n  <meta name=\"theme-color\" content=\"#080f1c\">\n"
+    },
+    "WEB:/flutter_bootstrap.js": {
+      "url": "https://prepaidguard-web.onrender.com/flutter_bootstrap.js",
+      "status": 200,
+      "headers": {
+        "Date": "Thu, 19 Nov 2026 02:01:08 GMT",
+        "Content-Type": "application/javascript",
+        "Transfer-Encoding": "chunked",
+        "Connection": "close",
+        "Cache-Control": "public, max-age=0, s-maxage=300",
+        "etag": "W/\"e8d064d925f046a251bef5d5096b1609\"",
+        "last-modified": "Wed, 18 Nov 2026 17:50:08 UTC",
+        "rndr-id": "39eb1c2a-6fc6-489b",
+        "Server": "cloudflare",
+        "strict-transport-security": "max-age=315360000; includeSubdomains; preload",
+        "vary": "Accept-Encoding",
+        "x-content-type-options": "nosniff",
+        "cf-cache-status": "MISS",
+        "CF-RAY": "a5cba011cea790f1-SIN",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "length": 13094,
+      "sha256": "245b28968ad74fe2ca8d1069bfeb2a91fe60e37cf9680b62a49bb742c104c4d5",
+      "elapsed_ms": 484.0,
+      "body_preview": "(()=>{var C={blink:!0,gecko:!1,webkit:!1,unknown:!1},A=()=>navigator.vendor===\"Google Inc.\"||navigator.userAgent.includes(\"Edg/\")?\"blink\":navigator.vendor===\"Apple Computer, Inc.\"?\"webkit\":navigator.v"
+    },
+    "WEB:/main.dart.js": {
+      "url": "https://prepaidguard-web.onrender.com/main.dart.js",
+      "status": 200,
+      "headers": {
+        "Date": "Thu, 19 Nov 2026 02:01:08 GMT",
+        "Content-Type": "application/javascript",
+        "Transfer-Encoding": "chunked",
+        "Connection": "close",
+        "cache-control": "public, max-age=0, s-maxage=300",
+        "Age": "71",
+        "etag": "W/\"a277050fc508e9666b62ab7fb10e46b3\"",
+        "last-modified": "Wed, 18 Nov 2026 17:50:08 UTC",
+        "rndr-id": "dfbf23b2-d2e4-447f",
+        "Server": "cloudflare",
+        "strict-transport-security": "max-age=315360000; includeSubdomains; preload",
+        "vary": "Accept-Encoding",
+        "x-content-type-options": "nosniff",
+        "cf-cache-status": "HIT",
+        "CF-RAY": "a5cba01509d79b93-SIN",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "length": 3564562,
+      "sha256": "be8cd70baf24e02240535ccf2fadbf02d14ddc6f9a26c8c9740ddc317a2e3c43",
+      "elapsed_ms": 1547.0,
+      "body_preview": "(function dartProgram(){function copyProperties(a,b){var s=Object.keys(a)\nfor(var r=0;r<s.length;r++){var q=s[r]\nb[q]=a[q]}}function mixinPropertiesHard(a,b){var s=Object.keys(a)\nfor(var r=0;r<s.lengt"
+    },
+    "WEB:/index.html": {
+      "url": "https://prepaidguard-web.onrender.com/index.html",
+      "status": 200,
+      "headers": {
+        "Date": "Thu, 19 Nov 2026 02:01:10 GMT",
+        "Content-Type": "text/html; charset=utf-8",
+        "Transfer-Encoding": "chunked",
+        "Connection": "close",
+        "Cache-Control": "public, max-age=0, s-maxage=300",
+        "etag": "W/\"c886e177e695a4ab313e2539d78c0024\"",
+        "last-modified": "Wed, 18 Nov 2026 17:50:08 UTC",
+        "rndr-id": "80e44997-caef-4395",
+        "Server": "cloudflare",
+        "strict-transport-security": "max-age=315360000; includeSubdomains; preload",
+        "vary": "Accept-Encoding",
+        "x-content-type-options": "nosniff",
+        "cf-cache-status": "MISS",
+        "CF-RAY": "a5cba01ebe2307be-SIN",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "length": 14664,
+      "sha256": "96ea634f6e7376894b46c07642ac2ec5693f51afba210ba687cea0cb71cc7699",
+      "elapsed_ms": 500.0,
+      "body_preview": "<!doctype html>\n<html lang=\"vi\">\n<head>\n  <base href=\"/\">\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n  <meta name=\"theme-color\" content=\"#080f1c\">\n"
+    }
+  },
+  "browser_steps": [
+    {
+      "step": "01_live_desktop_home_fresh",
+      "load_time_ms": 4766.0,
+      "title": "PrepaidGuard Business",
+      "text_sample": "PrepaidGuard Kết nối ví / Đăng nhập Làm mới trạng thái Thông tin thanh toán Khám phá Gói của tôi Cơ sở Giao dịch Khám phá gói dịch vụ Xem giá trả trước, thời hạn và điều kiện hoàn gốc trước khi đăng ký. Cơ sở nhận tiền theo từng kỳ đã xác nhận sử dụng. Gói đã công bố Xem gói QR đăng ký Các khoản hiển thị bằng mUSDC trên mạng thử nghiệm.",
+      "screenshot": "screenshots/01_live_desktop_home_fresh.png"
+    },
+    {
+      "step": "02_live_desktop_home_cached",
+      "screenshot": "screenshots/02_live_desktop_home_cached.png",
+      "matches_fresh": true
+    },
+    {
+      "step": "04_live_plan1_direct",
+      "screenshot": "screenshots/04_live_plan1_direct.png",
+      "text_sample": "PrepaidGuard Kết nối ví / Đăng nhập Làm mới trạng thái Thông tin thanh toán Khám phá Gói của tôi Cơ sở Giao dịch Đã mở gói #1 từ QR đăng ký. Kiểm tra điều khoản trước khi ký. Khám phá gói dịch vụ Xem giá trả trước, thời hạn và điều kiện hoàn gốc trước khi đăng ký. Cơ sở nhận tiền theo từng kỳ đã xác nhận sử dụng. Gói đã công bố Xem gói QR đăng ký Các khoản hiển thị bằng mUSDC trên mạng thử nghiệm."
+    }
+  ],
+  "overflow_checks": {
+    "375x812_iPhoneSE": {
+      "viewport": "375x812",
+      "overflow": false,
+      "screenshot": "screenshots/08_live_mobile_375x812_iPhoneSE.png"
+    },
+    "375x812_iPhoneSE_plan1": {
+      "viewport": "375x812",
+      "overflow": false,
+      "screenshot": "screenshots/09_live_mobile_375x812_iPhoneSE_plan1.png"
+    },
+    "390x844_iPhone12": {
+      "viewport": "390x844",
+      "overflow": false,
+      "screenshot": "screenshots/08_live_mobile_390x844_iPhone12.png"
+    },
+    "390x844_iPhone12_plan1": {
+      "viewport": "390x844",
+      "overflow": false,
+      "screenshot": "screenshots/09_live_mobile_390x844_iPhone12_plan1.png"
+    }
+  }
+}
