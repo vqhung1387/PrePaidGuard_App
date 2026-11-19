@@ -1,6 +1,8 @@
 # Nghiệm thu PrePaidGuard ngày 19/11/2026
 
-Web và API đã phát hành mã ứng dụng [`8b4ec38`](https://github.com/vqhung1387/PrePaidGuard_App/commit/8b4ec380cfa65df901f17f677bf000bd40a645c9). Năm workflow CI của mốc này đã qua. Render ghi web `dep-dbut178m7kps73ddh0dg` và API `dep-dbussl6i0phs73bhmm1g` cùng SHA. Khi bàn giao, web, API `/health`, `/ready`, `/api/v1/config` và `/api/v1/plans/1` đều trả HTTP 200. Cấu hình probe trong repo dùng `/health`; `/ready` kiểm PostgreSQL và RPC Fuji. [Web](https://prepaidguard-web.onrender.com/) · [API readiness](https://prepaidguard-api.onrender.com/ready) · [GitHub Actions](https://github.com/vqhung1387/PrePaidGuard_App/actions/runs/44343776881)
+Render đã phát hành web [`bef1666`](https://dashboard.render.com/static/srv-dbtcnqjncjis739sldgg/deploys/dep-dbuu9ue1egvs739mag30). Cả năm workflow của mốc tích hợp đã qua. Khi kiểm lại, web và API `/health`, `/ready`, `/api/v1/config`, `/api/v1/plans/1` đều trả HTTP 200. Probe dùng `/health`. Endpoint `/ready` kiểm PostgreSQL và RPC Fuji. [Web](https://prepaidguard-web.onrender.com/) · [API readiness](https://prepaidguard-api.onrender.com/ready) · [CI tích hợp](https://github.com/vqhung1387/PrePaidGuard_App/actions/runs/44361939438)
+
+Ngay sau deploy, trang HTML mới từng đi cùng giao diện cũ. Lần kiểm lại lấy được cùng SHA-256 từ URL bundle chuẩn và URL có tham số phiên bản. Hai phiên trình duyệt mới, Chrome desktop và WebKit giả lập iPhone 12, đều tải giao diện mới, mở màn cơ sở, xem điều khoản chưa kết nối ví và mở đúng QR gói #1 tổng 100 mUSDC. Render trả `s-maxage=300` cho bundle. Lần phát hành sau cần xác minh giao diện thật từ phiên mới bên cạnh trạng thái Live.
 
 ## Bản tích hợp UI mới
 
@@ -23,10 +25,9 @@ Các giao dịch Core và lần quét QR trên iPhone thật trong bảng dướ
 
 | Ưu tiên | Đầu mối | Tiêu chí hoàn thành |
 | --- | --- | --- |
-| 1 | Lead | Xác nhận CI xanh trên SHA tích hợp. Kiểm phiên bản đang Live trên Render và phát hành đúng SHA đã qua CI. Smoke trang chủ, link QR, API và hai màn vai trò trên URL công khai. |
-| 2 | UI | Sau khi cảnh báo Core được xử lý, chạy xuyên suốt bằng hai địa chỉ Core trên web Live. Cơ sở công bố gói có đủ thời gian thao tác. Hội viên đăng ký và ký QR. Cơ sở nhập QR, giải ngân, hội viên hoàn phần còn lại. Lưu receipt và đối chiếu số tiền của hai vai. |
-| 3 | UI | Kiểm lại API khởi động chậm trên Safari iPhone 12 thật. Thử chuyển từ link QR sang trình duyệt ví và ký trên điện thoại. Xác nhận ca dùng hai thiết bị vật lý và hỗ trợ khóa ký của trình duyệt ví. |
-| 4 | BE | Kiểm ngày hết hạn PostgreSQL trên Render. Mốc đã ghi nhận là 16/12/2026. Sao lưu và thử khôi phục vào DB riêng trước mốc hết hạn. |
-| 5 | Lead | Rà PR đưa nhánh tích hợp vào `main` và kiểm lại CI của HEAD sau khi merge. |
+| 1 | BE | Render xác nhận PostgreSQL Free hết hạn 16/12/2026, vô hiệu hóa Export và chặn toàn bộ kết nối ngoài. Chờ duyệt quyền kết nối tạm từ đúng một IP hoặc thực hiện từ một dịch vụ đã có quyền truy cập nội bộ. Tạo dump bằng TLS, thử khôi phục vào DB rỗng riêng rồi thu hồi quyền tạm. [Recovery](https://dashboard.render.com/d/dpg-dbt6srtg1s2s738umi0g-a/recovery) |
+| 2 | Lead | [PR #4](https://github.com/vqhung1387/PrePaidGuard_App/pull/4) đã mở vào `main`. GitHub yêu cầu một review chấp thuận trước khi gộp. Kiểm CI của HEAD sau khi merge. |
+| 3 | UI | Sau khi cảnh báo Core được xử lý, chạy xuyên suốt bằng hai địa chỉ Core trên web Live. Cơ sở công bố gói có đủ thời gian thao tác. Hội viên đăng ký và ký QR. Cơ sở nhập QR, giải ngân, hội viên hoàn phần còn lại. Lưu receipt và đối chiếu số tiền của hai vai. |
+| 4 | UI | Kiểm lại API khởi động chậm trên Safari iPhone 12 thật. Thử chuyển từ link QR sang trình duyệt ví và ký trên điện thoại. Xác nhận ca dùng hai thiết bị vật lý và hỗ trợ khóa ký của trình duyệt ví. |
 
 MVP dùng Fuji và mUSDC thử nghiệm. Yield trên Fuji đang `DISABLED`. QR đăng ký đã mở bằng camera hệ thống trên iPhone. Nghiệp vụ check-in hiện hỗ trợ nhập payload. Booking, lịch tập và giờ đông vẫn thuộc phần demo.
