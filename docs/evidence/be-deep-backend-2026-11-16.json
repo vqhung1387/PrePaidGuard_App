@@ -1,0 +1,87 @@
+{
+  "timestamp_utc": "2026-11-16T10:24:42.926567+00:00",
+  "phase": "backend",
+  "status": "pass",
+  "results": [
+    {
+      "phase": "backend",
+      "name": "lint",
+      "status": "pass",
+      "detail": "",
+      "seconds": 0.06,
+      "attempts": 1
+    },
+    {
+      "phase": "backend",
+      "name": "format",
+      "status": "pass",
+      "detail": "",
+      "seconds": 0.06,
+      "attempts": 1
+    },
+    {
+      "phase": "backend",
+      "name": "migration schema setup",
+      "status": "pass",
+      "detail": "",
+      "seconds": 0.62,
+      "attempts": 1
+    },
+    {
+      "phase": "backend",
+      "name": "migration upgrade",
+      "status": "pass",
+      "detail": "",
+      "seconds": 1.45,
+      "attempts": 1
+    },
+    {
+      "phase": "backend",
+      "name": "migration check",
+      "status": "pass",
+      "detail": "",
+      "seconds": 1.36,
+      "attempts": 1
+    },
+    {
+      "phase": "backend",
+      "name": "migration schema cleanup",
+      "status": "pass",
+      "detail": "",
+      "seconds": 0.66,
+      "attempts": 1
+    },
+    {
+      "phase": "backend",
+      "name": "backend tests",
+      "status": "pass",
+      "detail": "",
+      "seconds": 46.14,
+      "attempts": 1
+    },
+    {
+      "phase": "contracts",
+      "name": "phase",
+      "status": "skipped",
+      "detail": "not selected",
+      "seconds": 0,
+      "attempts": 1
+    },
+    {
+      "phase": "integration",
+      "name": "phase",
+      "status": "skipped",
+      "detail": "not selected",
+      "seconds": 0,
+      "attempts": 1
+    },
+    {
+      "phase": "frontend",
+      "name": "phase",
+      "status": "skipped",
+      "detail": "not selected",
+      "seconds": 0,
+      "attempts": 1
+    }
+  ]
+}

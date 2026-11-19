@@ -1,0 +1,55 @@
+{
+  "timestamp_utc": "2026-11-16T10:24:34.998565+00:00",
+  "phase": "integration",
+  "status": "pass",
+  "results": [
+    {
+      "phase": "integration",
+      "name": "Node 24 version",
+      "status": "pass",
+      "detail": "",
+      "seconds": 0.05,
+      "attempts": 1
+    },
+    {
+      "phase": "integration",
+      "name": "contract build",
+      "status": "pass",
+      "detail": "",
+      "seconds": 6.75,
+      "attempts": 1
+    },
+    {
+      "phase": "integration",
+      "name": "live contract and API tests",
+      "status": "pass",
+      "detail": "",
+      "seconds": 12.02,
+      "attempts": 1
+    },
+    {
+      "phase": "contracts",
+      "name": "phase",
+      "status": "skipped",
+      "detail": "not selected",
+      "seconds": 0,
+      "attempts": 1
+    },
+    {
+      "phase": "backend",
+      "name": "phase",
+      "status": "skipped",
+      "detail": "not selected",
+      "seconds": 0,
+      "attempts": 1
+    },
+    {
+      "phase": "frontend",
+      "name": "phase",
+      "status": "skipped",
+      "detail": "not selected",
+      "seconds": 0,
+      "attempts": 1
+    }
+  ]
+}

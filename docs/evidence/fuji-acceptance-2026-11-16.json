@@ -1,0 +1,269 @@
+{
+  "status": "PASS",
+  "chain_id": 43113,
+  "deployment_id": "43113-0xc2b19df4e38ce6fa921120f2b16c8c3a9c6a2364",
+  "api_url": "https://prepaidguard-api.onrender.com",
+  "transactions": [
+    {
+      "label": "publish",
+      "status": "confirmed",
+      "sender": "0xb6b3259E4edc8e15ccd514f22dc3d2ddB5166E68",
+      "hash": "0xe750bfa299f074f17cafc7fb8b9be60b9ad92926e9748e43960f566bba2c3906",
+      "block": 61166410,
+      "block_hash": "0x1fff2df52ffdcd8ff952333c793d01608d918deb1853ae10c24a9190bc6192b9",
+      "gas_used": "350000",
+      "gas_price": "160"
+    },
+    {
+      "label": "approve 200 test mUSDC",
+      "status": "confirmed",
+      "sender": "0x7e75509052FDcEba5E143a4943aBFD580C6AA0Eb",
+      "hash": "0x0906c1495a06cf6a7048c0b4ae705725c3762c2502ebde11b9b9fa323e18cb52",
+      "block": 61166417,
+      "block_hash": "0xc9d5621b6b7a5b9f06256cf1bff657548c9a362666871cbe4f860791c1c01a18",
+      "gas_used": "350000",
+      "gas_price": "160"
+    },
+    {
+      "label": "subscribe first",
+      "status": "confirmed",
+      "sender": "0x7e75509052FDcEba5E143a4943aBFD580C6AA0Eb",
+      "hash": "0x895668d83367d0e737b1a6a9af10cf6002fd7973c8eef92a2df9dfd17309536a",
+      "block": 61166422,
+      "block_hash": "0x4dd5219c33dbbc6356d44b62e7e5d26a7f0045fabeaf3c6f3252c7956002e25a",
+      "gas_used": "350000",
+      "gas_price": "160"
+    },
+    {
+      "label": "release one period",
+      "status": "confirmed",
+      "sender": "0xb6b3259E4edc8e15ccd514f22dc3d2ddB5166E68",
+      "hash": "0x22542c973204ad8c51e35999dbe6f72e53d7a3e1c7bc1373cbac51389d9eea68",
+      "block": 61166435,
+      "block_hash": "0xdd9756f54e548c9ccd7254b52709a7abe9fe42c04d834cf15fc24aead578a5a0",
+      "gas_used": "350000",
+      "gas_price": "160"
+    },
+    {
+      "label": "reject old QR replay",
+      "status": "reverted",
+      "sender": "0xb6b3259E4edc8e15ccd514f22dc3d2ddB5166E68",
+      "hash": "0xbc5f093445e2e3acc4056cbe0fb494a2da015b63359427471b20e511188c4b3f",
+      "block": 61166442,
+      "block_hash": "0x89aae518524cddbfa0984f8c7389b9c644c4b39879526eac1e1428359817955c",
+      "gas_used": "350000",
+      "gas_price": "160"
+    },
+    {
+      "label": "subscribe second without client tracking",
+      "status": "confirmed",
+      "sender": "0x7e75509052FDcEba5E143a4943aBFD580C6AA0Eb",
+      "hash": "0xe0333eb9f23435a4468591fcb96c32f7d3f6b283fbefb222b5bab21dbf07fcae",
+      "block": 61166448,
+      "block_hash": "0x07b7ca8271ddedd4f6a7d9f41a4173ffe55b8d1a7a99e3dcfe3461b8fbfe6937",
+      "gas_used": "350000",
+      "gas_price": "160"
+    },
+    {
+      "label": "refund subscription 2",
+      "status": "confirmed",
+      "sender": "0x7e75509052FDcEba5E143a4943aBFD580C6AA0Eb",
+      "hash": "0x8d0ee63641c35fd906b3f3c6ccd62ffbf786bd665a71cd52c33a5cea34ede10c",
+      "block": 61166489,
+      "block_hash": "0xfdb44f2651bc5cc1d98937b459bcce86dff4ce557bbe604c02000cee9389e76d",
+      "gas_used": "350000",
+      "gas_price": "160"
+    },
+    {
+      "label": "refund subscription 1",
+      "status": "confirmed",
+      "sender": "0x7e75509052FDcEba5E143a4943aBFD580C6AA0Eb",
+      "hash": "0x5bf451da1220d5a0ad8a40fed86085c78f242a9b1893b660f251b429550ea37c",
+      "block": 61166496,
+      "block_hash": "0x95f355ce15ad6ba5441960ea1accea33ff8cad0fd5f3824a486b83cae378e7bf",
+      "gas_used": "350000",
+      "gas_price": "160"
+    }
+  ],
+  "checks": [
+    {
+      "check": "readiness with real Fuji",
+      "status": 200,
+      "request_id": "f6b327c0-4f98-4e28-8760-3be324732e30",
+      "error_code": null
+    },
+    {
+      "check": "pin real deployment",
+      "status": 200,
+      "request_id": "61dbac51-19ae-4245-9c6f-9a7583d441c3",
+      "error_code": null
+    },
+    {
+      "check": "merchant challenge",
+      "status": 201,
+      "request_id": "1c509cee-0b9d-4a5f-881b-d280b1c55897",
+      "error_code": null
+    },
+    {
+      "check": "merchant verify",
+      "status": 200,
+      "request_id": "7a955e21-2b81-4ebb-bdf2-9abca1967768",
+      "error_code": null
+    },
+    {
+      "check": "subscriber challenge",
+      "status": 201,
+      "request_id": "293c2900-1a94-43c6-8189-e412a70689e1",
+      "error_code": null
+    },
+    {
+      "check": "subscriber verify",
+      "status": 200,
+      "request_id": "e3f9375d-b5f5-405f-8bf7-a0f4b89a06ab",
+      "error_code": null
+    },
+    {
+      "check": "create demo merchant",
+      "status": 201,
+      "request_id": "c1521c29-b639-4129-8d4c-a7db2723c165",
+      "error_code": null
+    },
+    {
+      "check": "create exact-price draft",
+      "status": 201,
+      "request_id": "e5b86b72-3f87-4f10-85ff-d56c997da0ac",
+      "error_code": null
+    },
+    {
+      "check": "CREATE_PLAN report receipt",
+      "status": 202,
+      "request_id": "3d33c7cb-b88b-49c1-a4d2-c5297070b827",
+      "error_code": null
+    },
+    {
+      "check": "published plan metadata",
+      "status": 200,
+      "request_id": "ea3a011d-1130-4636-a7a1-00838c947b7e",
+      "error_code": null
+    },
+    {
+      "check": "SUBSCRIBE report receipt",
+      "status": 202,
+      "request_id": "4ad201ca-aaca-47a9-823f-770da52f7ae5",
+      "error_code": null
+    },
+    {
+      "check": "first subscription eligibility",
+      "status": 200,
+      "request_id": "d23ac6d0-5a23-44c7-9da3-79f698c770f6",
+      "error_code": null
+    },
+    {
+      "check": "CHECK_IN report receipt",
+      "status": 202,
+      "request_id": "bad899c2-7a78-4b10-86be-c034403626e6",
+      "error_code": null
+    },
+    {
+      "check": "CHECK_IN report receipt",
+      "status": 202,
+      "request_id": "007d9b00-ff77-46ef-a594-6b6bf75e4b67",
+      "error_code": null
+    },
+    {
+      "check": "scanner recovers unreported subscription",
+      "status": 200,
+      "request_id": "409f5471-f2bd-4993-9c04-c5168b903f02",
+      "error_code": null
+    },
+    {
+      "check": "scanner recovers unreported subscription",
+      "status": 200,
+      "request_id": "6dc8f83c-55e2-4696-b795-3b941c917abe",
+      "error_code": null
+    },
+    {
+      "check": "scanner recovers unreported subscription",
+      "status": 200,
+      "request_id": "aa1eefc3-9cac-4e15-8c02-726fe0cacaf5",
+      "error_code": null
+    },
+    {
+      "check": "scanner recovers unreported subscription",
+      "status": 200,
+      "request_id": "363beacb-9c1a-4c37-bac1-2fb1a1228ae3",
+      "error_code": null
+    },
+    {
+      "check": "recovered history from chain",
+      "status": 200,
+      "request_id": "5c1fe32f-c98f-4732-97df-57b160b80cc4",
+      "error_code": null
+    },
+    {
+      "check": "refund eligibility",
+      "status": 200,
+      "request_id": "a2694b6c-96b7-452e-9877-7268f6b9435a",
+      "error_code": null
+    },
+    {
+      "check": "REFUND report receipt",
+      "status": 202,
+      "request_id": "a67bd6dc-3253-487e-b871-e46082e98199",
+      "error_code": null
+    },
+    {
+      "check": "exact refund detail",
+      "status": 200,
+      "request_id": "3dc2cd39-4f48-4bfc-bc88-4f6100b1a15c",
+      "error_code": null
+    },
+    {
+      "check": "refund eligibility",
+      "status": 200,
+      "request_id": "1c2042c5-e528-4219-8773-823a209cf37a",
+      "error_code": null
+    },
+    {
+      "check": "REFUND report receipt",
+      "status": 202,
+      "request_id": "9ebf66e2-bd37-4edb-957f-697c42f2d6fd",
+      "error_code": null
+    },
+    {
+      "check": "exact refund detail",
+      "status": 200,
+      "request_id": "d14ed814-2ca2-4406-8b6e-7e50011334cc",
+      "error_code": null
+    },
+    {
+      "check": "revoke test session",
+      "status": 204,
+      "request_id": "3c64b4d4-79c8-426d-bedb-3bcb8dfbcc7f",
+      "error_code": null
+    },
+    {
+      "check": "revoke test session",
+      "status": 204,
+      "request_id": "61f550f5-9d81-4bb6-a9f6-77edceebcfa6",
+      "error_code": null
+    }
+  ],
+  "initial_balances": {
+    "merchant": "0",
+    "subscriber": "500000000",
+    "vault": "0"
+  },
+  "plan_id": "1",
+  "subscription_ids": [
+    "1",
+    "2"
+  ],
+  "final_balances": {
+    "merchant": "50000000",
+    "subscriber": "450000000",
+    "vault": "0"
+  },
+  "conservation": "500 mUSDC = 50 merchant + 450 subscriber + 0 Vault",
+  "confirmations": 2
+}

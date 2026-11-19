@@ -1,0 +1,21 @@
+[project]
+name = "prepaidguard-backend"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.20.1",
+    "fastapi>=0.162.4",
+    "psycopg[binary]>=3.3.8",
+    "pydantic-settings>=2.16.2",
+    "pyjwt>=2,<3",
+    "sqlalchemy>=2,<2.1",
+    "uvicorn>=0.54.0",
+    "web3>=7,<8",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.2.0",
+    "ruff>=0.17.4",
+]

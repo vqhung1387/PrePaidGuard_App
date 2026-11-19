@@ -27,6 +27,7 @@ node_modules/
 contracts/artifacts/
 contracts/cache/
 contracts/coverage/
+shared/deployments/local*.json
 
 # Editor / OS
 .idea/
@@ -34,3 +35,6 @@ contracts/coverage/
 .DS_Store
 Thumbs.db
 *.log
+
+# Local acceptance artifacts
+/validation-results/

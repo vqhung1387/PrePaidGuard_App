@@ -1,0 +1,21 @@
+# Only adopt prepaidguard-api after reviewing Render's plan. No DB or env changes.
+# Blueprint autoSync must remain false; live credentials stay on the service.
+services:
+  - type: web
+    name: prepaidguard-api
+    runtime: docker
+    repo: https://github.com/vqhung1387/PrePaidGuard_App
+    branch: fix/be-nghiem-thu-1116
+    region: singapore
+    plan: free
+    rootDir: ""
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    dockerCommand: ""
+    numInstances: 1
+    autoDeployTrigger: commit
+    renderSubdomainPolicy: enabled
+    previews:
+      generation: "off"
+    # Fuji RPC outages must not cause Render to remove a running API from routing.
+    healthCheckPath: /health

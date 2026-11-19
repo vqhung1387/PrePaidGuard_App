@@ -1,0 +1,56 @@
+{
+  "chain_id": 43113,
+  "deployment_id": "43113-0xc2b19df4e38ce6fa921120f2b16c8c3a9c6a2364",
+  "block": 61166492,
+  "scope": "5 sequential samples per method on one real Fuji plan, not a load test",
+  "methods": {
+    "getPlan": {
+      "samples_ms": [
+        346.61,
+        219.83,
+        176.17,
+        212.8,
+        158.75
+      ],
+      "median_ms": 212.8,
+      "max_ms": 346.61,
+      "errors": []
+    },
+    "getLogs_90_blocks": {
+      "samples_ms": [
+        302.78,
+        242.83,
+        232.38,
+        234.19,
+        242.88
+      ],
+      "median_ms": 242.83,
+      "max_ms": 302.78,
+      "errors": []
+    },
+    "transaction_and_receipt": {
+      "samples_ms": [
+        108.3,
+        110.7,
+        130.32,
+        116.34,
+        153.24
+      ],
+      "median_ms": 116.34,
+      "max_ms": 153.24,
+      "errors": []
+    },
+    "HTTPS_catalog_one_plan": {
+      "samples_ms": [
+        762.04,
+        1050.02,
+        748.17,
+        754.33,
+        565.62
+      ],
+      "median_ms": 754.33,
+      "max_ms": 1050.02,
+      "errors": []
+    }
+  }
+}

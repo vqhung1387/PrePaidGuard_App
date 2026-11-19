@@ -1,6 +1,6 @@
 # PrePaidGuard — Tổng quan dự án
 
-> Phiên bản đặc tả: 0.1 — 11/11/2026. Trạng thái: DESIGN DRAFT, chưa triển khai.
+> Đặc tả gốc 0.1 — 11/11/2026. Cập nhật 12/11/2026: backend và Solidity đã được triển khai trên nhánh backend. Nghiệm thu thiết bị/Fuji theo docs/backend-handoff.md.
 > Nhóm: 3 người, thời gian dự kiến: 14 ngày. Ngày là mốc tương đối; cần xác nhận hạn nộp chính thức.
 
 ## 1. Mục tiêu
@@ -43,18 +43,18 @@ P1: adapter yield mô phỏng, báo cáo tổng quan đơn giản và video/demo
 
 Ngoài MVP: tiền pháp định, BENQI production, ví nhúng, PWA offline hoàn chỉnh, chuyển nhượng, nhân viên POS có ví riêng, arbitrator/tranh chấp, thông báo push, nhiều token, native iOS nếu Android được chọn làm nền tảng chính.
 
-## 5. Baseline nghiệp vụ đề xuất — CHƯA CHỐT
+## 5. Baseline nghiệp vụ được triển khai
 
-Các luật dưới đây giúp ba phần viết cùng một giao diện dự kiến. Không triển khai thanh toán/refund trước khi nhóm xác nhận B1–B6.
+Theo phạm vi người dùng giao tiếp tục cả backend và Solidity, hai phần dùng B1–B6 dưới đây. Flutter và nhóm cần nghiệm thu cùng baseline này trước demo.
 
 | ID | Quyết định đề xuất | Trạng thái |
 | --- | --- | --- |
-| B1 | Giải ngân theo kỳ, kỳ đầu sau một period_duration kể từ subscribe. Một chữ ký giải ngân một kỳ. | Cần chốt |
-| B2 | Không tự trả các kỳ bỏ lỡ; sau mỗi release, next_release_at = thời gian release + period_duration. Thời gian hoàn tất có thể kéo dài. | Cần chốt; cần xác nhận phù hợp gói tháng |
-| B3 | refund_available_at = next_release_at + grace_period. Khách được hủy do không sử dụng, không được mô tả là bằng chứng gym đóng cửa. | Cần chốt; thay đổi so với một số đoạn đề án |
-| B4 | Check-in chỉ khi next_release_at <= block.timestamp < refund_available_at; refund khi block.timestamp >= refund_available_at. Không có vùng chồng lấn. | Cần chốt |
-| B5 | MockUSDC 6 decimals; giá kỳ cố định, tổng gốc = giá kỳ × số kỳ; chia yield 70/20/10. | Cần chốt |
-| B6 | Quyền scanner dùng chính ví merchant; merchant chịu gas check-in. Khách chịu approve/subscribe/refund. | Cần chốt |
+| B1 | Giải ngân theo kỳ, kỳ đầu sau một period_duration kể từ subscribe. Một chữ ký giải ngân một kỳ. | Đã triển khai, chờ nghiệm thu |
+| B2 | Không tự trả các kỳ bỏ lỡ; sau mỗi release, next_release_at = thời gian release + period_duration. Thời gian hoàn tất có thể kéo dài. | Đã triển khai, chờ nghiệm thu |
+| B3 | refund_available_at = next_release_at + grace_period. Khách được hủy do không sử dụng, không được mô tả là bằng chứng gym đóng cửa. | Đã triển khai, chờ nghiệm thu |
+| B4 | Check-in chỉ khi next_release_at <= block.timestamp < refund_available_at; refund khi block.timestamp >= refund_available_at. Không có vùng chồng lấn. | Đã triển khai, chờ nghiệm thu |
+| B5 | MockUSDC 6 decimals; giá kỳ cố định, tổng gốc = giá kỳ × số kỳ; chia yield 70/20/10. | Đã triển khai, chờ nghiệm thu |
+| B6 | Quyền scanner dùng chính ví merchant; merchant chịu gas check-in. Khách chịu approve/subscribe/refund. | Đã triển khai, chờ nghiệm thu |
 
 Không check-in không chứng minh cơ sở vi phạm. Nếu nhóm muốn chỉ hoàn khi merchant đóng cửa, B3/B4 và DTO refund phải được thiết kế lại với nguồn xác nhận/trust model rõ ràng.
 
