@@ -16,12 +16,16 @@ import 'real_mode_test.dart' as f;
 
 class _UxTestApi extends f.FakeApi {
   bool failDraftCreate = false;
+  bool failCatalog = false;
   Json? lastDraftBody;
   final List<Json> customDrafts = [];
   Json? subscriptionDetailOverride;
 
   @override
   Future<dynamic> request(String method, String path, {Json? body}) async {
+    if (failCatalog && method == 'GET' && path == '/api/v1/plans?limit=20') {
+      throw ApiFailure(503, 'RPC_UNAVAILABLE', 'Máy chủ tạm bận.');
+    }
     if (method == 'POST' && path == '/api/v1/plan-drafts') {
       if (failDraftCreate) {
         throw ApiFailure(503, 'RPC_UNAVAILABLE', 'Máy chủ tạm bận.');
@@ -644,6 +648,47 @@ void main() {
       expect(find.text('Khám phá gói dịch vụ'), findsOneWidget);
       expect(find.textContaining('Đã mở gói #1 từ QR đăng ký'), findsOneWidget);
 
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
+    'Registration QR keeps the selected plan usable when the catalog is unavailable',
+    (tester) async {
+      tester.view.physicalSize = const Size(1280, 1100);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final api = _UxTestApi()..failCatalog = true;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RealWorkspaceScreen(
+            initialUri: Uri.parse(
+              'https://app.example/?plan_id=1&chain_id=43113&vault=${f.vault}',
+            ),
+            apiBaseUrl: 'https://api.example.com',
+            apiFactory: (_) => api,
+            walletFactory: f.FakeWallet.new,
+            storeFactory: MemoryPendingStore.new,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Đã mở gói #1 từ QR đăng ký'), findsOneWidget);
+      expect(find.text('Chưa thể tải các gói khác'), findsOneWidget);
+      await tester.tap(find.text('Xem gói'));
+      await tester.pumpAndSettle();
+      expect(find.text('Kết nối ví để đăng ký'), findsOneWidget);
+      await tester.tap(find.text('Hủy'));
+      await tester.pumpAndSettle();
+
+      api.failCatalog = false;
+      await tester.tap(find.text('Tải lại danh mục'));
+      await tester.pumpAndSettle();
+      expect(find.text('Chưa thể tải các gói khác'), findsNothing);
+      expect(find.text('Xem gói'), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
     },
   );

@@ -83,6 +83,7 @@ class LiveController extends ChangeNotifier {
       merchantIssues = [];
   List<Json> pending = [];
   String? plansCursor;
+  bool catalogUnavailable = false;
   String? membershipsCursor, merchantMembershipsCursor, draftsCursor;
   SubscriptionFilter membershipFilter = SubscriptionFilter.all;
   SubscriptionFilter merchantMembershipFilter = SubscriptionFilter.all;
@@ -148,7 +149,7 @@ class LiveController extends ChangeNotifier {
       .map((item) => Map<String, dynamic>.from(item as Map))
       .toList();
 
-  Future<void> bootstrap() async {
+  Future<void> bootstrap({Uri? registration}) async {
     final value = await _get('/api/v1/config');
     if (value['chain_id'] != expectedChainId ||
         value['token'] is! Map ||
@@ -170,14 +171,25 @@ class LiveController extends ChangeNotifier {
         'Deployment không khớp bundle đã pin; khóa gửi giao dịch.',
       );
     }
-    final page = await _get('/api/v1/plans?limit=20');
-    final initialPlans = _items(page);
-    final initialCursor = page['next_cursor'] as String?;
     config = value;
-    _catalogPlans = initialPlans;
     _linkedPlan = null;
-    plansCursor = initialCursor;
-    _emit();
+    try {
+      if (registration != null) await openRegistration(registration);
+    } finally {
+      try {
+        final page = await _get('/api/v1/plans?limit=20');
+        _catalogPlans = _items(page);
+        plansCursor = page['next_cursor'] as String?;
+        catalogUnavailable = false;
+      } catch (_) {
+        if (_linkedPlan == null) {
+          config = null;
+          rethrow;
+        }
+        catalogUnavailable = true;
+      }
+      _emit();
+    }
   }
 
   Future<void> openRegistration(Uri link) async {
@@ -321,6 +333,7 @@ class LiveController extends ChangeNotifier {
     );
     _catalogPlans = _items(planPage);
     plansCursor = planPage['next_cursor'] as String?;
+    catalogUnavailable = false;
     final linked = _linkedPlan;
     if (linked != null) {
       final id = linked['plan_id'] as String;

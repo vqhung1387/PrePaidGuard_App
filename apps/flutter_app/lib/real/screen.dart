@@ -193,10 +193,7 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
       previous?.dispose();
       _controller = c;
       c.addListener(_changed);
-      await c.operation(() async {
-        await c.bootstrap();
-        await c.openRegistration(_entryUri);
-      });
+      await c.operation(() => c.bootstrap(registration: _entryUri));
       if (mounted) {
         ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
       }
@@ -1239,6 +1236,16 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
         'Các gói sẽ xuất hiện tại đây sau khi cơ sở công bố.',
       )
     else ...[
+      if (c.catalogUnavailable)
+        _emptyState(
+          Icons.storefront_outlined,
+          'Chưa thể tải các gói khác',
+          'Bạn vẫn có thể xem gói từ liên kết đăng ký.',
+          action: FilledButton(
+            onPressed: busy ? null : () => _run(c.refresh),
+            child: const Text('Tải lại danh mục'),
+          ),
+        ),
       LayoutBuilder(
         builder: (context, constraints) {
           final wide = constraints.maxWidth >= 730;

@@ -277,6 +277,26 @@ def main():
                 click(guest, "Hủy")
                 click(guest, "Cơ sở")
                 button(guest, "Kết nối ví").wait_for(state="visible")
+                catalog_url = args.api_url.rstrip("/") + "/api/v1/plans?limit=20"
+                guest.route(catalog_url, lambda route: route.fulfill(
+                    status=503, content_type="application/json", body=json.dumps({
+                        "error": {"code": "RPC_UNAVAILABLE", "message": "Catalog unavailable",
+                                  "details": {}, "request_id": "catalog-fault-test"}}),
+                    headers={"access-control-allow-origin": args.app_url.rstrip("/")},
+                ))
+                root_url = args.app_url.rstrip("/") + "/"
+                guest.goto(root_url + f"?plan_id={plan['plan_id']}&chain_id={config['chain_id']}"
+                           f"&vault={config['vault_address']}", wait_until="networkidle")
+                guest.locator("flt-semantics-placeholder").dispatch_event("click")
+                button(guest, "Tải lại danh mục").wait_for(state="visible")
+                click(guest, "Xem gói")
+                guest.get_by_text(re.compile("Tổng trả trước: 100 mUSDC")).first.wait_for(state="visible")
+                click(guest, "Hủy")
+                record("registration QR can open a plan when the catalog request fails")
+                guest.unroute(catalog_url)
+                guest.go_back(wait_until="domcontentloaded")
+                guest.wait_for_url(root_url)
+                record("one browser Back returns from registration QR to the previous document")
             record("guest can review published terms on mobile before signing in")
             customer_context, customer = open_session(browser, accounts[2], "customer")
             record("subscriber SIWE independent browser login")
