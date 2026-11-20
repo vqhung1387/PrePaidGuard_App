@@ -23,5 +23,14 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/club-session.jpg
+    - assets/class-dance.jpg
+    - assets/class-pilates.jpg
+    - assets/class-yoga.jpg
+    - assets/fonts/OFL.txt
     - assets/gym-hero.jpg
     - assets/gym-referral.jpg
+  fonts:
+    - family: DM Sans
+      fonts:
+        - asset: assets/fonts/DM-Sans.ttf

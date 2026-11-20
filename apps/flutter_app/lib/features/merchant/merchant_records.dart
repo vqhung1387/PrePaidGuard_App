@@ -77,7 +77,7 @@ class _MerchantHistoryState extends State<MerchantHistory> {
                       'Kỳ ${release.period} · ${formatMerchantTime(context, release.confirmedAt)}',
                     ),
                     Text(
-                      '${formatTokenAmount(release.amount)} USDC đã giải ngân',
+                      '${formatTokenAmount(release.amount)} $creditUnit đã giải ngân',
                       style: const TextStyle(color: accent),
                     ),
                   ],
@@ -168,10 +168,10 @@ class _PlanRecord extends StatelessWidget {
               const SizedBox(height: 8),
               Text(plan.serviceLabel, style: const TextStyle(color: mutedText)),
               Text(
-                '${plan.periods} kỳ × ${plan.daysPerPeriod} ngày · ${formatTokenAmount(plan.pricePerPeriod)} USDC/kỳ',
+                '${plan.periods} kỳ × ${plan.daysPerPeriod} ngày · ${formatTokenAmount(plan.pricePerPeriod)} $creditUnit/kỳ',
               ),
               Text(
-                'Tổng trả trước mỗi lượt: ${formatTokenAmount(plan.total)} USDC',
+                'Tổng trả trước mỗi lượt: ${formatTokenAmount(plan.total)} $creditUnit',
                 style: const TextStyle(color: mutedText),
               ),
               const Divider(height: 22),
@@ -182,7 +182,7 @@ class _PlanRecord extends StatelessWidget {
                   Text('${memberships.length} lượt đăng ký'),
                   Text('$pending check-in chờ duyệt'),
                   Text(
-                    '${formatTokenAmount(released)} USDC đã giải ngân',
+                    '${formatTokenAmount(released)} $creditUnit đã giải ngân',
                     style: const TextStyle(color: accent),
                   ),
                 ],

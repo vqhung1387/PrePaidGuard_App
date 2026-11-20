@@ -1,3 +1,5 @@
+const creditUnit = 'PG Credit';
+const testnetCreditRate = '1 $creditUnit = 1 mUSDC';
 final _tokenScale = BigInt.from(1000000);
 final _amountPattern = RegExp(r'^\d{1,24}([.,]\d{1,6})?$');
 final _ambiguousThousandPattern = RegExp(r'^[1-9]\d{0,2}[.,]\d{3}$');
@@ -32,7 +34,7 @@ String? validateTokenAmountInput(String? raw) {
     return 'Không dùng dấu hàng nghìn: nhập 1000 cho một nghìn (nếu là số lẻ 3 chữ số, thêm 0 cuối như 1,0010).';
   }
   if (_tooManyDecimalsPattern.hasMatch(amount)) {
-    return 'Tối đa 6 chữ số thập phân (mUSDC có 6 decimals).';
+    return 'Tối đa 6 chữ số thập phân.';
   }
   if (parseTokenAmount(amount) == null) return tokenAmountError;
   return null;

@@ -70,7 +70,7 @@ class _MembershipSummary extends StatelessWidget {
         const Text('Tiền gốc còn lại', style: TextStyle(color: mutedText)),
         const SizedBox(height: 4),
         Text(
-          '${formatTokenAmount(membership.remaining)} USDC',
+          '${formatTokenAmount(membership.remaining)} $creditUnit',
           style: type.headlineLarge?.copyWith(color: accent),
         ),
         const SizedBox(height: 10),
@@ -128,7 +128,7 @@ class _MembershipSummary extends StatelessWidget {
                           style: const TextStyle(color: mutedText),
                         ),
                       Text(
-                        '${formatTokenAmount(plan.pricePerPeriod)} USDC mỗi kỳ',
+                        '${formatTokenAmount(plan.pricePerPeriod)} $creditUnit mỗi kỳ',
                         style: const TextStyle(color: mutedText),
                       ),
                     ],
@@ -169,7 +169,7 @@ class _MembershipSummary extends StatelessWidget {
     final (title, detail, statusColor) = switch (membership.status) {
       DemoCheckInStatus.ready => (
         'Sẵn sàng check-in kỳ ${membership.nextPeriod}',
-        '${formatTokenAmount(membership.plan.pricePerPeriod)} USDC sẽ giải ngân khi cơ sở xác nhận.',
+        '${formatTokenAmount(membership.plan.pricePerPeriod)} $creditUnit sẽ giải ngân khi cơ sở xác nhận.',
         accent,
       ),
       DemoCheckInStatus.awaitingMerchant => (

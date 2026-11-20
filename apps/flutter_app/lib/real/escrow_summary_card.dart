@@ -98,10 +98,10 @@ class EscrowSummaryCard extends StatelessWidget {
     final sourceText = sources.join(' + ');
     final theme = Theme.of(context);
     final metrics = [
-      ('Tổng gốc đã khóa', '${formatTokenAmount(totals[0])} mUSDC'),
-      ('Tổng đã giải ngân', '${formatTokenAmount(totals[1])} mUSDC'),
-      ('Đang giữ trong Vault', '${formatTokenAmount(totals[2])} mUSDC'),
-      ('Tổng đã hoàn gốc', '${formatTokenAmount(totals[3])} mUSDC'),
+      ('Tổng gốc đã khóa', '${formatTokenAmount(totals[0])} $creditUnit'),
+      ('Tổng đã giải ngân', '${formatTokenAmount(totals[1])} $creditUnit'),
+      ('Đang giữ trong Vault', '${formatTokenAmount(totals[2])} $creditUnit'),
+      ('Tổng đã hoàn gốc', '${formatTokenAmount(totals[3])} $creditUnit'),
     ];
 
     return Padding(
@@ -189,7 +189,7 @@ class EscrowSummaryCard extends StatelessWidget {
                 expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Nguồn dữ liệu: $sourceText${maxBlock != null ? ' · Block #$maxBlock' : ''} · mUSDC thử nghiệm (Chain ${config['chain_id']}, Yield ${config['yield_mode']})',
+                    'Nguồn dữ liệu: $sourceText${maxBlock != null ? ' · Block #$maxBlock' : ''} · $testnetCreditRate trên mạng thử nghiệm (Chain ${config['chain_id']}, Yield ${config['yield_mode']})',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: mutedText,
                     ),

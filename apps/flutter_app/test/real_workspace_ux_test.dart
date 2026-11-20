@@ -95,7 +95,7 @@ void main() {
       await tester.pumpAndSettle();
       await _tapScroll(tester, find.text('Tạo gói dịch vụ'));
       for (final (label, value) in [
-        ('mUSDC mỗi kỳ', '50'),
+        ('PG Credit mỗi kỳ', '50'),
         ('Số kỳ', '2'),
         ('Thời lượng mỗi kỳ', '1 phút'),
         ('Thời gian ân hạn', '2'),
@@ -107,7 +107,7 @@ void main() {
       }
       await tester.pumpAndSettle();
       expect(
-        find.text('Tổng khóa trả trước: 100 mUSDC (50 mUSDC/kỳ × 2 kỳ)'),
+        find.text('Tổng khóa trả trước: 100 PG Credit (50 PG Credit/kỳ × 2 kỳ)'),
         findsOneWidget,
       );
       expect(
@@ -120,7 +120,7 @@ void main() {
         'Gói Yoga\u0000lỗi',
       );
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'mUSDC mỗi kỳ'),
+        find.widgetWithText(TextFormField, 'PG Credit mỗi kỳ'),
         '1.000',
       );
       await tester.tap(find.text('Xác nhận'));
@@ -137,7 +137,7 @@ void main() {
         'Buổi sáng\nBuổi tối',
       );
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'mUSDC mỗi kỳ'),
+        find.widgetWithText(TextFormField, 'PG Credit mỗi kỳ'),
         '25',
       );
       await tester.enterText(
@@ -147,7 +147,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('Không dùng dấu hàng nghìn'), findsNothing);
       expect(
-        find.text('Tổng khóa trả trước: 100 mUSDC (25 mUSDC/kỳ × 4 kỳ)'),
+        find.text('Tổng khóa trả trước: 100 PG Credit (25 PG Credit/kỳ × 4 kỳ)'),
         findsOneWidget,
       );
 
@@ -217,14 +217,14 @@ void main() {
       );
       expect(find.text('Bản nháp: Gói Draft Kiểm Tra'), findsOneWidget);
       expect(
-        find.textContaining('15 mUSDC/kỳ × 3 kỳ · Tổng 45 mUSDC'),
+        find.textContaining('15 PG Credit/kỳ × 3 kỳ · Tổng 45 PG Credit'),
         findsOneWidget,
       );
 
       await _tapScroll(tester, find.text('Công bố bản nháp'));
       expect(find.text('Kiểm tra và công bố gói'), findsOneWidget);
       expect(
-        find.textContaining('Mỗi kỳ: 15 mUSDC × 3 kỳ = Tổng 45 mUSDC'),
+        find.textContaining('Mỗi kỳ: 15 PG Credit × 3 kỳ = Tổng 45 PG Credit'),
         findsOneWidget,
       );
       expect(wallet.transactions, isEmpty);
@@ -322,11 +322,11 @@ void main() {
       await tester.tap(find.text('Xác nhận'));
       await tester.pumpAndSettle();
       expect(find.text('Giải ngân một kỳ'), findsOneWidget);
-      expect(find.textContaining('Đăng ký #1 (Gói #1)'), findsOneWidget);
+      expect(find.textContaining('Đăng ký #1 (Gói 1)'), findsOneWidget);
       expect(find.textContaining('Ví hội viên: $signer'), findsOneWidget);
       expect(find.textContaining('Kỳ giải ngân: Kỳ 1/2 · Nonce 0'), findsOneWidget);
       expect(
-        find.textContaining('Số tiền giải ngân kỳ này: 50 mUSDC'),
+        find.textContaining('Số tiền giải ngân kỳ này: 50 PG Credit'),
         findsOneWidget,
       );
       expect(wallet.transactions, isEmpty);
@@ -551,6 +551,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      await tester.tap(find.text('Gói dịch vụ'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Kết nối API'));
       await tester.pumpAndSettle();
       expect(find.textContaining('HTTP 502'), findsOneWidget);
@@ -590,7 +592,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       await _tapScroll(tester, find.text('Xem gói'));
-      expect(find.textContaining('Tổng trả trước: 100 mUSDC'), findsOneWidget);
+      expect(find.textContaining('Tổng trả trước: 100 PG Credit'), findsOneWidget);
       expect(find.text('Kết nối ví để đăng ký'), findsOneWidget);
       expect(wallet.transactions, isEmpty);
       await tester.tap(find.text('Hủy'));
@@ -761,10 +763,10 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('Tổng gốc đã khóa'), findsOneWidget);
-      expect(find.text('6 mUSDC'), findsOneWidget);
-      expect(find.text('1 mUSDC'), findsOneWidget);
-      expect(find.text('2 mUSDC'), findsOneWidget);
-      expect(find.text('3 mUSDC'), findsOneWidget);
+      expect(find.text('6 PG Credit'), findsOneWidget);
+      expect(find.text('1 PG Credit'), findsOneWidget);
+      expect(find.text('2 PG Credit'), findsOneWidget);
+      expect(find.text('3 PG Credit'), findsOneWidget);
       expect(find.textContaining('Bỏ qua 1 đăng ký'), findsOneWidget);
       expect(
         find.textContaining('1 gói đang hoạt động · Mốc hoàn gốc sớm nhất: 2026-11-18T12:00:00Z'),

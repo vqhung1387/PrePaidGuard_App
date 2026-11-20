@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import DBAPIError
 from starlette.concurrency import run_in_threadpool
 
-from app.api import auth, metadata, reads, system, transactions
+from app.api import auth, community, metadata, reads, system, transactions
 from app.blockchain.vault import Vault
 from app.core.config import Settings
 from app.core.db import make_engine
@@ -76,7 +76,13 @@ def create_app(settings: Settings | None = None, vault: Vault | None = None) -> 
             expose_headers=["X-Request-ID", "Retry-After", "WWW-Authenticate"],
         )
     app.include_router(system.router)
-    for router in (auth.router, metadata.router, reads.router, transactions.router):
+    for router in (
+        auth.router,
+        community.router,
+        metadata.router,
+        reads.router,
+        transactions.router,
+    ):
         app.include_router(router, prefix="/api/v1")
     return app
 

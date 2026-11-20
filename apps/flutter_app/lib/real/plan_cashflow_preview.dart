@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/prepaid_guard_theme.dart';
 import '../features/plans/demo_plan.dart';
 
 /// Illustrates the published terms. The selected period never submits a transaction.
@@ -26,96 +27,88 @@ class _PlanCashflowPreviewState extends State<PlanCashflowPreview> {
     final released = widget.unit * BigInt.from(current);
     final held = widget.unit * BigInt.from(widget.periods - current);
     final theme = Theme.of(context).textTheme;
-    const ink = Color(0xff143f35);
-    const lime = Color(0xffc7eaa6);
+
+    const ink = Color(0xff103a46);
     Widget amount(String label, BigInt value, Color color) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Color(0xffd7e6de))),
+        Text(label, style: theme.bodySmall?.copyWith(color: mutedText)),
         Text(
-          '${formatTokenAmount(value)} mUSDC',
-          style: theme.titleLarge?.copyWith(
+          '${formatTokenAmount(value)} $creditUnit',
+          style: theme.titleMedium?.copyWith(
             color: color,
             fontWeight: FontWeight.w700,
           ),
         ),
       ],
     );
-    return DecoratedBox(
+    return Container(
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: ink,
+        color: const Color(0xffedf6f7),
         borderRadius: BorderRadius.circular(18),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Dòng tiền theo kỳ',
-              style: theme.titleLarge?.copyWith(color: Colors.white),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Ước tính khi các kỳ đã chọn đều được xác nhận sử dụng.',
-              style: TextStyle(color: Color(0xffd7e6de)),
-            ),
-            const SizedBox(height: 14),
-            Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 8,
-              children: [
-                IconButton.outlined(
-                  tooltip: 'Kỳ trước',
-                  onPressed: current == 0
-                      ? null
-                      : () => setState(() => _period = current - 1),
-                  style: IconButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    disabledForegroundColor: Colors.white38,
-                  ),
-                  icon: const Icon(Icons.remove),
-                ),
-                Semantics(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Dòng tiền theo kỳ',
+            style: theme.titleLarge?.copyWith(color: ink),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Mỗi kỳ xác nhận giải ngân ${formatTokenAmount(widget.unit)} $creditUnit.',
+            style: theme.bodyMedium?.copyWith(color: mutedText),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: Semantics(
                   liveRegion: true,
                   child: Text(
                     'Kỳ $current/${widget.periods}',
-                    style: theme.titleMedium?.copyWith(color: Colors.white),
+                    style: theme.titleMedium,
                   ),
                 ),
-                IconButton.outlined(
-                  tooltip: 'Kỳ tiếp theo',
-                  onPressed: current == widget.periods
-                      ? null
-                      : () => setState(() => _period = current + 1),
-                  style: IconButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    disabledForegroundColor: Colors.white38,
-                  ),
-                  icon: const Icon(Icons.add),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            LinearProgressIndicator(
+              ),
+              IconButton(
+                tooltip: 'Kỳ trước',
+                onPressed: current == 0
+                    ? null
+                    : () => setState(() => _period = current - 1),
+                icon: const Icon(Icons.chevron_left),
+              ),
+              IconButton(
+                tooltip: 'Kỳ tiếp theo',
+                onPressed: current == widget.periods
+                    ? null
+                    : () => setState(() => _period = current + 1),
+                icon: const Icon(Icons.chevron_right),
+              ),
+            ],
+          ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
               value: current / widget.periods,
-              color: lime,
-              backgroundColor: const Color(0xff698c7e),
-              minHeight: 8,
-              borderRadius: BorderRadius.circular(4),
-              semanticsLabel: 'Tỷ lệ tiền đã chuyển theo ước tính',
+              minHeight: 10,
+              color: accent,
+              backgroundColor: const Color(0xffc8dce1),
+              semanticsLabel: 'Tỷ lệ dự kiến giải ngân',
+              semanticsValue: '${(100 * current / widget.periods).round()}%',
             ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 24,
-              runSpacing: 10,
-              children: [
-                amount('Cơ sở đã nhận', released, lime),
-                amount('Còn giữ cho khách', held, Colors.white),
-              ],
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 24,
+            runSpacing: 8,
+            children: [
+              amount('Dự kiến cơ sở nhận', released, accent),
+              amount('Còn giữ cho khách', held, ink),
+            ],
+          ),
+        ],
       ),
     );
   }

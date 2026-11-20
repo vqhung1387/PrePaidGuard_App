@@ -65,11 +65,11 @@ class PlanComparison extends StatelessWidget {
                           ),
                           DataCell(Text('${plan.accessDays} ngày')),
                           DataCell(
-                            Text('${formatTokenAmount(plan.total)} USDC'),
+                            Text('${formatTokenAmount(plan.total)} $creditUnit'),
                           ),
                           DataCell(
                             Text(
-                              '${formatTokenAmount(plan.pricePerPeriod)} USDC',
+                              '${formatTokenAmount(plan.pricePerPeriod)} $creditUnit',
                             ),
                           ),
                           DataCell(Text(_offerText(plan))),
@@ -148,7 +148,7 @@ class _ComparisonRow extends StatelessWidget {
               Text(plan.serviceLabel, style: const TextStyle(color: mutedText)),
               const SizedBox(height: 4),
               Text(
-                'Trả trước ${formatTokenAmount(plan.total)} USDC',
+                'Trả trước ${formatTokenAmount(plan.total)} $creditUnit',
                 style: type.titleMedium?.copyWith(color: accent),
               ),
               Text(
@@ -156,13 +156,13 @@ class _ComparisonRow extends StatelessWidget {
                 style: const TextStyle(color: mutedText),
               ),
               Text(
-                'Giải ngân ${formatTokenAmount(plan.pricePerPeriod)} USDC/kỳ',
+                'Giải ngân ${formatTokenAmount(plan.pricePerPeriod)} $creditUnit/kỳ',
                 style: const TextStyle(color: mutedText),
               ),
               if (plan.discountPercent > 0) ...[
                 const SizedBox(height: 4),
                 Text(
-                  'Tiết kiệm ${plan.discountPercent}% (${formatTokenAmount(plan.savings)} USDC)',
+                  'Tiết kiệm ${plan.discountPercent}% (${formatTokenAmount(plan.savings)} $creditUnit)',
                 ),
               ],
               if (plan.bonusDaysAfterCheckIn > 0)

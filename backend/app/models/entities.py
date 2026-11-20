@@ -1,9 +1,10 @@
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
     BigInteger,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -12,6 +13,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -311,3 +313,41 @@ class ProjectionIssue(Identity, VaultScope, Base):
             "code = 'UNSUPPORTED_TIMESTAMP'", name="ck_projection_issue_code"
         ),
     )
+
+
+class ClubEntry(Identity, Base):
+    __tablename__ = "club_entries"
+    merchant_id: Mapped[UUID] = mapped_column(ForeignKey("merchants.id"))
+    branch: Mapped[str] = mapped_column(String(100))
+    kind: Mapped[str] = mapped_column(String(12))
+    title: Mapped[str] = mapped_column(String(120))
+    detail: Mapped[str] = mapped_column(String(500))
+    day: Mapped[date] = mapped_column(Date)
+    minute: Mapped[int]
+    amount: Mapped[int]
+    created: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    __table_args__ = (
+        Index("ix_club_day", "merchant_id", "branch", "day", "kind"),
+        Index(
+            "uq_club_hour",
+            "merchant_id",
+            "branch",
+            "day",
+            "minute",
+            unique=True,
+            postgresql_where=text("kind = 'attendance'"),
+        ),
+    )
+
+
+class BuddyInvite(Base):
+    __tablename__ = "buddy_invites"
+    digest: Mapped[str] = mapped_column(String(64), primary_key=True)
+    owner: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
+    expires: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class BuddyPair(Base):
+    __tablename__ = "buddy_pairs"
+    first_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    second_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), primary_key=True)

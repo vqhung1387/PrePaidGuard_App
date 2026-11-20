@@ -192,7 +192,7 @@ class _WorkspaceHomeState extends State<WorkspaceHome> {
       ),
       _Section.merchantHistory => (
         'Lịch sử duyệt check-in',
-        'Xem các lượt đã xác nhận và số USDC mô phỏng đã giải ngân trong phiên.',
+        'Xem các lượt đã xác nhận và số $creditUnit mô phỏng đã giải ngân trong phiên.',
       ),
       _Section.merchantPlans => (
         'Gói của cơ sở (${ownedPlans.length})',

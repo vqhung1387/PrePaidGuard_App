@@ -77,20 +77,20 @@ class MonthlyOfferCard extends StatelessWidget {
                   style: TextStyle(color: mutedText),
                 ),
                 Text(
-                  '${formatTokenAmount(plan.total)} USDC',
+                  '${formatTokenAmount(plan.total)} $creditUnit',
                   style: type.headlineSmall?.copyWith(
                     color: selected ? accent : brightText,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 Text(
-                  '${formatTokenAmount(plan.pricePerPeriod)} USDC/tháng',
+                  '${formatTokenAmount(plan.pricePerPeriod)} $creditUnit/tháng',
                   style: const TextStyle(color: mutedText),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   discounted
-                      ? 'Giảm ${formatTokenAmount(plan.savings)} USDC so với mua từng tháng'
+                      ? 'Giảm ${formatTokenAmount(plan.savings)} $creditUnit so với mua từng tháng'
                       : '${plan.accessDays} ngày tập theo lịch demo',
                   style: const TextStyle(color: mutedText),
                 ),

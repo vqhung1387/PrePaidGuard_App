@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import '../features/plans/demo_plan.dart' show formatTokenAmount;
 import 'api.dart';
 import 'ethereum.dart';
 import 'wallet.dart';
@@ -344,7 +345,7 @@ class LiveController extends ChangeNotifier {
       } on ApiFailure catch (error) {
         if (error.status != 404) rethrow;
         _linkedPlan = null;
-        notice = 'Gói #$id từ liên kết không còn được công bố.';
+        notice = 'Gói $id từ liên kết không còn được công bố.';
       }
     }
     if (!loggedIn || generation != _generation) {
@@ -957,8 +958,12 @@ class LiveController extends ChangeNotifier {
     await assertContext();
     await _noPending('SUBSCRIBE', {'plan_id': plan['plan_id']});
     final amount = uint(plan['total_price']);
-    if (await _tokenRead(encodeBalance(account!)) < amount)
-      throw StateError('Không đủ mUSDC thử nghiệm.');
+    final balance = await _tokenRead(encodeBalance(account!));
+    if (balance < amount) {
+      throw StateError(
+        'Ví có ${formatTokenAmount(balance)} mUSDC, còn thiếu ${formatTokenAmount(amount - balance)} mUSDC. Gửi địa chỉ ví cho người cấp token thử trên Fuji, rồi đăng ký lại.',
+      );
+    }
     if (await _tokenRead(encodeAllowance(account!, config!['vault_address'])) <
         amount) {
       final approval = await _send(

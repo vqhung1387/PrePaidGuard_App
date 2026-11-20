@@ -46,7 +46,7 @@ class MembershipActivity extends StatelessWidget {
                       : 'Cơ sở xác nhận kỳ ${release.period}',
                 ),
                 subtitle: Text(
-                  'Đã giải ngân ${formatTokenAmount(release.amount)} USDC mô phỏng',
+                  'Đã giải ngân ${formatTokenAmount(release.amount)} $creditUnit mô phỏng',
                 ),
               ),
               const Divider(height: 1),
@@ -71,7 +71,7 @@ class MembershipActivity extends StatelessWidget {
               ),
               title: const Text('Hội viên đăng ký gói'),
               subtitle: Text(
-                'Tiền gốc ban đầu: ${formatTokenAmount(plan.total)} USDC mô phỏng',
+                'Tiền gốc ban đầu: ${formatTokenAmount(plan.total)} $creditUnit mô phỏng',
               ),
             ),
           ],

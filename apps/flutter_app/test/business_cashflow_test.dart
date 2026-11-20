@@ -63,11 +63,12 @@ void main() {
         await tester.pumpAndSettle();
       }
 
+      await tap(find.text('Gói dịch vụ'));
       await tap(find.byTooltip('Kỳ trước'));
       expect(find.text('Kỳ 0/2'), findsOneWidget);
-      expect(find.text('0 mUSDC'), findsOneWidget);
+      expect(find.text('0 PG Credit'), findsOneWidget);
       await tap(find.byTooltip('Kỳ tiếp theo'));
-      expect(find.text('50 mUSDC'), findsNWidgets(2));
+      expect(find.text('50 PG Credit'), findsNWidgets(2));
       await tap(find.byTooltip('Kỳ tiếp theo'));
       expect(find.text('Kỳ 2/2'), findsOneWidget);
       expect(
@@ -84,7 +85,24 @@ void main() {
       await tap(find.text('Kết nối ví để đăng ký'));
       expect(c.loggedIn, isTrue);
       expect(find.text('Tiếp tục ký ví'), findsOneWidget);
-      expect(find.textContaining('Tổng trả trước: 100 mUSDC'), findsOneWidget);
+      expect(
+        find.textContaining('Tổng trả trước: 100 PG Credit'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Ví thanh toán: 100 mUSDC'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.textContaining('1 PG Credit = 1 mUSDC'),
+        ),
+        findsOneWidget,
+      );
+      expect(wallet.transactions, isEmpty);
+      await tap(find.text('Thử quy trình không dùng token'));
+      await tap(find.text('Thử đăng ký'));
+      await tap(find.text('Thử xác nhận kỳ đầu'));
+      expect(find.textContaining('Gốc còn giữ: 50 PG Credit'), findsOneWidget);
+      await tap(find.text('Đóng'));
       expect(wallet.transactions, isEmpty);
       await tap(find.text('Hủy'));
       expect(wallet.transactions, isEmpty);

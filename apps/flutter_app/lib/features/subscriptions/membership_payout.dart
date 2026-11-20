@@ -71,7 +71,7 @@ class _PayoutSchedule extends StatelessWidget {
                 children: [
                   Text(label),
                   Text(
-                    '${formatTokenAmount(amount)} USDC',
+                    '${formatTokenAmount(amount)} $creditUnit',
                     style: type.titleSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -86,7 +86,7 @@ class _PayoutSchedule extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            '$completed/${plan.periods} kỳ đã giải ngân · USDC mô phỏng',
+            '$completed/${plan.periods} kỳ đã giải ngân · $creditUnit mô phỏng',
             style: const TextStyle(color: mutedText),
           ),
           const SizedBox(height: 10),
@@ -104,7 +104,7 @@ class _PayoutSchedule extends StatelessWidget {
                 color: period <= completed ? accent : mutedText,
               ),
               title: Text(
-                'Kỳ $period · ${formatTokenAmount(plan.pricePerPeriod)} USDC',
+                'Kỳ $period · ${formatTokenAmount(plan.pricePerPeriod)} $creditUnit',
               ),
               subtitle: Text(
                 period <= completed

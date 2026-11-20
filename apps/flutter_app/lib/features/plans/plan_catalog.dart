@@ -101,11 +101,11 @@ class _PlanCatalogState extends State<PlanCatalog> {
             const SizedBox(height: 8),
             if (plan.monthlyListPrice != null) ...[
               Text(
-                '${plan.periods} tháng × ${formatTokenAmount(plan.pricePerPeriod)} USDC',
+                '${plan.periods} tháng × ${formatTokenAmount(plan.pricePerPeriod)} $creditUnit',
               ),
               if (plan.discountPercent > 0)
                 Text(
-                  'Tiết kiệm ${formatTokenAmount(plan.savings)} USDC so với mua từng tháng.',
+                  'Tiết kiệm ${formatTokenAmount(plan.savings)} $creditUnit so với mua từng tháng.',
                 ),
               if (plan.bonusDaysAfterCheckIn > 0) ...[
                 const SizedBox(height: 8),
@@ -120,7 +120,7 @@ class _PlanCatalogState extends State<PlanCatalog> {
               child: Padding(
                 padding: const EdgeInsets.all(14),
                 child: Text(
-                  'Tổng tiền gốc mô phỏng: ${formatTokenAmount(plan.total)} USDC',
+                  'Tổng tiền gốc mô phỏng: ${formatTokenAmount(plan.total)} $creditUnit',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
@@ -132,7 +132,7 @@ class _PlanCatalogState extends State<PlanCatalog> {
             const Divider(height: 24),
             const Text('Trả trước một lần khi đăng ký'),
             Text(
-              'Giải ngân cho cơ sở: ${formatTokenAmount(plan.pricePerPeriod)} USDC mỗi kỳ đủ điều kiện.',
+              'Giải ngân cho cơ sở: ${formatTokenAmount(plan.pricePerPeriod)} $creditUnit mỗi kỳ đủ điều kiện.',
             ),
             const SizedBox(height: 8),
             const Text(
@@ -473,7 +473,7 @@ class _PlanCatalogState extends State<PlanCatalog> {
                   style: type.labelLarge?.copyWith(color: mutedText),
                 ),
                 Text(
-                  '${formatTokenAmount(plan.total)} USDC',
+                  '${formatTokenAmount(plan.total)} $creditUnit',
                   style: type.headlineSmall?.copyWith(
                     color: accent,
                     fontWeight: FontWeight.w800,
@@ -481,7 +481,7 @@ class _PlanCatalogState extends State<PlanCatalog> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Giải ngân ${formatTokenAmount(plan.pricePerPeriod)} USDC mỗi kỳ đủ điều kiện',
+                  'Giải ngân ${formatTokenAmount(plan.pricePerPeriod)} $creditUnit mỗi kỳ đủ điều kiện',
                 ),
                 Text(
                   '${plan.periods} kỳ · ${plan.daysPerPeriod} ngày mỗi kỳ',

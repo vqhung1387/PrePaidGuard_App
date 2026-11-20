@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
-const canvas = Color(0xfff5f6f2);
+const canvas = Color(0xfff2f8fb);
 const panel = Color(0xffffffff);
-const panelRaised = Color(0xffeaf1ea);
-const panelOutline = Color(0xffd5dfd8);
-const accent = Color(0xff11614b);
-const mutedText = Color(0xff52655d);
-const brightText = Color(0xff182d25);
+const panelRaised = Color(0xffe3f6fc);
+const panelOutline = Color(0xffd9e8ee);
+const accent = Color(0xff00779d);
+const cyan = Color(0xff00a9dc);
+const mutedText = Color(0xff526774);
+const brightText = Color(0xff172e3b);
 
 ThemeData prepaidGuardTheme() {
   final colors =
@@ -23,7 +24,7 @@ ThemeData prepaidGuardTheme() {
         outline: mutedText,
         outlineVariant: panelOutline,
       );
-  final base = ThemeData(colorScheme: colors);
+  final base = ThemeData(colorScheme: colors, fontFamily: 'DM Sans');
 
   OutlineInputBorder fieldBorder(Color color, {double width = 1}) =>
       OutlineInputBorder(
@@ -54,10 +55,20 @@ ThemeData prepaidGuardTheme() {
       foregroundColor: brightText,
       surfaceTintColor: Colors.transparent,
     ),
+    chipTheme: base.chipTheme.copyWith(
+      backgroundColor: panel,
+      selectedColor: panelRaised,
+      checkmarkColor: accent,
+      side: const BorderSide(color: panelOutline),
+      shape: const StadiumBorder(),
+    ),
+    dialogTheme: const DialogThemeData(backgroundColor: panel),
     cardTheme: CardThemeData(
       margin: EdgeInsets.zero,
       color: panel,
-      elevation: 0,
+      elevation: 1.5,
+      surfaceTintColor: Colors.transparent,
+      shadowColor: const Color(0x220a5877),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: const BorderSide(color: panelOutline),
@@ -76,7 +87,7 @@ ThemeData prepaidGuardTheme() {
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         minimumSize: const Size(0, 48),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: const StadiumBorder(),
         textStyle: const TextStyle(fontWeight: FontWeight.w700),
       ),
     ),

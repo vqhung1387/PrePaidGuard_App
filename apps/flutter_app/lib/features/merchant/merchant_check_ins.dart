@@ -37,10 +37,10 @@ class _MerchantCheckInsState extends State<MerchantCheckIns> {
             Text(membership.memberEmail),
             const SizedBox(height: 12),
             Text(
-              'Giải ngân kỳ này: ${formatTokenAmount(membership.plan.pricePerPeriod)} USDC',
+              'Giải ngân kỳ này: ${formatTokenAmount(membership.plan.pricePerPeriod)} $creditUnit',
             ),
             Text(
-              'Gốc còn lại sau duyệt: ${formatTokenAmount(membership.remaining - membership.plan.pricePerPeriod)} USDC',
+              'Gốc còn lại sau duyệt: ${formatTokenAmount(membership.remaining - membership.plan.pricePerPeriod)} $creditUnit',
             ),
             const SizedBox(height: 12),
             const Text('Số tiền mô phỏng trong phiên demo.'),
@@ -129,7 +129,7 @@ class _MerchantCheckInsState extends State<MerchantCheckIns> {
               ),
               const SizedBox(height: 6),
               Text(
-                'Kỳ ${membership.nextPeriod} · ${formatTokenAmount(membership.plan.pricePerPeriod)} USDC dự kiến giải ngân',
+                'Kỳ ${membership.nextPeriod} · ${formatTokenAmount(membership.plan.pricePerPeriod)} $creditUnit dự kiến giải ngân',
                 style: const TextStyle(color: accent),
               ),
               const SizedBox(height: 8),

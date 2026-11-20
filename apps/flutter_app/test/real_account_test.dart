@@ -58,6 +58,44 @@ class DetailApi extends f.FakeApi {
 }
 
 void main() {
+  testWidgets('club picker filters the catalog and can restore all providers', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 960));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = f.FakeApi();
+    api.pages['/api/v1/plans?limit=20'] = {
+      'next_cursor': null,
+      'items': [
+        for (final (id, name, owner) in [
+          ('1', 'Studio A', f.merchant),
+          ('2', 'Studio B', f.customer),
+        ])
+          {
+            ...f.plan(),
+            'plan_id': id,
+            'title': 'Gói $name',
+            'merchant_address': owner,
+            'merchant': {'business_name': name},
+          },
+      ],
+    };
+    final controller = await f.signedIn(api: api);
+    await tester.pumpWidget(
+      MaterialApp(home: RealWorkspaceScreen(controller: controller)),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tìm cơ sở'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Studio B'));
+    await tester.pumpAndSettle();
+    expect(find.text('Gói Studio B'), findsOneWidget);
+    expect(find.text('Gói Studio A'), findsNothing);
+    await tester.tap(find.text('Hiện tất cả cơ sở'));
+    await tester.pumpAndSettle();
+    expect(find.text('Gói Studio A'), findsOneWidget);
+    expect(find.text('Gói Studio B'), findsOneWidget);
+  });
   for (final mode in ['MOCK', 'DISABLED']) {
     testWidgets(
       'real detail shows exact API principal and explicitly labelled yield $mode',
@@ -79,10 +117,10 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.text('Chi tiết / lịch sử'));
         await tester.pumpAndSettle();
-        expect(find.text('Đã trả trước: 100 mUSDC'), findsOneWidget);
-        expect(find.text('Đã giải ngân: 50 mUSDC'), findsOneWidget);
-        expect(find.text('Đã hoàn gốc: 50 mUSDC'), findsOneWidget);
-        expect(find.text('Gốc còn lại: 0 mUSDC'), findsOneWidget);
+        expect(find.text('Đã trả trước: 100 PG Credit'), findsOneWidget);
+        expect(find.text('Đã giải ngân: 50 PG Credit'), findsOneWidget);
+        expect(find.text('Đã hoàn gốc: 50 PG Credit'), findsOneWidget);
+        expect(find.text('Gốc còn lại: 0 PG Credit'), findsOneWidget);
         Finder inDialog(String text) => find.descendant(
           of: find.byType(AlertDialog),
           matching: find.text(text),
@@ -92,14 +130,14 @@ void main() {
             inDialog('Lợi tức mô phỏng (MOCK) · Token thử nghiệm'),
             findsOneWidget,
           );
-          expect(inDialog('Đã trả cho khách: 0,2 mUSDC'), findsOneWidget);
+          expect(inDialog('Đã trả cho khách: 0,2 PG Credit'), findsOneWidget);
           expect(
             inDialog('Ước tính chưa nhận: Chưa có dữ liệu'),
             findsOneWidget,
           );
         } else {
           expect(inDialog('Lợi tức · Đã tắt (DISABLED)'), findsOneWidget);
-          expect(inDialog('Đã trả cho khách: 0,2 mUSDC'), findsNothing);
+          expect(inDialog('Đã trả cho khách: 0,2 PG Credit'), findsNothing);
         }
         expect(find.text('https://example.test/tx/confirmed'), findsOneWidget);
         final loadMore = inDialog('Tải thêm lịch sử');
@@ -130,7 +168,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Khám phá gói dịch vụ'), findsOneWidget);
+      expect(find.text('Giới thiệu bạn'), findsOneWidget);
       expect(find.byKey(const ValueKey('auth-email')), findsNothing);
       expect(find.text('Về demo'), findsNothing);
       expect(tester.takeException(), isNull);

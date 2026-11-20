@@ -121,13 +121,13 @@ class MerchantDashboard extends StatelessWidget {
                   (
                     Icons.lock_clock_outlined,
                     'Chờ giải ngân',
-                    '${formatTokenAmount(due)} USDC',
+                    '${formatTokenAmount(due)} $creditUnit',
                   ),
                   (Icons.task_alt_outlined, 'Đã duyệt', '$releases'),
                   (
                     Icons.account_balance_wallet_outlined,
                     'Đã giải ngân',
-                    '${formatTokenAmount(released)} USDC',
+                    '${formatTokenAmount(released)} $creditUnit',
                   ),
                 ])
                   SizedBox(

@@ -240,7 +240,7 @@ void main() {
     await tester.enterText(fields.at(2), '12,345678');
     await tester.pumpAndSettle();
     expect(find.textContaining('Không dùng dấu hàng nghìn'), findsNothing);
-    expect(find.text('37,037034 USDC thử nghiệm'), findsOneWidget);
+    expect(find.text('37,037034 PG Credit thử nghiệm'), findsOneWidget);
 
     await tester.ensureVisible(create);
     await tester.tap(create);
@@ -264,17 +264,17 @@ void main() {
 
     expect(find.text('Gói tập của bạn'), findsOneWidget);
     expect(find.text('Gym 3 tháng'), findsOneWidget);
-    expect(find.text('37,037034 USDC'), findsOneWidget);
+    expect(find.text('37,037034 PG Credit'), findsOneWidget);
     expect(find.text('Đã giải ngân 0/3 kỳ'), findsOneWidget);
 
     await tester.tap(find.text('Check-in kỳ đầu (demo)'));
     await tester.pumpAndSettle();
     expect(find.text('Đang chờ cơ sở xác nhận'), findsOneWidget);
-    expect(find.text('37,037034 USDC'), findsOneWidget);
+    expect(find.text('37,037034 PG Credit'), findsOneWidget);
     await _switchMode(tester, 'Chế độ Cơ sở');
-    expect(find.text('12,345678 USDC'), findsOneWidget);
+    expect(find.text('12,345678 PG Credit'), findsOneWidget);
     expect(
-      find.text('Kỳ 1 · 12,345678 USDC dự kiến giải ngân'),
+      find.text('Kỳ 1 · 12,345678 PG Credit dự kiến giải ngân'),
       findsOneWidget,
     );
     final queueSearch = find.widgetWithText(
@@ -292,10 +292,10 @@ void main() {
     await tester.tap(find.text('Xác nhận kỳ demo'));
     await tester.pumpAndSettle();
     expect(find.text('Duyệt check-in'), findsNothing);
-    expect(find.text('12,345678 USDC'), findsOneWidget);
+    expect(find.text('12,345678 PG Credit'), findsOneWidget);
     await tester.tap(find.text('Lịch sử'));
     await tester.pumpAndSettle();
-    expect(find.text('12,345678 USDC đã giải ngân'), findsOneWidget);
+    expect(find.text('12,345678 PG Credit đã giải ngân'), findsOneWidget);
     await tester.tap(find.text('Quản lý gói'));
     await tester.pumpAndSettle();
     final managedPlan = find.ancestor(
@@ -308,15 +308,15 @@ void main() {
     );
     await _switchMode(tester, 'Chế độ Hội viên');
     expect(find.text('Gói tập của bạn'), findsOneWidget);
-    expect(find.text('24,691356 USDC'), findsOneWidget);
+    expect(find.text('24,691356 PG Credit'), findsOneWidget);
     expect(find.text('Đã giải ngân 1/3 kỳ'), findsOneWidget);
     expect(find.text('Cơ sở xác nhận kỳ đầu'), findsOneWidget);
     expect(find.text('Check-in kỳ đầu (demo)'), findsNothing);
     expect(find.text('Check-in kỳ 2 (demo)'), findsOneWidget);
     await tester.tap(find.text('Xem từng kỳ giải ngân'));
     await tester.pumpAndSettle();
-    expect(find.text('Kỳ 2 · 12,345678 USDC'), findsOneWidget);
-    expect(find.text('1/3 kỳ đã giải ngân · USDC mô phỏng'), findsOneWidget);
+    expect(find.text('Kỳ 2 · 12,345678 PG Credit'), findsOneWidget);
+    expect(find.text('1/3 kỳ đã giải ngân · PG Credit mô phỏng'), findsOneWidget);
     expect(find.text('Chờ hoàn thành các kỳ trước'), findsOneWidget);
     await tester.tap(find.widgetWithText(TextButton, 'Đóng'));
     await tester.pumpAndSettle();
@@ -406,7 +406,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byType(DataTable),
-        matching: find.text('32 USDC'),
+        matching: find.text('32 PG Credit'),
       ),
       findsOneWidget,
     );
@@ -422,7 +422,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byType(DataTable),
-        matching: find.text('249,6 USDC'),
+        matching: find.text('249,6 PG Credit'),
       ),
       findsOneWidget,
     );
@@ -451,7 +451,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(subscribe);
     await tester.pumpAndSettle();
-    expect(find.text('Tổng tiền gốc mô phỏng: 249,6 USDC'), findsOneWidget);
+    expect(find.text('Tổng tiền gốc mô phỏng: 249,6 PG Credit'), findsOneWidget);
     expect(
       find.text('Tặng 15 ngày tập sau khi cơ sở xác nhận check-in kỳ đầu.'),
       findsOneWidget,
@@ -468,7 +468,7 @@ void main() {
     await tester.tap(find.text('Xác nhận kỳ demo'));
     await tester.pumpAndSettle();
     await _switchMode(tester, 'Chế độ Hội viên');
-    expect(find.text('239,2 USDC'), findsOneWidget);
+    expect(find.text('239,2 PG Credit'), findsOneWidget);
     expect(find.text('Đã giải ngân 1/24 kỳ'), findsOneWidget);
     expect(find.text('Tổng thời hạn tập: 735 ngày (mô phỏng)'), findsOneWidget);
     expect(find.text('Hội viên nhận 15 ngày tập thêm'), findsOneWidget);
@@ -548,10 +548,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('So sánh các gói'));
     await tester.pumpAndSettle();
-    expect(find.text('Trả trước 16 USDC'), findsOneWidget);
+    expect(find.text('Trả trước 16 PG Credit'), findsOneWidget);
     expect(find.byType(DataTable), findsNothing);
     final firstComparedPlan = find.ancestor(
-      of: find.text('Trả trước 16 USDC'),
+      of: find.text('Trả trước 16 PG Credit'),
       matching: find.byType(Card),
     );
     final chooseComparedPlan = find.descendant(
@@ -562,7 +562,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(chooseComparedPlan);
     await tester.pumpAndSettle();
-    expect(find.text('Tổng tiền gốc mô phỏng: 16 USDC'), findsOneWidget);
+    expect(find.text('Tổng tiền gốc mô phỏng: 16 PG Credit'), findsOneWidget);
     await tester.tap(find.text('Quay lại'));
     await tester.pumpAndSettle();
     final threeMonthOffer = find.ancestor(
@@ -598,14 +598,14 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(subscribe);
     await tester.pumpAndSettle();
-    expect(find.text('3 tháng × 14,4 USDC'), findsOneWidget);
-    expect(find.text('Tổng tiền gốc mô phỏng: 43,2 USDC'), findsOneWidget);
+    expect(find.text('3 tháng × 14,4 PG Credit'), findsOneWidget);
+    expect(find.text('Tổng tiền gốc mô phỏng: 43,2 PG Credit'), findsOneWidget);
     await tester.tap(find.text('Xác nhận demo'));
     await tester.pumpAndSettle();
     final checkIn = find.text('Check-in kỳ đầu (demo)');
     final balance = find.text('Tiền gốc còn lại');
     expect(checkIn, findsOneWidget);
-    expect(find.text('43,2 USDC'), findsOneWidget);
+    expect(find.text('43,2 PG Credit'), findsOneWidget);
     expect(
       tester.getTopLeft(checkIn).dy,
       lessThan(tester.getTopLeft(balance).dy),

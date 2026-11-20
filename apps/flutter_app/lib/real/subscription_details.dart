@@ -10,7 +10,7 @@ String formatTestnetAmount(Object? value) {
   final amount = BigInt.tryParse(value.toString());
   return amount == null
       ? 'Chưa có dữ liệu'
-      : '${formatTokenAmount(amount)} mUSDC';
+      : '${formatTokenAmount(amount)} $creditUnit';
 }
 
 class SubscriptionYield extends StatelessWidget {

@@ -54,10 +54,10 @@ class _PlanFormState extends State<PlanForm> {
     final duration = parseWholeNumber(_duration.text, max: 3650);
     final perPeriod = price == null
         ? null
-        : '${formatTokenAmount(price)} USDC thử nghiệm';
+        : '${formatTokenAmount(price)} $creditUnit thử nghiệm';
     final total = price == null || periods == null
         ? '—'
-        : '${formatTokenAmount(price * BigInt.from(periods))} USDC thử nghiệm';
+        : '${formatTokenAmount(price * BigInt.from(periods))} $creditUnit thử nghiệm';
 
     return Form(
       key: _formKey,
@@ -167,7 +167,7 @@ class _PlanFormState extends State<PlanForm> {
                 decimal: true,
               ),
               decoration: const InputDecoration(
-                labelText: 'Giá mỗi kỳ (USDC)',
+                labelText: 'Giá mỗi kỳ ($creditUnit)',
                 helperText: tokenAmountHint,
                 helperMaxLines: 2,
                 errorMaxLines: 3,
