@@ -947,10 +947,6 @@ class _RealWorkspaceScreenState extends State<RealWorkspaceScreen> {
     ],
   ];
 
-  String _shortWallet(String address) => address.length > 13
-      ? '${address.substring(0, 6)}…${address.substring(address.length - 4)}'
-      : address;
-
   int? _durationSeconds(String value) {
     const secondsPerUnit = {'ngày': 86400, 'giờ': 3600, 'phút': 60, 'giây': 1};
     final match = RegExp(
